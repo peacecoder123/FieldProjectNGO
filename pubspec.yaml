@@ -1,0 +1,81 @@
+name: ngo_volunteer_management
+description: HopeConnect NGO Volunteer Management Application
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ─── State Management ────────────────────────────────────────────────────────
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # ─── Navigation ──────────────────────────────────────────────────────────────
+  go_router: ^14.2.7
+
+  # ─── Data / Serialisation ────────────────────────────────────────────────────
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # ─── Charts ──────────────────────────────────────────────────────────────────
+  syncfusion_flutter_charts: ^26.1.35
+
+  # ─── Networking (wired but unused until real API) ────────────────────────────
+  dio: ^5.4.3+1
+  #retrofit: ^4.1.0
+
+  # ─── UI helpers ──────────────────────────────────────────────────────────────
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  flutter_svg: ^2.0.10+1
+  intl: ^0.19.0
+  gap: ^3.0.1                     # SizedBox shorthand
+  badges: ^3.1.2                  # Notification badge dots
+
+  # ─── Storage (local, for theme preference) ───────────────────────────────────
+  shared_preferences: ^2.3.2
+
+  # ─── Utilities ───────────────────────────────────────────────────────────────
+  equatable: ^2.0.5
+  uuid: ^4.4.2
+  collection: ^1.18.0
+  logger: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code generation
+  build_runner: ^2.4.11
+  freezed: ^2.5.2
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.4.0
+  #retrofit_generator: 8.1.0
+
+  # Linting
+  flutter_lints: ^4.0.0
+  very_good_analysis: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+
+  # # #fonts:
+  # #   - family: Inter
+  # #     fonts:
+  # #       - asset: assets/fonts/Inter-Regular.ttf
+  #         weight: 400
+  #       - asset: assets/fonts/Inter-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Inter-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/Inter-Bold.ttf
+  #         weight: 700

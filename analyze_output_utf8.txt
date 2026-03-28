@@ -1,0 +1,120 @@
+﻿Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 67.0.0 (98.0.0 available)
+  analyzer 6.4.1 (12.0.0 available)
+  analyzer_plugin 0.11.3 (0.14.7 available)
+  build 2.4.1 (4.0.5 available)
+  build_config 1.1.2 (1.3.0 available)
+  build_resolvers 2.4.2 (3.0.4 available)
+  build_runner 2.4.13 (2.13.1 available)
+  build_runner_core 7.3.2 (9.3.2 available)
+  characters 1.4.0 (1.4.1 available)
+  custom_lint_core 0.6.3 (0.8.2 available)
+  dart_style 2.3.6 (3.1.8 available)
+  flutter_lints 4.0.0 (6.0.0 available)
+  flutter_riverpod 2.6.1 (3.3.1 available)
+  freezed 2.5.2 (3.2.5 available)
+  freezed_annotation 2.4.4 (3.1.0 available)
+  go_router 14.8.1 (17.1.0 available)
+  intl 0.19.0 (0.20.2 available)
+  json_annotation 4.9.0 (4.11.0 available)
+  json_serializable 6.8.0 (6.13.1 available)
+  lints 4.0.0 (6.1.0 available)
+  matcher 0.12.17 (0.12.19 available)
+  material_color_utilities 0.11.1 (0.13.0 available)
+  meta 1.17.0 (1.18.2 available)
+  riverpod 2.6.1 (3.2.1 available)
+  riverpod_analyzer_utils 0.5.1 (0.5.10 available)
+  riverpod_annotation 2.6.1 (4.0.2 available)
+  riverpod_generator 2.4.0 (4.0.3 available)
+  shelf_web_socket 2.0.1 (3.0.0 available)
+  source_gen 1.5.0 (4.2.2 available)
+  source_helper 1.3.5 (1.3.11 available)
+  syncfusion_flutter_charts 26.2.14 (33.1.45 available)
+  syncfusion_flutter_core 26.2.14 (33.1.45 available)
+  test_api 0.7.7 (0.7.11 available)
+  vector_math 2.2.0 (2.3.0 available)
+  very_good_analysis 6.0.0 (10.2.0 available)
+Got dependencies!
+35 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing project2...                                           
+
+   info - The import of 'package:flutter_riverpod/flutter_riverpod.dart' is unnecessary because all of the used elements are also provided by the import of 'package:riverpod_annotation/riverpod_annotation.dart' - lib\app\router.dart:2:8 - unnecessary_import
+   info - 'ProviderRef' is deprecated and shouldn't be used. will be removed in 3.0.0. Use Ref instead - lib\app\router.g.dart:22:24 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\app\theme\app_theme.dart:130:34 - deprecated_member_use
+   info - Dangling library doc comment - lib\core\enums\app_enums.dart:1:1 - dangling_library_doc_comments
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\app_badge.dart:100:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\app_card.dart:41:39 - deprecated_member_use
+   info - The 'child' argument should be last in widget constructor invocations - lib\core\widgets\app_modal.dart:38:48 - sort_child_properties_last
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\app_shell.dart:180:60 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\core\widgets\app_shell.dart:222:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\widgets\app_shell.dart:224:18 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\widgets\app_shell.dart:226:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\widgets\app_shell.dart:300:13 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\app_shell.dart:360:50 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\app_shell.dart:397:42 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\core\widgets\app_shell.dart:496:22 - prefer_const_constructors
+   info - The file name '≡ƒôä widgets.dart' isn't a lower_case_with_underscores identifier - lib\core\widgets\≡ƒôä widgets.dart:1:1 - file_names
+  error - The named parameter 'isSuperAdmin' is required, but there's no corresponding argument - lib\features\admin\presentation\screens\admin_dashboard_screen.dart:47:32 - missing_required_argument
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\admin_overview_tab.dart:284:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\admin_overview_tab.dart:285:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\admin_overview_tab.dart:288:52 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\features\admin\presentation\tabs\admin_overview_tab.dart:352:29 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\admin_overview_tab.dart:607:54 - deprecated_member_use
+  error - The argument type 'List<IconButton>' can't be assigned to the parameter type 'Widget?'.  - lib\features\admin\presentation\tabs\documentation_tab.dart:24:20 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\documentation_tab.dart:110:34 - deprecated_member_use
+  error - The argument type 'List<ElevatedButton>' can't be assigned to the parameter type 'Widget?'.  - lib\features\admin\presentation\tabs\donations_tab.dart:48:24 - argument_type_not_assignable
+   info - Use 'const' with the constructor to improve performance - lib\features\admin\presentation\tabs\donations_tab.dart:204:29 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\admin\presentation\tabs\donations_tab.dart:209:29 - prefer_const_constructors
+  error - The getter 'purple50' isn't defined for the type 'AppColors' - lib\features\admin\presentation\tabs\donations_tab.dart:242:56 - undefined_getter
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\admin\presentation\tabs\donations_tab.dart:322:13 - deprecated_member_use
+  error - The getter 'blue700' isn't defined for the type 'AppColors' - lib\features\admin\presentation\tabs\joining_letters_tab.dart:110:39 - undefined_getter
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\admin\presentation\tabs\joining_letters_tab.dart:248:13 - deprecated_member_use
+  error - The argument type 'List<ElevatedButton>' can't be assigned to the parameter type 'Widget?'.  - lib\features\admin\presentation\tabs\members_tab.dart:34:20 - argument_type_not_assignable
+  error - The getter 'indigo500' isn't defined for the type 'AppColors' - lib\features\admin\presentation\tabs\members_tab.dart:206:90 - undefined_getter
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\admin\presentation\tabs\members_tab.dart:303:13 - deprecated_member_use
+  error - The getter 'indigo500' isn't defined for the type 'AppColors' - lib\features\admin\presentation\tabs\members_tab.dart:392:88 - undefined_getter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\members_tab.dart:499:22 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\members_tab.dart:501:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\members_tab.dart:506:67 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\members_tab.dart:509:70 - deprecated_member_use
+  error - The named parameter 'constraints' isn't defined - lib\features\admin\presentation\tabs\members_tab.dart:578:69 - undefined_named_parameter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\members_tab.dart:601:46 - deprecated_member_use
+warning - Unused import: 'package:ngo_volunteer_management/shared/data/entities.dart' - lib\features\admin\presentation\tabs\requests_tab.dart:8:8 - unused_import
+  error - The getter 'relationship' isn't defined for the type 'MouRequestEntity' - lib\features\admin\presentation\tabs\requests_tab.dart:181:90 - undefined_getter
+warning - The value of the local variable 'tasksAsync' isn't used - lib\features\admin\presentation\tabs\volunteers_tab.dart:29:11 - unused_local_variable
+  error - The argument type 'List<ElevatedButton>' can't be assigned to the parameter type 'Widget?'.  - lib\features\admin\presentation\tabs\volunteers_tab.dart:36:20 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\volunteers_tab.dart:354:59 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\volunteers_tab.dart:589:22 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\tabs\volunteers_tab.dart:591:41 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:125:27 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:135:27 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\presentation\screens\login_screen.dart:161:57 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\presentation\screens\login_screen.dart:164:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\presentation\screens\login_screen.dart:229:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\presentation\screens\login_screen.dart:384:44 - deprecated_member_use
+  error - The named parameter 'address' is required, but there's no corresponding argument - lib\features\member\presentation\tabs\hospital_mou_tab.dart:93:67 - missing_required_argument
+  error - The named parameter 'bloodGroup' is required, but there's no corresponding argument - lib\features\member\presentation\tabs\hospital_mou_tab.dart:93:67 - missing_required_argument
+  error - The named parameter 'patientAge' is required, but there's no corresponding argument - lib\features\member\presentation\tabs\hospital_mou_tab.dart:93:67 - missing_required_argument
+  error - The named parameter 'requesterId' isn't defined - lib\features\member\presentation\tabs\hospital_mou_tab.dart:95:27 - undefined_named_parameter
+  error - The named parameter 'relationship' isn't defined - lib\features\member\presentation\tabs\hospital_mou_tab.dart:100:27 - undefined_named_parameter
+  error - The getter 'requesterId' isn't defined for the type 'MouRequestEntity' - lib\features\member\presentation\tabs\hospital_mou_tab.dart:128:58 - undefined_getter
+  error - The getter 'attendeeIds' isn't defined for the type 'MeetingEntity' - lib\features\member\presentation\tabs\member_meetings_tab.dart:42:46 - undefined_getter
+  error - The getter 'isOnline' isn't defined for the type 'MeetingEntity' - lib\features\member\presentation\tabs\member_meetings_tab.dart:86:23 - undefined_getter
+   info - Use 'const' with the constructor to improve performance - lib\features\member\presentation\tabs\member_meetings_tab.dart:88:13 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\features\member\presentation\tabs\member_meetings_tab.dart:89:25 - prefer_const_literals_to_create_immutables
+   info - Unnecessary 'const' keyword - lib\features\member\presentation\tabs\member_tasks_tab.dart:123:19 - unnecessary_const
+  error - Invalid constant value - lib\features\member\presentation\tabs\member_tasks_tab.dart:127:61 - invalid_constant
+  error - The getter 'blue700' isn't defined for the type 'AppColors' - lib\features\member\presentation\tabs\member_tasks_tab.dart:127:71 - undefined_getter
+  error - The getter 'userId' isn't defined for the type 'JoiningLetterRequestEntity' - lib\features\volunteer\presentation\tabs\volunteer_certificate_tab.dart:30:55 - undefined_getter
+  error - Undefined class 'LetterType' - lib\features\volunteer\presentation\tabs\volunteer_joining_letter_tab.dart:19:3 - undefined_class
+  error - Undefined name 'LetterType' - lib\features\volunteer\presentation\tabs\volunteer_joining_letter_tab.dart:19:31 - undefined_identifier
+  error - The name 'LetterType' isn't a type, so it can't be used as a type argument - lib\features\volunteer\presentation\tabs\volunteer_joining_letter_tab.dart:40:39 - non_type_as_type_argument
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\volunteer\presentation\tabs\volunteer_joining_letter_tab.dart:41:17 - deprecated_member_use
+  error - Undefined name 'LetterType' - lib\features\volunteer\presentation\tabs\volunteer_joining_letter_tab.dart:42:24 - undefined_identifier
+  error - The method 'JoiningLetterRequestEntity' isn't defined for the type '_VolunteerJoiningLetterTabState' - lib\features\volunteer\presentation\tabs\volunteer_joining_letter_tab.dart:50:66 - undefined_method
+  error - The getter 'userId' isn't defined for the type 'JoiningLetterRequestEntity' - lib\features\volunteer\presentation\tabs\volunteer_joining_letter_tab.dart:74:56 - undefined_getter
+  error - The getter 'attendeeIds' isn't defined for the type 'MeetingEntity' - lib\features\volunteer\presentation\tabs\volunteer_meetings_tab.dart:30:58 - undefined_getter
+  error - The getter 'isOnline' isn't defined for the type 'MeetingEntity' - lib\features\volunteer\presentation\tabs\volunteer_meetings_tab.dart:51:31 - undefined_getter
+
