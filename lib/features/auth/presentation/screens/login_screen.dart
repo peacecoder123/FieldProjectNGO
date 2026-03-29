@@ -158,10 +158,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
-                                color: AppColors.red500.withOpacity(0.1),
+                                color: AppColors.red500.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                    color: AppColors.red500.withOpacity(0.3)),
+                                    color: AppColors.red500.withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 children: [
@@ -226,7 +226,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B).withOpacity(0.6),
+                        color: const Color(0xFF1E293B).withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFF334155)),
                       ),
@@ -381,7 +381,7 @@ class _DemoTile extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.blue600.withOpacity(0.2),
+                  color: AppColors.blue600.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(

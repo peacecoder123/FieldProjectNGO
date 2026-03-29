@@ -18,6 +18,17 @@ abstract final class AppColors {
   static const Color purple400 = Color(0xFFC084FC);
   static const Color purple100 = Color(0xFFF3E8FF);
 
+  static const Color blue700 = Color(0xFF2A52BE); // Dark blue (approx. 20% opacity)
+  static const Color emerald700 = Color(0xFF0DB84C); // Dark green
+  static const Color orange50 = Color(0xFFF5F7D0); // Light orange
+  static const Color orange100 = Color(0xFFFDFABE); // Lighter orange
+  static const Color orange600 = Color(0xFFFF9800); // Bright orange
+  static const Color orange700 = Color(0xFFFF6600); // Orange-honey color
+  static const Color orange800 = Color(0xFFFF4500); // Bright red-orange
+
+  static const Color orange200 = Color(0xFFFFD740); // Added for border references
+  static const Color emerald200 = Color(0xFFA7F3D0); // Added for meeting card border
+    
   static const Color emerald600 = Color(0xFF059669);
   static const Color emerald500 = Color(0xFF10B981);
   static const Color emerald400 = Color(0xFF34D399);

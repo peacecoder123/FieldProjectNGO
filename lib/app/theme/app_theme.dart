@@ -127,7 +127,7 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isDark
-            ? AppColors.slate700.withOpacity(0.5)
+            ? AppColors.slate700.withValues(alpha: 0.5)
             : AppColors.white,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

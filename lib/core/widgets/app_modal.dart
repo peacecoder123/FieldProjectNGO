@@ -35,7 +35,7 @@ class AppModal extends StatelessWidget {
     if (isWide) {
       return showDialog<T>(
         context: context,
-        builder: (_) => AppModal(title: title, child: child, size: size),
+        builder: (_) => AppModal(title: title, size: size, child: child),
       );
     } else {
       return showModalBottomSheet<T>(

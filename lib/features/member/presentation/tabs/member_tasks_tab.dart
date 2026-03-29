@@ -21,45 +21,56 @@ class MemberTasksTab extends ConsumerWidget {
 
     if (currentUser == null) return const Center(child: Text('Please login'));
 
-    return Column(
-      children: [
-        const SectionHeader(
-          title: 'My Tasks',
-          subtitle: 'Active assignments and submission portal',
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: tasksAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (tasks) {
-              final myTasks = tasks.where((t) => t.assignedToId == currentUser.id).toList();
+    return tasksAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (tasks) {
+        final myTasks = tasks.where((t) => t.assignedToId == currentUser.id).toList();
 
-              if (myTasks.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.assignment_turned_in_rounded, size: 64, color: AppColors.slate200),
-                      SizedBox(height: 16),
-                      Text('No tasks assigned to you yet', style: TextStyle(color: AppColors.slate500)),
-                    ],
+        if (myTasks.isEmpty) {
+          return const Column(
+            children: [
+              SectionHeader(
+                title: 'My Tasks',
+                subtitle: 'Active assignments and submission portal',
+              ),
+              SizedBox(height: 48),
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.assignment_turned_in_rounded, size: 64, color: AppColors.slate200),
+                    SizedBox(height: 16),
+                    Text('No tasks assigned to you yet', style: TextStyle(color: AppColors.slate500)),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.all(20),
+          itemCount: myTasks.length + 1, // +1 for header
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SectionHeader(
+                    title: 'My Tasks',
+                    subtitle: 'Active assignments and submission portal',
                   ),
-                );
-              }
-
-              return ListView.separated(
-                itemCount: myTasks.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final task = myTasks[index];
-                  return _MemberTaskItem(task: task);
-                },
+                  SizedBox(height: 16),
+                ],
               );
-            },
-          ),
-        ),
-      ],
+            }
+            final task = myTasks[index - 1];
+            return _MemberTaskItem(task: task);
+          },
+        );
+      },
     );
   }
 }

@@ -1,3 +1,5 @@
+library app_enums;
+
 /// Mirrors the TypeScript union types from the React source.
 /// Using sealed enums gives us exhaustive switch support in Dart 3.
 
@@ -100,6 +102,11 @@ enum MembershipType {
 enum PersonStatus {
   active,
   inactive;
+
+  String get displayName => switch (this) {
+    PersonStatus.active   => 'Active',
+    PersonStatus.inactive => 'Inactive',
+  };
 
   static PersonStatus fromString(String value) =>
       PersonStatus.values.firstWhere(
