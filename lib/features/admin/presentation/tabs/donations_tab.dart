@@ -40,7 +40,10 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
           return matchesSearch && matchesType;
         }).toList();
 
-        return Column(
+        return ListView(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
           children: [
             SectionHeader(
               title: 'Donations',
@@ -61,7 +64,7 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             
             // Stats Row
             LayoutBuilder(
@@ -108,18 +111,18 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
             const SizedBox(height: 16),
 
             // Donations List
-            Expanded(
-              child: filtered.isEmpty
-                  ? const Center(child: Text('No donations found', style: TextStyle(color: AppColors.slate400)))
-                  : ListView.separated(
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final d = filtered[index];
-                        return _DonationItem(donation: d);
-                      },
-                    ),
-            ),
+            if (filtered.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Text('No donations found', style: TextStyle(color: AppColors.slate400)),
+                )
+              )
+            else
+              ...filtered.map((d) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _DonationItem(donation: d),
+              )),
           ],
         );
       },
@@ -307,6 +310,7 @@ class _AddDonationFormState extends State<_AddDonationForm> {
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           TextFormField(
             decoration: const InputDecoration(labelText: 'Donor Name'),

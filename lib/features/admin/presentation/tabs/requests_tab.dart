@@ -22,6 +22,12 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Listen to tab changes to rebuild the ListView
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -32,34 +38,38 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return ListView(
+      shrinkWrap: true,
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.all(20),
       children: [
         const SectionHeader(
           title: 'Requests & Inquiries',
           subtitle: 'Handle MOU requests and general inquiries from members and volunteers',
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 24),
         TabBar(
           controller: _tabController,
           labelColor: AppColors.blue600,
           unselectedLabelColor: AppColors.slate500,
-          indicatorColor: AppColors.blue600,
           indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: Colors.transparent, // Removes the default bottom line
+          indicator: BoxDecoration(
+            color: AppColors.blue600.withValues(alpha: 0.1), // Translucent blue background
+            borderRadius: BorderRadius.circular(8),
+          ),
+          onTap: (_) => setState(() {}),
           tabs: const [
             Tab(text: 'General Requests'),
             Tab(text: 'MOU Requests'),
           ],
         ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _GeneralRequestsList(),
-              _MouRequestsList(),
-            ],
-          ),
-        ),
+        const SizedBox(height: 24),
+        
+        if (_tabController.index == 0)
+          _GeneralRequestsList()
+        else
+          _MouRequestsList(),
       ],
     );
   }
@@ -75,15 +85,18 @@ class _GeneralRequestsList extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (requests) {
         if (requests.isEmpty) {
-          return const Center(child: Text('No general requests', style: TextStyle(color: AppColors.slate400)));
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Text('No general requests', style: TextStyle(color: AppColors.slate400)),
+            ),
+          );
         }
 
-        return ListView.separated(
-          itemCount: requests.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final req = requests[index];
-            return AppCard(
+        return Column(
+          children: requests.map((req) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -132,8 +145,8 @@ class _GeneralRequestsList extends ConsumerWidget {
                   ],
                 ],
               ),
-            );
-          },
+            ),
+          )).toList(),
         );
       },
     );
@@ -150,15 +163,18 @@ class _MouRequestsList extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (requests) {
         if (requests.isEmpty) {
-          return const Center(child: Text('No MOU requests', style: TextStyle(color: AppColors.slate400)));
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Text('No MOU requests', style: TextStyle(color: AppColors.slate400)),
+            ),
+          );
         }
 
-        return ListView.separated(
-          itemCount: requests.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final req = requests[index];
-            return AppCard(
+        return Column(
+          children: requests.map((req) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -202,8 +218,8 @@ class _MouRequestsList extends ConsumerWidget {
                   ],
                 ],
               ),
-            );
-          },
+            ),
+          )).toList(),
         );
       },
     );
