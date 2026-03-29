@@ -15,7 +15,7 @@ class NgoApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
-      title: 'HopeConnect NGO',
+      title: 'Jayashree Foundation', // <-- Updated App Name
       debugShowCheckedModeBanner: false,
 
       // ── Theme ──────────────────────────────────────────────────────────────

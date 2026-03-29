@@ -37,48 +37,49 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
   Widget build(BuildContext context) {
     final volunteersAsync = ref.watch(volunteerProvider);
 
-    return Column(
-      children: [
-        SectionHeader(
-          title: 'Volunteers',
-          subtitle: 'Manage NGO volunteers and their tasks',
-          actions: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () => _showAddVolunteerModal(context),
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Add Volunteer'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.blue600,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+    return volunteersAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (volunteers) {
+        final filtered = _filterVolunteers(volunteers);
+
+        return ListView(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            SectionHeader(
+              title: 'Volunteers',
+              subtitle: 'Manage NGO volunteers and their tasks',
+              actions: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddVolunteerModal(context),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Add Volunteer'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.blue600,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildFilters(),
-        const SizedBox(height: 16),
-        Expanded(
-          child: volunteersAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (volunteers) {
-              final filtered = _filterVolunteers(volunteers);
+            ),
+            const SizedBox(height: 16),
+            _buildFilters(),
+            const SizedBox(height: 24),
 
-              if (filtered.isEmpty) {
-                return _buildEmptyState();
-              }
-
-              return _buildVolunteerList(filtered);
-            },
-          ),
-        ),
-      ],
+            if (filtered.isEmpty)
+              _buildEmptyState()
+            else
+              _buildVolunteerList(filtered),
+          ],
+        );
+      },
     );
   }
 
@@ -95,36 +96,39 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.slate100,
-              borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.slate100,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.person_search_rounded,
+                size: 28,
+                color: AppColors.slate400,
+              ),
             ),
-            child: const Icon(
-              Icons.person_search_rounded,
-              size: 28,
-              color: AppColors.slate400,
+            const SizedBox(height: 16),
+            const Text(
+              'No volunteers found',
+              style: TextStyle(
+                color: AppColors.slate500,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No volunteers found',
-            style: TextStyle(
-              color: AppColors.slate500,
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 4),
+            const Text(
+              'Try adjusting your search or filter',
+              style: TextStyle(color: AppColors.slate400, fontSize: 12),
             ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Try adjusting your search or filter',
-            style: TextStyle(color: AppColors.slate400, fontSize: 12),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -136,6 +140,8 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
 
         if (isWide) {
           return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               childAspectRatio: 2.5,
@@ -153,16 +159,16 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
           );
         }
 
-        return ListView.separated(
-          itemCount: volunteers.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final v = volunteers[index];
-            return _VolunteerCard(
-              volunteer: v,
-              onTap: () => _showVolunteerDetails(context, v),
-            );
-          },
+        return Column(
+          children: volunteers
+              .map((v) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _VolunteerCard(
+                      volunteer: v,
+                      onTap: () => _showVolunteerDetails(context, v),
+                    ),
+                  ))
+              .toList(),
         );
       },
     );

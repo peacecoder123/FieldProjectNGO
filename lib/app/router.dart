@@ -5,7 +5,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../core/constants/app_constants.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/features/auth/domain/entities/user_entity.dart';
-import '../features/auth/presentation/screens/landing_screen.dart';
+
+// --- UPDATED IMPORT HERE ---
+import 'package:ngo_volunteer_management/features/public/presentation/screens/landing_screen.dart';
+// ---------------------------
+
 import '../features/auth/presentation/screens/login_screen.dart';
 import 'package:ngo_volunteer_management/features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'package:ngo_volunteer_management/features/member/presentation/screens/member_dashboard_screen.dart';

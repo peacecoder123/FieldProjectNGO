@@ -16,68 +16,65 @@ class DocumentationTab extends ConsumerWidget {
     final docsAsync = ref.watch(documentProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Column(
-      children: [
-        SectionHeader(
-          title: 'Documentation',
-          subtitle: 'Access NGO policies, templates and reports',
-          actions: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                onPressed: () {}, // For future upload functionality
-                icon: const Icon(Icons.upload_file_rounded, color: AppColors.blue600),
+    return docsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (docs) {
+        final grouped = <String, List<DocumentEntity>>{};
+        for (var d in docs) {
+          grouped.putIfAbsent(d.category, () => []).add(d);
+        }
+
+        return ListView(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            SectionHeader(
+              title: 'Documentation',
+              subtitle: 'Access NGO policies, templates and reports',
+              actions: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () {}, // For future upload functionality
+                    icon: const Icon(Icons.upload_file_rounded, color: AppColors.blue600),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: docsAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (docs) {
-              final grouped = <String, List<DocumentEntity>>{};
-              for (var d in docs) {
-                grouped.putIfAbsent(d.category, () => []).add(d);
-              }
+            ),
+            const SizedBox(height: 24),
 
-              return ListView.builder(
-                itemCount: grouped.length,
-                itemBuilder: (context, index) {
-                  final category = grouped.keys.elementAt(index);
-                  final categoryDocs = grouped[category]!;
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Row(
-                          children: [
-                            Text(
-                              category,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.slate700),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(color: AppColors.slate100, borderRadius: BorderRadius.circular(12)),
-                              child: Text('${categoryDocs.length}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                            ),
-                          ],
+            ...grouped.keys.map((category) {
+              final categoryDocs = grouped[category]!;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      children: [
+                        Text(
+                          category,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.slate700),
                         ),
-                      ),
-                      ...categoryDocs.map((doc) => _DocumentCard(doc: doc, isDark: isDark)),
-                      const SizedBox(height: 8),
-                    ],
-                  );
-                },
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: AppColors.slate100, borderRadius: BorderRadius.circular(12)),
+                          child: Text('${categoryDocs.length}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ...categoryDocs.map((doc) => _DocumentCard(doc: doc, isDark: isDark)),
+                  const SizedBox(height: 8),
+                ],
               );
-            },
-          ),
-        ),
-      ],
+            }),
+          ],
+        );
+      },
     );
   }
 }

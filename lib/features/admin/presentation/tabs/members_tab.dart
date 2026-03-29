@@ -26,46 +26,51 @@ class _MembersTabState extends ConsumerState<MembersTab> {
   Widget build(BuildContext context) {
     final membersAsync = ref.watch(memberProvider);
 
-    return Column(
-      children: [
-        SectionHeader(
-          title: 'Members',
-          subtitle: 'Manage NGO members, memberships and renewals',
-          actions: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () => _showAddMemberModal(context),
-                icon: const Icon(Icons.person_add_rounded, size: 18),
-                label: const Text('Add Member'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.emerald600,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildFilters(),
-        const SizedBox(height: 16),
-        Expanded(
-          child: membersAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (members) {
-              final filtered = members.where((m) {
-                final matchesSearch = m.name.toLowerCase().contains(_searchQuery.toLowerCase()) || 
-                                     m.email.toLowerCase().contains(_searchQuery.toLowerCase());
-                final matchesStatus = _statusFilter == null || m.status == _statusFilter;
-                return matchesSearch && matchesStatus;
-              }).toList();
+    return membersAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (members) {
+        final filtered = members.where((m) {
+          final matchesSearch = m.name.toLowerCase().contains(_searchQuery.toLowerCase()) || 
+                                m.email.toLowerCase().contains(_searchQuery.toLowerCase());
+          final matchesStatus = _statusFilter == null || m.status == _statusFilter;
+          return matchesSearch && matchesStatus;
+        }).toList();
 
-              if (filtered.isEmpty) {
-                return const Center(
+        return ListView(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            SectionHeader(
+              title: 'Members',
+              subtitle: 'Manage NGO members, memberships and renewals',
+              actions: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddMemberModal(context),
+                    icon: const Icon(Icons.person_add_rounded, size: 18),
+                    label: const Text('Add Member'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.emerald600,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFilters(),
+            const SizedBox(height: 24),
+
+            if (filtered.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -74,24 +79,19 @@ class _MembersTabState extends ConsumerState<MembersTab> {
                       Text('No members found', style: TextStyle(color: AppColors.slate500)),
                     ],
                   ),
-                );
-              }
-
-              return ListView.separated(
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final m = filtered[index];
-                  return _MemberCard(
-                    member: m,
-                    onTap: () => _showMemberDetails(context, m),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
+                ),
+              )
+            else
+              ...filtered.map((m) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _MemberCard(
+                  member: m,
+                  onTap: () => _showMemberDetails(context, m),
+                ),
+              )),
+          ],
+        );
+      },
     );
   }
 
@@ -284,6 +284,7 @@ class _AddMemberFormState extends State<_AddMemberForm> {
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           TextFormField(
             decoration: const InputDecoration(labelText: 'Full Name'),
@@ -370,105 +371,107 @@ class _MemberDetailsContent extends ConsumerWidget {
     final tasksAsync = ref.watch(taskProvider);
     final daysToRenewal = AppFormatters.daysUntil(member.renewalDate);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            AppAvatar(
-              initials: AppFormatters.initials(member.name),
-              size: AvatarSize.xlarge,
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    member.name,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  Text(member.email, style: const TextStyle(color: AppColors.slate500)),
-                  const SizedBox(height: 8),
-                  AppBadge(
-                    label: member.membershipType.displayLabel,
-                    color: member.membershipType == MembershipType.eightyG ? AppColors.primary : AppColors.purple500,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
-        const Text('Membership Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatBox(
-                label: 'Renewal Date',
-                value: AppFormatters.displayDate(member.renewalDate),
-                subtitle: daysToRenewal < 0 ? 'Expired' : '$daysToRenewal days left',
-                color: daysToRenewal < 30 ? AppColors.red500 : AppColors.emerald500,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatBox(
-                label: 'Fees Payment',
-                value: member.isPaid ? 'Paid' : 'Pending',
-                subtitle: member.isPaid ? 'FY 2024-25' : 'Action Required',
-                color: member.isPaid ? AppColors.emerald500 : AppColors.amber500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
-        const Text('Contact Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        AppCard(
-          child: Column(
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              _InfoTile(label: 'Phone', value: member.phone, icon: Icons.phone_android_rounded),
-              const Divider(height: 24),
-              _InfoTile(label: 'Address', value: member.address, icon: Icons.location_on_rounded),
-              const Divider(height: 24),
-              _InfoTile(label: 'Joined On', value: AppFormatters.displayDate(member.joinDate), icon: Icons.verified_user_rounded),
+              AppAvatar(
+                initials: AppFormatters.initials(member.name),
+                size: AvatarSize.xlarge,
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      member.name,
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                    Text(member.email, style: const TextStyle(color: AppColors.slate500)),
+                    const SizedBox(height: 8),
+                    AppBadge(
+                      label: member.membershipType.displayLabel,
+                      color: member.membershipType == MembershipType.eightyG ? AppColors.primary : AppColors.purple500,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
-        const SizedBox(height: 32),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Assigned Tasks', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            TextButton.icon(
-              onPressed: () => _showAddTaskModal(context, ref),
-              icon: const Icon(Icons.add_task_rounded, size: 18),
-              label: const Text('Assign Task'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        tasksAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Error loading tasks: $e'),
-          data: (tasks) {
-            final memberTasks = tasks.where((t) => t.assignedToId == member.id && t.assignedToType == AssigneeType.member).toList();
-            if (memberTasks.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: Text('No tasks assigned', style: TextStyle(color: AppColors.slate400)),
+          const SizedBox(height: 32),
+          const Text('Membership Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _StatBox(
+                  label: 'Renewal Date',
+                  value: AppFormatters.displayDate(member.renewalDate),
+                  subtitle: daysToRenewal < 0 ? 'Expired' : '$daysToRenewal days left',
+                  color: daysToRenewal < 30 ? AppColors.red500 : AppColors.emerald500,
                 ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatBox(
+                  label: 'Fees Payment',
+                  value: member.isPaid ? 'Paid' : 'Pending',
+                  subtitle: member.isPaid ? 'FY 2024-25' : 'Action Required',
+                  color: member.isPaid ? AppColors.emerald500 : AppColors.amber500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          const Text('Contact Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          AppCard(
+            child: Column(
+              children: [
+                _InfoTile(label: 'Phone', value: member.phone, icon: Icons.phone_android_rounded),
+                const Divider(height: 24),
+                _InfoTile(label: 'Address', value: member.address, icon: Icons.location_on_rounded),
+                const Divider(height: 24),
+                _InfoTile(label: 'Joined On', value: AppFormatters.displayDate(member.joinDate), icon: Icons.verified_user_rounded),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Assigned Tasks', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              TextButton.icon(
+                onPressed: () => _showAddTaskModal(context, ref),
+                icon: const Icon(Icons.add_task_rounded, size: 18),
+                label: const Text('Assign Task'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          tasksAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Text('Error loading tasks: $e'),
+            data: (tasks) {
+              final memberTasks = tasks.where((t) => t.assignedToId == member.id && t.assignedToType == AssigneeType.member).toList();
+              if (memberTasks.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: Text('No tasks assigned', style: TextStyle(color: AppColors.slate400)),
+                  ),
+                );
+              }
+              return Column(
+                children: memberTasks.map((t) => _TaskTile(task: t)).toList(),
               );
-            }
-            return Column(
-              children: memberTasks.map((t) => _TaskTile(task: t)).toList(),
-            );
-          },
-        ),
-      ],
+            },
+          ),
+        ],
+      ),
     );
   }
 

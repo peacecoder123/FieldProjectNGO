@@ -24,38 +24,40 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
   Widget build(BuildContext context) {
     final requestsAsync = ref.watch(joiningLetterProvider);
 
-    return Column(
-      children: [
-        const SectionHeader(
-          title: 'Joining Letters',
-          subtitle: 'Review and approve requests for official joining letters',
-        ),
-        const SizedBox(height: 16),
-        _buildFilters(),
-        const SizedBox(height: 16),
-        Expanded(
-          child: requestsAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (requests) {
-              final filtered = requests.where((r) => _statusFilter == null || r.status == _statusFilter).toList();
+    return requestsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (requests) {
+        final filtered = requests.where((r) => _statusFilter == null || r.status == _statusFilter).toList();
 
-              if (filtered.isEmpty) {
-                return const Center(child: Text('No requests found', style: TextStyle(color: AppColors.slate400)));
-              }
+        return ListView(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            const SectionHeader(
+              title: 'Joining Letters',
+              subtitle: 'Review and approve requests for official joining letters',
+            ),
+            const SizedBox(height: 16),
+            _buildFilters(),
+            const SizedBox(height: 24),
 
-              return ListView.separated(
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final req = filtered[index];
-                  return _JoiningRequestCard(request: req);
-                },
-              );
-            },
-          ),
-        ),
-      ],
+            if (filtered.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Text('No requests found', style: TextStyle(color: AppColors.slate400)),
+                )
+              )
+            else
+              ...filtered.map((req) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _JoiningRequestCard(request: req),
+              )),
+          ],
+        );
+      },
     );
   }
 
@@ -237,6 +239,7 @@ class _ApproveRequestFormState extends State<_ApproveRequestForm> {
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           TextFormField(
             decoration: const InputDecoration(labelText: 'Approved By (Admin Name)'),

@@ -50,8 +50,10 @@ class AdminOverviewTab extends ConsumerWidget {
                 _ChartPoint('Rejected',  tasks.where((t) => t.status == TaskStatus.rejected).length,  AppColors.red500),
               ];
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              return ListView(
+                shrinkWrap: true,
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.all(20),
                 children: [
                   // ── Hero banner ────────────────────────────────────────
                   _HeroBanner(
