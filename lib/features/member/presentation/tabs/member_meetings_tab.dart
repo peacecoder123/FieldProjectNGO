@@ -18,35 +18,39 @@ class MemberMeetingsTab extends ConsumerWidget {
     final meetingsAsync = ref.watch(meetingProvider);
     final currentUser = ref.watch(currentUserProvider);
 
-    return Column(
-      children: [
-        const SectionHeader(
-          title: 'Meetings',
-          subtitle: 'Scheduled catchups and meeting summaries',
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: meetingsAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (meetings) {
-              if (meetings.isEmpty) {
-                return const Center(child: Text('No meetings scheduled', style: TextStyle(color: AppColors.slate400)));
-              }
-
-              return ListView.separated(
-                itemCount: meetings.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final meeting = meetings[index];
-                  final isAttendee = meeting.attendees.contains(currentUser?.name);
-                  return _MeetingItem(meeting: meeting, isAttendee: isAttendee);
-                },
-              );
-            },
-          ),
-        ),
-      ],
+    return meetingsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (meetings) {
+        return ListView(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            const SectionHeader(
+              title: 'Meetings',
+              subtitle: 'Scheduled catchups and meeting summaries',
+            ),
+            const SizedBox(height: 24),
+            
+            if (meetings.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Text('No meetings scheduled', style: TextStyle(color: AppColors.slate400)),
+                )
+              )
+            else
+              ...meetings.map((meeting) {
+                final isAttendee = meeting.attendees.contains(currentUser?.name);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _MeetingItem(meeting: meeting, isAttendee: isAttendee),
+                );
+              }),
+          ],
+        );
+      },
     );
   }
 }
@@ -66,8 +70,10 @@ class _MeetingItem extends ConsumerWidget {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: Text(meeting.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+              const SizedBox(width: 12),
               if (isAttendee) const AppBadge(label: 'ATTENDING', color: AppColors.emerald500),
             ],
           ),
@@ -84,8 +90,9 @@ class _MeetingItem extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          if (meeting.summary != null)
+          if (meeting.summary != null && meeting.summary!.isNotEmpty)
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(8)),
               child: Column(
@@ -143,6 +150,7 @@ class _AddSummaryFormState extends State<_AddSummaryForm> {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
           controller: _controller,

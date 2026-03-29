@@ -27,48 +27,36 @@ class MemberTasksTab extends ConsumerWidget {
       data: (tasks) {
         final myTasks = tasks.where((t) => t.assignedToId == currentUser.id).toList();
 
-        if (myTasks.isEmpty) {
-          return const Column(
-            children: [
-              SectionHeader(
-                title: 'My Tasks',
-                subtitle: 'Active assignments and submission portal',
-              ),
-              SizedBox(height: 48),
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.assignment_turned_in_rounded, size: 64, color: AppColors.slate200),
-                    SizedBox(height: 16),
-                    Text('No tasks assigned to you yet', style: TextStyle(color: AppColors.slate500)),
-                  ],
-                ),
-              ),
-            ],
-          );
-        }
-
-        return ListView.separated(
+        return ListView(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
           padding: const EdgeInsets.all(20),
-          itemCount: myTasks.length + 1, // +1 for header
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SectionHeader(
-                    title: 'My Tasks',
-                    subtitle: 'Active assignments and submission portal',
+          children: [
+            const SectionHeader(
+              title: 'My Tasks',
+              subtitle: 'Active assignments and submission portal',
+            ),
+            const SizedBox(height: 24),
+            
+            if (myTasks.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Column(
+                    children: [
+                      Icon(Icons.assignment_turned_in_rounded, size: 64, color: AppColors.slate200),
+                      SizedBox(height: 16),
+                      Text('No tasks assigned to you yet', style: TextStyle(color: AppColors.slate500)),
+                    ],
                   ),
-                  SizedBox(height: 16),
-                ],
-              );
-            }
-            final task = myTasks[index - 1];
-            return _MemberTaskItem(task: task);
-          },
+                ),
+              )
+            else
+              ...myTasks.map((task) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _MemberTaskItem(task: task),
+              )),
+          ],
         );
       },
     );
@@ -94,8 +82,10 @@ class _MemberTaskItem extends ConsumerWidget {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(task.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Expanded(child: Text(task.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+              const SizedBox(width: 12),
               AppBadge(label: task.status.displayName.toUpperCase(), color: statusColor),
             ],
           ),
@@ -128,11 +118,11 @@ class _MemberTaskItem extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: AppColors.blue50, borderRadius: BorderRadius.circular(8)),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.blue600),
-                  const SizedBox(width: 8),
-                  const Expanded(
+                  Icon(Icons.info_outline_rounded, size: 16, color: AppColors.blue600),
+                  SizedBox(width: 8),
+                  Expanded(
                     child: Text(
                       'Your submission is under review by the admin.',
                       style: TextStyle(fontSize: 12, color: AppColors.blue600, fontWeight: FontWeight.w500),
@@ -176,6 +166,7 @@ class _SubmitTaskFormState extends State<_SubmitTaskForm> {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
         const Text(
           'Please provide proof of completion (Image URL or photo)',
