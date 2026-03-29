@@ -97,7 +97,7 @@ class AppBadge extends StatelessWidget {
   static Color? _toDark(Color? light) {
     if (light == null) return null;
     // Apply a dark-mode overlay: use the same hue but semi-transparent
-    return light.withOpacity(0.2);
+    return light.withValues(alpha: 0.2);
   }
 
   static Color? _toDarkFg(Color? light) {

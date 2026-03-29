@@ -177,7 +177,7 @@ class _SidebarContent extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: gradientColors.colors.map((c) => c.withOpacity(0.25)).toList(),
+                colors: gradientColors.colors.map((c) => c.withValues(alpha: 0.25)).toList(),
               ),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -219,13 +219,13 @@ class _SidebarContent extends ConsumerWidget {
         ),
 
         // ── Nav items ─────────────────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'NAVIGATION',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.slate500,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
@@ -297,9 +297,9 @@ class _SidebarLogo extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Column(
+            const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'HopeConnect',
                   style: TextStyle(
@@ -357,7 +357,7 @@ class _NavTile extends StatelessWidget {
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: AppColors.blue600.withOpacity(0.3),
+                        color: AppColors.blue600.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       )
@@ -394,7 +394,7 @@ class _NavTile extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: isActive
-                          ? Colors.white.withOpacity(0.25)
+                          ? Colors.white.withValues(alpha: 0.25)
                           : AppColors.red500,
                       borderRadius: BorderRadius.circular(999),
                     ),
@@ -493,8 +493,8 @@ class _SignOutButton extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(10),
                 color: Colors.transparent,
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   Icon(
                     Icons.logout_rounded,
                     size: 15,

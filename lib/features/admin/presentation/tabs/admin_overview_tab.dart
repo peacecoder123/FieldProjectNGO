@@ -281,11 +281,11 @@ class _Pill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: warning
-            ? AppColors.amber400.withOpacity(0.3)
-            : Colors.white.withOpacity(0.2),
+            ? AppColors.amber400.withValues(alpha: 0.3)
+            : Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
         border: warning
-            ? Border.all(color: AppColors.amber300.withOpacity(0.5))
+            ? Border.all(color: AppColors.amber300.withValues(alpha: 0.5))
             : null,
       ),
       child: Text(
@@ -604,7 +604,7 @@ class _QuickOverview extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.slate700.withOpacity(0.5)
+                  color: isDark ? AppColors.slate700.withValues(alpha: 0.5)
                       : AppColors.slate50,
                   borderRadius: BorderRadius.circular(10),
                 ),
