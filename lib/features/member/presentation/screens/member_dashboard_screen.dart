@@ -14,8 +14,7 @@ class MemberDashboardScreen extends ConsumerStatefulWidget {
   const MemberDashboardScreen({super.key});
 
   @override
-  ConsumerState<MemberDashboardScreen> createState() =>
-      _MemberDashboardState();
+  ConsumerState<MemberDashboardScreen> createState() => _MemberDashboardState();
 }
 
 class _MemberDashboardState extends ConsumerState<MemberDashboardScreen> {

@@ -13,77 +13,77 @@ class MemberCertificateTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lettersAsync = ref.watch(joiningLetterProvider);
 
-    return Column(
-      children: [
-        const SectionHeader(
-          title: 'Certificates & Letters',
-          subtitle: 'Download your official NGO documentation',
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: lettersAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (letters) {
-              final myApproved = letters.where((l) => l.status.name == 'approved').toList();
+    return lettersAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (letters) {
+        final myApproved = letters.where((l) => l.status.name == 'approved').toList();
 
-              if (myApproved.isEmpty) {
-                return const Center(
+        return ListView(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            const SectionHeader(
+              title: 'Certificates & Letters',
+              subtitle: 'Download your official NGO documentation',
+            ),
+            const SizedBox(height: 24),
+            
+            if (myApproved.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.badge_rounded, size: 64, color: AppColors.slate200),
                       SizedBox(height: 16),
                       Text('No approved certificates yet', style: TextStyle(color: AppColors.slate500)),
                     ],
                   ),
-                );
-              }
-
-              return ListView.separated(
-                itemCount: myApproved.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final letter = myApproved[index];
-                  return AppCard(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(color: AppColors.blue50, borderRadius: BorderRadius.circular(10)),
-                          child: const Icon(Icons.verified_rounded, color: AppColors.blue600),
+                ),
+              )
+            else
+              ...myApproved.map((letter) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: AppCard(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(color: AppColors.blue50, borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.verified_rounded, color: AppColors.blue600),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(letter.type.displayLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Issued on ${AppFormatters.displayDate(letter.requestDate)}',
+                              style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(letter.type.displayLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                              Text(
-                                'Issued on ${AppFormatters.displayDate(letter.requestDate)}',
-                                style: const TextStyle(fontSize: 12, color: AppColors.slate500),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.download_rounded, color: AppColors.blue600),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Downloading Certificate...')),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.download_rounded, color: AppColors.blue600),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Downloading Certificate...'), backgroundColor: AppColors.emerald500,),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              )),
+          ],
+        );
+      },
     );
   }
 }
