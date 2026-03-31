@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import '../../features/auth/domain/entities/user_entity.dart';
+import 'package:ngo_volunteer_management/services/document_generation/document_generator.dart';
 
 // ── Infrastructure ────────────────────────────────────────────────────────────
 
@@ -97,4 +98,12 @@ final isAuthenticatedProvider = Provider<bool>(
 /// The current user's role, or `null` when logged out.
 final currentRoleProvider = Provider<UserRole?>(
   (ref) => ref.watch(currentUserProvider)?.role,
+);
+
+// ── Document Generation ──────────────────────────────────────────────────────
+
+/// Singleton instance of the dynamic template engine.
+/// Use `ref.read(documentGeneratorProvider)` to access it.
+final documentGeneratorProvider = Provider<DocumentGenerator>(
+  (ref) => DocumentGenerator(),
 );

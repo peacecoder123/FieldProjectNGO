@@ -232,3 +232,55 @@ enum TenureType {
   monthly,
   annual;
 }
+
+// ── Document type (generated documents) ───────────────────────────────────────
+
+enum DocumentType {
+  donationReceipt,
+  eightyGCertificate,
+  joiningLetter,
+  certificate,
+  mouDocument;
+
+  String get displayLabel => switch (this) {
+    DocumentType.donationReceipt    => 'Donation Receipt',
+    DocumentType.eightyGCertificate => '80G Certificate',
+    DocumentType.joiningLetter      => 'Joining Letter',
+    DocumentType.certificate        => 'Certificate',
+    DocumentType.mouDocument        => 'MOU Document',
+  };
+
+  static DocumentType fromString(String value) =>
+      DocumentType.values.firstWhere(
+        (e) => e.name == value,
+        orElse: () => DocumentType.donationReceipt,
+      );
+}
+
+// ── Template field type (dynamic fields in templates) ─────────────────────────
+
+enum TemplateFieldType {
+  text,
+  number,
+  date,
+  currency,
+  signature,
+  boolean,
+  dropdown;
+
+  String get displayLabel => switch (this) {
+    TemplateFieldType.text      => 'Text',
+    TemplateFieldType.number    => 'Number',
+    TemplateFieldType.date      => 'Date',
+    TemplateFieldType.currency  => 'Currency',
+    TemplateFieldType.signature => 'Signature',
+    TemplateFieldType.boolean   => 'Yes/No',
+    TemplateFieldType.dropdown  => 'Dropdown',
+  };
+
+  static TemplateFieldType fromString(String value) =>
+      TemplateFieldType.values.firstWhere(
+        (e) => e.name == value,
+        orElse: () => TemplateFieldType.text,
+      );
+}
