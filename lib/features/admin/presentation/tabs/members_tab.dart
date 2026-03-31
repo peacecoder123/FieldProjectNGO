@@ -304,7 +304,7 @@ class _AddMemberFormState extends State<_AddMemberForm> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<MembershipType>(
-            value: membershipType,
+            initialValue: membershipType,
             decoration: const InputDecoration(labelText: 'Membership Type'),
             items: MembershipType.values.map((t) => DropdownMenuItem(
               value: t,

@@ -1,10 +1,15 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import '../data/entities.dart';
 import '../data/mock_repositories.dart';
 import '../data/repositories.dart';
+
+// Import the new Firebase repository
+import '../../features/payments/repositories/donation_repository.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REPOSITORY PROVIDERS  (swap MockXxx → HttpXxx when API is ready)
@@ -22,9 +27,12 @@ final memberRepositoryProvider = Provider<IMemberRepository>(
 final taskRepositoryProvider = Provider<ITaskRepository>(
   (_) => MockTaskRepository(),
 );
+
+// ── UPDATED: Now points to the real Firebase Repository ──
 final donationRepositoryProvider = Provider<IDonationRepository>(
-  (_) => MockDonationRepository(),
+  (_) => DonationRepository(),
 );
+
 final generalRequestRepositoryProvider = Provider<IGeneralRequestRepository>(
   (_) => MockGeneralRequestRepository(),
 );
@@ -166,37 +174,54 @@ final taskProvider =
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DONATION STATE
+// DONATION STATE (FIREBASE REAL-TIME SYNC)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class DonationNotifier extends StateNotifier<AsyncValue<List<DonationEntity>>> {
-  DonationNotifier(this._repo) : super(const AsyncValue.loading()) {
-    _load();
+  final IDonationRepository _repository;
+  StreamSubscription<List<DonationEntity>>? _subscription;
+
+  DonationNotifier(this._repository) : super(const AsyncValue.loading()) {
+    _listenToFirebase();
   }
 
-  final IDonationRepository _repo;
-  int _receiptCounter = 5;
-
-  Future<void> _load() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.getAll);
-  }
-
-  Future<void> refresh() => _load();
-
-  Future<void> add(DonationEntity d) async {
-    final created = await _repo.add(d);
-    state = state.whenData((list) => [...list, created]);
-  }
-
-  Future<void> generateReceipt(int donationId) async {
-    _receiptCounter++;
-    final receiptNo =
-        'RCP-2025-${_receiptCounter.toString().padLeft(3, '0')}';
-    final updated = await _repo.generateReceipt(donationId, receiptNo);
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
+  void _listenToFirebase() {
+    _subscription = _repository.watchAll().listen(
+      (donations) {
+        state = AsyncValue.data(donations);
+      },
+      onError: (error, stackTrace) {
+        debugPrint('Firebase Stream Error: $error');
+        state = AsyncValue.error(error, stackTrace);
+      },
     );
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> add(DonationEntity donation) async {
+    try {
+      await _repository.add(donation);
+      // State updates automatically via the Stream
+    } catch (e, st) {
+      debugPrint("Firebase Add Error: $e");
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> generateReceipt(int id) async {
+    try {
+      final receiptNum = 'REC-${DateTime.now().year}-$id';
+      await _repository.generateReceipt(id, receiptNum);
+      // State updates automatically via the Stream
+    } catch (e, st) {
+      debugPrint("Firebase Update Error: $e");
+      state = AsyncValue.error(e, st);
+    }
   }
 }
 

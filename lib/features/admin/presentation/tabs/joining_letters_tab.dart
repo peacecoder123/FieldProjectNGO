@@ -248,7 +248,7 @@ class _ApproveRequestFormState extends State<_ApproveRequestForm> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: tenure,
+            initialValue: tenure,
             decoration: const InputDecoration(labelText: 'Tenure'),
             items: ['3 Months', '6 Months', '1 Year', 'Permanent'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
             onChanged: (val) => setState(() => tenure = val!),

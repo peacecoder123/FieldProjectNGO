@@ -12,6 +12,7 @@ import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/data/mock_data_source.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
+import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
 
 class DonationsTab extends ConsumerStatefulWidget {
   const DonationsTab({super.key});
@@ -207,12 +208,12 @@ class _DonationTrendChart extends StatelessWidget {
             child: SfCartesianChart(
               margin: EdgeInsets.zero,
               plotAreaBorderWidth: 0,
-              primaryXAxis: CategoryAxis(
+              primaryXAxis: const CategoryAxis(
                 axisLine: const AxisLine(width: 0),
                 majorTickLines: const MajorTickLines(size: 0),
                 labelStyle: const TextStyle(fontSize: 10, color: AppColors.slate400),
               ),
-              primaryYAxis: NumericAxis(
+              primaryYAxis: const NumericAxis(
                 isVisible: false,
               ),
               series: <CartesianSeries>[
@@ -326,7 +327,7 @@ class _AddDonationFormState extends State<_AddDonationForm> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<DonationType>(
-            value: selectedType,
+            initialValue: selectedType,
             decoration: const InputDecoration(labelText: 'Payment Mode'),
             items: DonationType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.name.toUpperCase()))).toList(),
             onChanged: (val) => setState(() => selectedType = val!),

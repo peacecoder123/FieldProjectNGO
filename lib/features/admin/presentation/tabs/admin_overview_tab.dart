@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-
+import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -351,10 +351,10 @@ class _DonationChart extends StatelessWidget {
             height: 180,
             child: SfCartesianChart(
               plotAreaBorderWidth: 0,
-              primaryXAxis: CategoryAxis(
-                axisLine: const AxisLine(width: 0),
-                majorTickLines: const MajorTickLines(size: 0),
-                labelStyle: const TextStyle(
+              primaryXAxis: const CategoryAxis(
+                axisLine: AxisLine(width: 0),
+                majorTickLines: MajorTickLines(size: 0),
+                labelStyle: TextStyle(
                     fontSize: 10, color: AppColors.slate400),
               ),
               primaryYAxis: NumericAxis(

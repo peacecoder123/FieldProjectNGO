@@ -1,16 +1,13 @@
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import '../../features/auth/domain/entities/user_entity.dart';
 import 'entities.dart';
+import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
 
 /// In-memory seed data.
 ///
 /// Exact Dart port of `src/app/data/mockData.ts`.
 /// Every field name, value, and relationship is preserved so the Flutter UI
 /// renders identically to the React original.
-///
-/// When a real API is ready, replace [MockDataSource] with a concrete
-/// implementation of each repository interface — zero business-logic changes
-/// required.
 abstract final class MockDataSource {
   MockDataSource._();
 
@@ -202,7 +199,8 @@ abstract final class MockDataSource {
   ];
 
   // ── Donations ─────────────────────────────────────────────────────────────
-
+  
+  // This merged list now includes your existing mock data plus the new test data
   static final List<DonationEntity> donations = [
     const DonationEntity(
       id: 1, donorName: 'TechCorp India Pvt Ltd',
@@ -243,6 +241,19 @@ abstract final class MockDataSource {
       type: DonationType.cheque, receiptGenerated: true,
       receiptNumber: 'RCP-2025-004',
       purpose: 'Scholarship Program', is80G: true,
+    ),
+    const DonationEntity(
+      id: 101, donorName: 'Priya Sharma',
+      amount: 5000, date: '2026-03-15',
+      type: DonationType.online, receiptGenerated: true,
+      purpose: 'Education for All Initiative', is80G: true,
+      receiptNumber: 'REC-2026-001',
+    ),
+    const DonationEntity(
+      id: 102, donorName: 'Rahul Desai',
+      amount: 2500, date: '2026-03-20',
+      type: DonationType.online, receiptGenerated: false,
+      purpose: 'General Fund', is80G: false,
     ),
   ];
 
