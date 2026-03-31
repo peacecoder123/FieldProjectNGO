@@ -96,7 +96,7 @@ class _CertificateRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final textSecondary = isDark ? AppColors.slate400 : AppColors.slate500;
-    final iconColor = AppColors.blue600;
+    const iconColor = AppColors.blue600;
 
     return AppCard(
       elevation: 1,

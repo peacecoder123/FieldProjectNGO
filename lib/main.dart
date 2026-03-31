@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'app/app.dart';
+import 'firebase_options.dart';
 import 'shared/providers/app_providers.dart';
 
 Future<void> main() async {
@@ -24,6 +26,19 @@ Future<void> main() async {
 
   // Load shared prefs so theme & user can be hydrated before first frame
   final prefs = await SharedPreferences.getInstance();
+
+  // Initialize Firebase
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('Firebase initialized successfully');
+  } catch (e, stack) {
+    debugPrint('Firebase initialization error: $e');
+    debugPrint('Stack: $stack');
+    // Re-throw to fail fast
+    rethrow;
+  }
 
   runApp(
     ProviderScope(

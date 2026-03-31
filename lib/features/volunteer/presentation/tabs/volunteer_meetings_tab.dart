@@ -489,10 +489,7 @@ class VolunteerMeetingsTab extends ConsumerStatefulWidget {
 }
 
 class _VolunteerMeetingsTabState extends ConsumerState<VolunteerMeetingsTab> {
-  MeetingEntity? _selectedMeeting;
-
   void _showMeetingDetails(BuildContext context, MeetingEntity meeting) {
-    setState(() => _selectedMeeting = meeting);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(

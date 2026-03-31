@@ -137,8 +137,9 @@ class _HeroSection extends StatelessWidget {
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 800;
           final content = [
-            Expanded(
-              flex: isWide ? 1 : 0,
+            Flexible(
+              flex: 1,
+              fit: FlexFit.loose,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -201,8 +202,9 @@ class _HeroSection extends StatelessWidget {
               ),
             ),
             if (isWide) const SizedBox(width: 48) else const SizedBox(height: 48),
-            Expanded(
-              flex: isWide ? 1 : 0,
+            Flexible(
+              flex: 1,
+              fit: FlexFit.loose,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -284,7 +286,7 @@ class _RecentWorksSection extends StatelessWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: crossAxisCount, crossAxisSpacing: 24, mainAxisSpacing: 24, childAspectRatio: 0.75),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: crossAxisCount, crossAxisSpacing: 24, mainAxisSpacing: 24, childAspectRatio: 1.0),
             itemCount: recentWorks.length,
             itemBuilder: (context, index) {
               final work = recentWorks[index];
@@ -300,21 +302,25 @@ class _RecentWorksSection extends StatelessWidget {
                   children: [
                     Stack(
                       children: [
-                        Image.network(work['image']!, height: 180, width: double.infinity, fit: BoxFit.cover),
-                        Positioned(top: 12, left: 12, child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: isDark ? AppColors.slate900.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(20)), child: Text(work['category']!, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)))),
+                        Image.network(work['image']!, height: 120, width: double.infinity, fit: BoxFit.cover),
+                        Positioned(top: 8, left: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: isDark ? AppColors.slate900.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(12)), child: Text(work['category']!, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold)))),
                       ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(children: [Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? AppColors.slate400 : AppColors.slate500), const SizedBox(width: 8), Text(work['date']!, style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500))]),
-                          const SizedBox(height: 12),
-                          Text(work['title']!, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 8),
-                          Text(work['desc']!, style: TextStyle(fontSize: 14, color: isDark ? AppColors.slate400 : AppColors.slate600), maxLines: 3, overflow: TextOverflow.ellipsis),
-                        ],
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [Icon(Icons.calendar_today_rounded, size: 11, color: isDark ? AppColors.slate400 : AppColors.slate500), const SizedBox(width: 4), Text(work['date']!, style: TextStyle(fontSize: 10, color: isDark ? AppColors.slate400 : AppColors.slate500))]),
+                            const SizedBox(height: 4),
+                            Text(work['title']!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 4),
+                            Expanded(
+                              child: Text(work['desc']!, style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate600), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   ],
@@ -424,7 +430,7 @@ class _NewsSection extends StatelessWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: crossAxisCount, crossAxisSpacing: 24, mainAxisSpacing: 24, childAspectRatio: 0.8),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: crossAxisCount, crossAxisSpacing: 24, mainAxisSpacing: 24, childAspectRatio: 1.1),
             itemCount: news.length,
             itemBuilder: (context, index) {
               final item = news[index];
@@ -438,32 +444,36 @@ class _NewsSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.network(item['image']!, height: 200, width: double.infinity, fit: BoxFit.cover),
-                    Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(item['source']!, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? AppColors.blue400 : AppColors.blue600)),
-                              Text(item['date']!, style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(item['title']!, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 12),
-                          Text(item['desc']!, style: TextStyle(fontSize: 14, color: isDark ? AppColors.slate400 : AppColors.slate600), maxLines: 3, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Text('Read More', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? AppColors.blue400 : AppColors.blue600)),
-                              const SizedBox(width: 8),
-                              Icon(Icons.arrow_forward_rounded, size: 16, color: isDark ? AppColors.blue400 : AppColors.blue600),
-                            ],
-                          )
-                        ],
+                    Image.network(item['image']!, height: 140, width: double.infinity, fit: BoxFit.cover),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(item['source']!, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? AppColors.blue400 : AppColors.blue600)),
+                                Text(item['date']!, style: TextStyle(fontSize: 10, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(item['title']!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 4),
+                            Expanded(
+                              child: Text(item['desc']!, style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate600), maxLines: 3, overflow: TextOverflow.ellipsis),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Text('Read More', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? AppColors.blue400 : AppColors.blue600)),
+                                const SizedBox(width: 4),
+                                Icon(Icons.arrow_forward_rounded, size: 12, color: isDark ? AppColors.blue400 : AppColors.blue600),
+                              ],
+                            )
+                          ],
+                        ),
                       ),
                     )
                   ],
@@ -498,24 +508,26 @@ class _AboutSection extends StatelessWidget {
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 800;
           final content = [
-            Expanded(
-              flex: isWide ? 1 : 0,
+            Flexible(
+              flex: 1,
+              fit: FlexFit.loose,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('About Jayashree Foundation', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
-                  const SizedBox(height: 24),
-                  Text('Founded in 2015, Jayashree Foundation is a non-profit organization dedicated to transforming lives through community service, education, healthcare, and environmental initiatives. We believe in the power of collective action and the difference passionate individuals can make.', style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
+                  Text('About Jayashree Foundation', style: TextStyle(fontSize: isWide ? 32 : 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
                   const SizedBox(height: 16),
-                  Text('Our mission is to create sustainable change by empowering communities, supporting underprivileged families, and mobilizing volunteers who share our vision of a better tomorrow.', style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
-                  const SizedBox(height: 16),
-                  Text('With a dedicated team of volunteers and partners across India, we continue to expand our reach and impact, touching thousands of lives every year.', style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
+                  Text('Founded in 2015, Jayashree Foundation is a non-profit organization dedicated to transforming lives through community service, education, healthcare, and environmental initiatives. We believe in the power of collective action and the difference passionate individuals can make.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
+                  const SizedBox(height: 12),
+                  Text('Our mission is to create sustainable change by empowering communities, supporting underprivileged families, and mobilizing volunteers who share our vision of a better tomorrow.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
+                  const SizedBox(height: 12),
+                  Text('With a dedicated team of volunteers and partners across India, we continue to expand our reach and impact, touching thousands of lives every year.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
                 ],
               ),
             ),
             if (isWide) const SizedBox(width: 48) else const SizedBox(height: 48),
-            Expanded(
-              flex: isWide ? 1 : 0,
+            Flexible(
+              flex: 1,
+              fit: FlexFit.loose,
               child: Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(color: isDark ? AppColors.slate800 : Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20)]),

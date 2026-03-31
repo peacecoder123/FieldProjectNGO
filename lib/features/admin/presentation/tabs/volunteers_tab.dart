@@ -454,7 +454,7 @@ class _AddVolunteerFormState extends State<_AddVolunteerForm> {
                 labelText: 'Tenure',
                 prefixIcon: Icon(Icons.calendar_month_rounded),
               ),
-              value: _tenure,
+              initialValue: _tenure,
               items: const [
                 DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
                 DropdownMenuItem(value: 'annual', child: Text('Annual')),

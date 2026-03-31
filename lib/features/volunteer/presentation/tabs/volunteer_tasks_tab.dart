@@ -86,7 +86,7 @@ class _VolunteerTasksTabState extends ConsumerState<VolunteerTasksTab> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Icon(Icons.event_busy_rounded, size: 18, color: AppColors.slate400),
+                      const Icon(Icons.event_busy_rounded, size: 18, color: AppColors.slate400),
                       const SizedBox(width: 8),
                       Text(
                         'Deadline: ${task.deadline}',
