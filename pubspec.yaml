@@ -40,6 +40,9 @@ dependencies:
   # ─── Storage (local, for theme preference) ───────────────────────────────────
   shared_preferences: ^2.3.2
 
+  # ─── Payments ────────────────────────────────────────────────────────────────
+  razorpay_flutter: ^1.3.7
+
   # ─── Utilities ───────────────────────────────────────────────────────────────
   equatable: ^2.0.5
   uuid: ^4.4.2
@@ -47,6 +50,8 @@ dependencies:
   logger: ^2.4.0
   firebase_core: ^4.6.0
   cloud_firestore: ^6.2.0
+  cloud_functions: 6.1.0
+  razorpay_web: ^3.1.3
 
 dev_dependencies:
   flutter_test:

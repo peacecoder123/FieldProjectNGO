@@ -21,6 +21,7 @@ class AdminOverviewTab extends ConsumerWidget {
     final membersAsync    = ref.watch(memberProvider);
     final tasksAsync      = ref.watch(taskProvider);
     final donationsAsync  = ref.watch(donationProvider);
+    final monthlyDonations = ref.watch(monthlyDonationAggregationProvider);
     final joiningAsync    = ref.watch(joiningLetterProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -39,7 +40,9 @@ class AdminOverviewTab extends ConsumerWidget {
             data: (donations) {
               final activeVols    = volunteers.where((v) => v.status == PersonStatus.active).length;
               final activeMems    = members.where((m) => m.status == PersonStatus.active).length;
-              final totalDonation = donations.fold(0, (s, d) => s + d.amount);
+              final totalDonation = donations.where((d) => d.paymentStatus != PaymentStatus.failed).fold(0, (s, d) => s + d.amount);
+              final donationCount = donations.where((d) => d.paymentStatus != PaymentStatus.failed).length;
+              final onlineCount   = donations.where((d) => d.type == DonationType.online && d.paymentStatus == PaymentStatus.success).length;
               final pendingReqs   = joiningAsync.value?.where((r) => r.status == RequestStatus.pending).length ?? 0;
               final pendingTasks  = tasks.where((t) => t.status == TaskStatus.submitted).length;
 
@@ -67,7 +70,7 @@ class AdminOverviewTab extends ConsumerWidget {
                   // ── Stat cards ─────────────────────────────────────────
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final crossCount = constraints.maxWidth > 600 ? 4 : 2;
+                      final crossCount = constraints.maxWidth > 900 ? 5 : (constraints.maxWidth > 600 ? 3 : 2);
                       return GridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -97,10 +100,19 @@ class AdminOverviewTab extends ConsumerWidget {
                           StatCard(
                             title:          'Total Donations',
                             value:          AppFormatters.inr(totalDonation),
-                            subtitle:       '${donations.where((d) => !d.receiptGenerated).length} receipts pending',
+                            subtitle:       '$donationCount total donations',
                             icon:           const Icon(Icons.currency_rupee_rounded, size: 20, color: AppColors.purple600),
                             iconBackground: AppColors.purple100,
                             trend:          '23%',
+                            trendUp:        true,
+                          ),
+                          StatCard(
+                            title:          'Online Payments',
+                            value:          '$onlineCount',
+                            subtitle:       'Via Razorpay checkout',
+                            icon:           const Icon(Icons.credit_card_rounded, size: 20, color: AppColors.rose600),
+                            iconBackground: AppColors.rose100,
+                            trend:          '15%',
                             trendUp:        true,
                           ),
                           StatCard(
@@ -127,7 +139,7 @@ class AdminOverviewTab extends ConsumerWidget {
                             Expanded(
                               flex: 2,
                               child: _DonationChart(
-                                data: MockDataSource.monthlyDonations,
+                                data: monthlyDonations,
                                 isDark: isDark,
                               ),
                             ),
@@ -145,7 +157,7 @@ class AdminOverviewTab extends ConsumerWidget {
                       return Column(
                         children: [
                           _DonationChart(
-                            data: MockDataSource.monthlyDonations,
+                            data: monthlyDonations,
                             isDark: isDark,
                           ),
                           const SizedBox(height: 12),

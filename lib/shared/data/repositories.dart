@@ -79,6 +79,8 @@ abstract interface class IDonationRepository {
   Stream<List<DonationEntity>> watchAll(); // Real-time Firebase support
   
   Future<DonationEntity>       add(DonationEntity donation);
+  Future<DonationEntity>       update(DonationEntity donation);
+  Future<void>                 updatePaymentStatus(int donationId, PaymentStatus status);
 
   /// Marks a donation as receipt-generated and stores the receipt number.
   Future<DonationEntity> generateReceipt(int donationId, String receiptNumber);
