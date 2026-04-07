@@ -411,8 +411,13 @@ class _AchievementsSection extends StatelessWidget {
                   final stat = stats[index];
                   return SizedBox(
                     width: cardWidth,
-                    child: Padding(
+                    child: Container(
                       padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.slate800 : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
+                      ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -463,61 +468,73 @@ class _NewsSection extends StatelessWidget {
           const SizedBox(height: 16),
           Text('Stay updated with our latest activities and media coverage', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
           const SizedBox(height: 48),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: crossAxisCount, crossAxisSpacing: 24, mainAxisSpacing: 24, childAspectRatio: aspectRatio),
-            itemCount: news.length,
-            itemBuilder: (context, index) {
-              final item = news[index];
-              return Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.slate800 : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.network(item['image']!, height: 140, width: double.infinity, fit: BoxFit.cover),
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.all(screenWidth > 600 ? 8 : 6),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Flexible(child: Text(item['source']!, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? AppColors.navy400 : AppColors.navy500), overflow: TextOverflow.ellipsis)),
-                                Flexible(child: Text(item['date']!, style: TextStyle(fontSize: 10, color: isDark ? AppColors.slate400 : AppColors.slate500), overflow: TextOverflow.ellipsis)),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(item['title']!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 4),
-                            Expanded(
-                              child: Text(item['desc']!, style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate600), maxLines: 3, overflow: TextOverflow.ellipsis),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Text('Read More', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? AppColors.navy400 : AppColors.navy500)),
-                                const SizedBox(width: 4),
-                                Icon(Icons.arrow_forward_rounded, size: 12, color: isDark ? AppColors.navy400 : AppColors.navy500),
-                              ],
-                            )
-                          ],
-                        ),
-                      ),
-                    )
-                  ],
-                ),
+          LayoutBuilder(
+            builder: (ctx, constraints) {
+              final cardWidth = (constraints.maxWidth - (crossAxisCount - 1) * 24) / crossAxisCount;
+              return Wrap(
+                spacing: 24,
+                runSpacing: 24,
+                children: List.generate(news.length, (index) {
+                  final item = news[index];
+                  return SizedBox(
+                    width: cardWidth,
+                    child: _NewsCard(isDark: isDark, item: item),
+                  );
+                }),
               );
             },
-          )
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NewsCard extends StatelessWidget {
+  const _NewsCard({required this.isDark, required this.item});
+  final bool isDark;
+  final Map item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.slate800 : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Image.network(item['image']!, height: 140, width: double.infinity, fit: BoxFit.cover),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(child: Text(item['source']!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.navy500), overflow: TextOverflow.ellipsis)),
+                    Flexible(child: Text(item['date']!, style: TextStyle(fontSize: 10, color: isDark ? AppColors.slate400 : AppColors.slate500), overflow: TextOverflow.ellipsis)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(item['title']!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
+                Text(item['desc']!, style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.4), maxLines: 3, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Text('Read More', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.navy500)),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_rounded, size: 12, color: isDark ? AppColors.navy400 : AppColors.navy500),
+                  ],
+                )
+              ],
+            ),
+          ),
         ],
       ),
     );

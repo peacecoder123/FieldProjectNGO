@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/features/auth/domain/entities/user_entity.dart';
 import 'package:ngo_volunteer_management/shared/data/repositories.dart';
 
@@ -46,8 +47,11 @@ class FirebaseAuthRepository implements IAuthRepository {
     final data = doc.data();
     if (data['password'] != password) return null;
 
+    final rawId = doc.id;
+    final userId = int.tryParse(rawId) ?? (data['id'] is int ? data['id'] as int : rawId.hashCode);
+
     return UserEntity(
-      id: doc.id,
+      id: userId,
       name: data['name'] ?? '',
       email: data['email'] ?? email,
       role: _roleFromString(data['role'] ?? 'admin'),
