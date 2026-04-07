@@ -288,8 +288,6 @@ class _RecentWorksSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     int crossAxisCount = screenWidth > 1024 ? 4 : (screenWidth > 600 ? 2 : 1);
-    // Use more flexible aspect ratio for smaller screens
-    double aspectRatio = screenWidth > 1024 ? 1.0 : (screenWidth > 600 ? 0.9 : 0.75);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
@@ -300,60 +298,71 @@ class _RecentWorksSection extends StatelessWidget {
           const SizedBox(height: 16),
           Text('Discover the latest initiatives and projects making a real difference in communities across the country', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
           const SizedBox(height: 48),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: crossAxisCount, crossAxisSpacing: 24, mainAxisSpacing: 24, childAspectRatio: aspectRatio),
-            itemCount: recentWorks.length,
-            itemBuilder: (context, index) {
-              final work = recentWorks[index];
-              return Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.slate800 : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Stack(
-                      children: [
-                        Image.network(work['image']!, height: 120, width: double.infinity, fit: BoxFit.cover),
-                        Positioned(top: 8, left: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: isDark ? AppColors.slate900.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(12)), child: Text(work['category']!, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold)))),
-                      ],
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.all(screenWidth > 600 ? 8 : 6),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.calendar_today_rounded, size: 11, color: isDark ? AppColors.slate400 : AppColors.slate500),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(work['date']!, style: TextStyle(fontSize: 10, color: isDark ? AppColors.slate400 : AppColors.slate500), overflow: TextOverflow.ellipsis),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(work['title']!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 4),
-                            Expanded(
-                              child: Text(work['desc']!, style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate600), maxLines: 2, overflow: TextOverflow.ellipsis),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  ],
-                ),
+          LayoutBuilder(
+            builder: (ctx, constraints) {
+              final cardWidth = (constraints.maxWidth - (crossAxisCount - 1) * 24) / crossAxisCount;
+              return Wrap(
+                spacing: 24,
+                runSpacing: 24,
+                children: List.generate(recentWorks.length, (index) {
+                  final work = recentWorks[index];
+                  return SizedBox(
+                    width: cardWidth,
+                    child: _WorkCard(isDark: isDark, work: work, cardWidth: cardWidth),
+                  );
+                }),
               );
             },
-          )
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkCard extends StatelessWidget {
+  const _WorkCard({required this.isDark, required this.work, required this.cardWidth});
+  final bool isDark;
+  final Map work;
+  final double cardWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.slate800 : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              Image.network(work['image']!, height: 150, width: double.infinity, fit: BoxFit.cover),
+              Positioned(top: 8, left: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), decoration: BoxDecoration(color: isDark ? AppColors.slate900.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(12)), child: Text(work['category']!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(work['title']!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 6),
+                Text(work['desc']!, style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.4), maxLines: 3, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 11, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                    const SizedBox(width: 4),
+                    Text(work['date']!, style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -375,8 +384,6 @@ class _AchievementsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     int crossAxisCount = screenWidth > 1024 ? 4 : (screenWidth > 600 ? 2 : 1);
-    // Use more flexible aspect ratio for smaller screens
-    double aspectRatio = screenWidth > 1024 ? 1.2 : (screenWidth > 600 ? 1.0 : 0.8);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
@@ -394,42 +401,38 @@ class _AchievementsSection extends StatelessWidget {
           const SizedBox(height: 16),
           Text('Milestones that reflect our commitment to creating positive change', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
           const SizedBox(height: 48),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: crossAxisCount, crossAxisSpacing: 24, mainAxisSpacing: 24, childAspectRatio: aspectRatio),
-            itemCount: stats.length,
-            itemBuilder: (context, index) {
-              final stat = stats[index];
-              return Container(
-                padding: EdgeInsets.all(screenWidth > 600 ? 32 : 20),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.slate800 : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(gradient: LinearGradient(colors: stat['colors'] as List<Color>), borderRadius: BorderRadius.circular(16)),
-                      child: Icon(stat['icon'] as IconData, color: Colors.white, size: 32),
+          LayoutBuilder(
+            builder: (ctx, constraints) {
+              final cardWidth = (constraints.maxWidth - (crossAxisCount - 1) * 24) / crossAxisCount;
+              return Wrap(
+                spacing: 24,
+                runSpacing: 24,
+                children: List.generate(stats.length, (index) {
+                  final stat = stats[index];
+                  return SizedBox(
+                    width: cardWidth,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(gradient: LinearGradient(colors: stat['colors'] as List<Color>), borderRadius: BorderRadius.circular(16)),
+                            child: Icon(stat['icon'] as IconData, color: Colors.white, size: 32),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(stat['num'] as String, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 4),
+                          Text(stat['label'] as String, style: TextStyle(fontSize: 14, color: isDark ? AppColors.slate400 : AppColors.slate600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    Flexible(
-                      child: Text(stat['num'] as String, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                    const SizedBox(height: 4),
-                    Flexible(
-                      child: Text(stat['label'] as String, style: TextStyle(fontSize: 14, color: isDark ? AppColors.slate400 : AppColors.slate600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
-                ),
+                  );
+                }),
               );
             },
-          )
+          ),
         ],
       ),
     );
@@ -449,9 +452,7 @@ class _NewsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    int crossAxisCount = screenWidth > 800 ? 3 : 1;
-    // Use more flexible aspect ratio for smaller screens
-    double aspectRatio = screenWidth > 800 ? 1.1 : 0.9;
+    int crossAxisCount = screenWidth > 800 ? 3 : (screenWidth > 600 ? 2 : 1);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
