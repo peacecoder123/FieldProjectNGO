@@ -20,100 +20,103 @@ class _LandingScreenState extends State<LandingScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
-    final safeTop = MediaQuery.paddingOf(context).top;
+    final topPadding = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.slate900 : Colors.white,
       body: Stack(
         children: [
-          // Main Scrollable Content — SafeArea only on top
-          SafeArea(
-            top: true, bottom: false, left: false, right: false,
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  SizedBox(height: 80), // navbar height placeholder
-                  _HeroSection(isDark: isDark, onLoginTap: _navigateToLogin),
-                  _RecentWorksSection(isDark: isDark, screenWidth: screenWidth),
-                  _AchievementsSection(isDark: isDark, screenWidth: screenWidth),
-                  _NewsSection(isDark: isDark, screenWidth: screenWidth),
-                  _AboutSection(isDark: isDark, screenWidth: screenWidth),
-                  _Footer(isDark: isDark),
-                ],
-              ),
+          // Main Scrollable Content — respect status bar padding
+          SingleChildScrollView(
+            padding: EdgeInsets.only(top: topPadding + 70),
+            child: Column(
+              children: [
+                _HeroSection(isDark: isDark, onLoginTap: _navigateToLogin),
+                _RecentWorksSection(isDark: isDark, screenWidth: screenWidth),
+                _AchievementsSection(isDark: isDark, screenWidth: screenWidth),
+                _NewsSection(isDark: isDark, screenWidth: screenWidth),
+                _AboutSection(isDark: isDark, screenWidth: screenWidth),
+                _Footer(isDark: isDark),
+              ],
             ),
           ),
 
-          // Sticky Glassmorphism NavBar
-          SafeArea(
-            top: true, bottom: false, left: false, right: false,
-            child: ClipRRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  height: 70,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.slate900.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.8),
-                    border: Border(bottom: BorderSide(color: isDark ? AppColors.slate800 : AppColors.slate200)),
-                  ),
-                  child: Row(
-                    children: [
-                      // Logo and title
-                      Expanded(
-                        flex: 2,
-                        child: Row(
+          // Sticky Glassmorphism NavBar — pinned to top with status bar padding
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(top: topPadding),
+              color: isDark ? AppColors.slate900 : Colors.white,
+              child: ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    height: 70,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.slate900.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.8),
+                      border: Border(bottom: BorderSide(color: isDark ? AppColors.slate800 : AppColors.slate200)),
+                    ),
+                    child: Row(
+                      children: [
+                        // Logo and title
+                        Expanded(
+                          flex: 2,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.asset('assets/images/logo.png', width: 36, height: 36, fit: BoxFit.cover),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Jayashree Foundation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : AppColors.slate900), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    Text('NGO', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                                  ],
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                        // Actions
+                        Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.asset('assets/images/logo.png', width: 36, height: 36, fit: BoxFit.cover),
+                            IconButton(
+                              onPressed: () {},
+                              icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded, color: isDark ? Colors.yellow.shade400 : AppColors.slate600),
+                              style: IconButton.styleFrom(
+                                backgroundColor: isDark ? AppColors.slate800 : Colors.white,
+                                padding: const EdgeInsets.all(8),
+                                minimumSize: const Size(36, 36),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: isDark ? AppColors.slate700 : AppColors.slate200)),
+                              ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Jayashree Foundation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : AppColors.slate900), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                  Text('NGO', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                                ],
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _navigateToLogin,
+                              icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                              label: const Text('Login'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.navy500,
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                textStyle: const TextStyle(fontSize: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
                             )
                           ],
-                        ),
-                      ),
-                      // Actions
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            onPressed: () {},
-                            icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded, color: isDark ? Colors.yellow.shade400 : AppColors.slate600),
-                            style: IconButton.styleFrom(
-                              backgroundColor: isDark ? AppColors.slate800 : Colors.white,
-                              padding: const EdgeInsets.all(8),
-                              minimumSize: const Size(36, 36),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: isDark ? AppColors.slate700 : AppColors.slate200)),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton.icon(
-                            onPressed: _navigateToLogin,
-                            icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                            label: const Text('Login'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.navy500,
-                              foregroundColor: Colors.white,
-                              elevation: 2,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              textStyle: const TextStyle(fontSize: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                          )
-                        ],
-                      )
-                    ],
+                        )
+                      ],
+                    ),
                   ),
                 ),
               ),
