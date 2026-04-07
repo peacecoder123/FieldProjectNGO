@@ -144,7 +144,7 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 2.5,
+              childAspectRatio: 2.2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
@@ -304,15 +304,16 @@ class _VolunteerCard extends ConsumerWidget {
               children: [
                 Text(
                   volunteer.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
+                    color: isDark ? AppColors.white : AppColors.slate900,
                   ),
                 ),
                 Text(
                   volunteer.email,
-                  style: const TextStyle(
-                    color: AppColors.slate500,
+                  style: TextStyle(
+                    color: isDark ? AppColors.slate400 : AppColors.slate500,
                     fontSize: 13,
                   ),
                 ),
@@ -334,21 +335,28 @@ class _VolunteerCard extends ConsumerWidget {
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              AppBadge.personStatus(volunteer.status),
-              const SizedBox(height: 4),
-              Text(
-                volunteer.assignedAdmin.isNotEmpty
-                    ? 'Admin: ${volunteer.assignedAdmin}'
-                    : 'No admin',
-                style: const TextStyle(
-                  color: AppColors.slate400,
-                  fontSize: 11,
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppBadge.personStatus(volunteer.status),
+                const SizedBox(height: 4),
+                Flexible(
+                  child: Text(
+                    volunteer.assignedAdmin.isNotEmpty
+                        ? 'Admin: ${volunteer.assignedAdmin}'
+                        : 'No admin',
+                    style: const TextStyle(
+                      color: AppColors.slate400,
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(width: 8),
           const Icon(Icons.chevron_right_rounded, color: AppColors.slate300),

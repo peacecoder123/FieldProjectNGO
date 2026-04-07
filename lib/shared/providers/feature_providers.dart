@@ -8,45 +8,53 @@ import '../data/entities.dart';
 import '../data/mock_repositories.dart';
 import '../data/repositories.dart';
 
-// Import the new Firebase repository
+// Firebase repositories
 import '../../features/payments/repositories/donation_repository.dart';
+import '../../features/volunteers/repositories/firebase_volunteer_repository.dart';
+import '../../features/members/repositories/firebase_member_repository.dart';
+import '../../features/tasks/repositories/firebase_task_repository.dart';
+import '../../features/requests/repositories/firebase_general_request_repository.dart';
+import '../../features/requests/repositories/firebase_mou_request_repository.dart';
+import '../../features/joining_letters/repositories/firebase_joining_letter_repository.dart';
+import '../../features/meetings/repositories/firebase_meeting_repository.dart';
+import '../../features/auth/repositories/firebase_auth_repository.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REPOSITORY PROVIDERS  (swap MockXxx → HttpXxx when API is ready)
+// REPOSITORY PROVIDERS — All wired to Firebase (Firestore)
 // ─────────────────────────────────────────────────────────────────────────────
 
 final authRepositoryProvider = Provider<IAuthRepository>(
-  (_) => MockAuthRepository(),
+  (_) => FirebaseAuthRepository(),
 );
 final volunteerRepositoryProvider = Provider<IVolunteerRepository>(
-  (_) => MockVolunteerRepository(),
+  (_) => FirebaseVolunteerRepository(),
 );
 final memberRepositoryProvider = Provider<IMemberRepository>(
-  (_) => MockMemberRepository(),
+  (_) => FirebaseMemberRepository(),
 );
 final taskRepositoryProvider = Provider<ITaskRepository>(
-  (_) => MockTaskRepository(),
+  (_) => FirebaseTaskRepository(),
 );
 
-// ── UPDATED: Now points to the real Firebase Repository ──
+// ── Donations — Firebase Repository ──
 final donationRepositoryProvider = Provider<IDonationRepository>(
   (_) => DonationRepository(),
 );
 
 final generalRequestRepositoryProvider = Provider<IGeneralRequestRepository>(
-  (_) => MockGeneralRequestRepository(),
+  (_) => FirebaseGeneralRequestRepository(),
 );
 final mouRequestRepositoryProvider = Provider<IMouRequestRepository>(
-  (_) => MockMouRequestRepository(),
+  (_) => FirebaseMouRequestRepository(),
 );
 final joiningLetterRepositoryProvider = Provider<IJoiningLetterRepository>(
-  (_) => MockJoiningLetterRepository(),
+  (_) => FirebaseJoiningLetterRepository(),
 );
 final documentRepositoryProvider = Provider<IDocumentRepository>(
   (_) => MockDocumentRepository(),
 );
 final meetingRepositoryProvider = Provider<IMeetingRepository>(
-  (_) => MockMeetingRepository(),
+  (_) => FirebaseMeetingRepository(),
 );
 
 // ─────────────────────────────────────────────────────────────────────────────

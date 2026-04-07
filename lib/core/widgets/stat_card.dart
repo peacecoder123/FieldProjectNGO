@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import 'app_card.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 
-/// Metric tile used on the Admin Overview dashboard.
-///
-/// Mirrors the React `<StatCard title value subtitle icon color trend />`.
+/// Compact metric tile for the Admin/Admin dashboard.
+/// Icon (top-left) → value → title, no wasted vertical space.
 class StatCard extends StatelessWidget {
   const StatCard({
     super.key,
@@ -32,55 +31,54 @@ class StatCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return AppCard(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Icon + trend ─────────────────────────────────────────────────
+          // ── Icon + trend ─────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: iconBackground,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: icon,
+                child: SizedBox(width: 18, height: 18, child: icon),
               ),
               if (trend != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
                     color: trendUp
-                        ? AppColors.emerald100
-                        : AppColors.red100,
+                        ? (isDark
+                            ? AppColors.emerald700.withValues(alpha: 0.3)
+                            : AppColors.emerald100)
+                        : (isDark
+                            ? AppColors.red600.withValues(alpha: 0.3)
+                            : AppColors.red100),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        trendUp
-                            ? Icons.arrow_upward_rounded
-                            : Icons.arrow_downward_rounded,
-                        size: 10,
+                        trendUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                        size: 7,
                         color: trendUp
-                            ? AppColors.emerald600
-                            : AppColors.red600,
+                            ? (isDark ? AppColors.emerald400 : AppColors.emerald600)
+                            : (isDark ? AppColors.red500 : AppColors.red600),
                       ),
                       const SizedBox(width: 2),
                       Text(
                         trend!,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 9,
                           fontWeight: FontWeight.w600,
                           color: trendUp
-                              ? AppColors.emerald600
-                              : AppColors.red600,
+                              ? (isDark ? AppColors.emerald400 : AppColors.emerald600)
+                              : (isDark ? AppColors.red500 : AppColors.red600),
                         ),
                       ),
                     ],
@@ -88,35 +86,42 @@ class StatCard extends StatelessWidget {
                 ),
             ],
           ),
-
-          const SizedBox(height: 12),
-
-          // ── Value ────────────────────────────────────────────────────────
+          const SizedBox(height: 8),
+          // ── Value + title ────────────────────────────────
           Text(
             value,
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
               color: isDark ? AppColors.white : AppColors.slate900,
+              fontSize: 20,
+              height: 1.1,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-
           const SizedBox(height: 2),
-
-          // ── Title ────────────────────────────────────────────────────────
+          // Title
           Text(
             title,
-            style: theme.textTheme.bodyMedium?.copyWith(
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
               color: isDark ? AppColors.slate400 : AppColors.slate500,
+              height: 1.2,
             ),
           ),
-
-          // ── Subtitle ─────────────────────────────────────────────────────
+          // Subtitle
           if (subtitle != null) ...[
             const SizedBox(height: 2),
             Text(
               subtitle!,
-              style: theme.textTheme.bodySmall?.copyWith(
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
                 color: isDark ? AppColors.slate500 : AppColors.slate400,
+                height: 1.2,
               ),
             ),
           ],

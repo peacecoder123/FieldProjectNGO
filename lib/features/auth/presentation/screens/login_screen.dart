@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
-import 'package:ngo_volunteer_management/shared/data/mock_data_source.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 
@@ -34,30 +33,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _error = 'Please enter your email');
       return;
     }
-    setState(() { _loading = true; _error = null; });
-
-    final repo = ref.read(authRepositoryProvider);
-    final user = await repo.login(
-      email:    email,
-      password: _passCtrl.text,
-    );
-
-    if (!mounted) return;
-    setState(() => _loading = false);
-
-    if (user == null) {
-      setState(() => _error = 'Invalid credentials. Use a demo email below.');
+    if (_passCtrl.text.isEmpty) {
+      setState(() => _error = 'Please enter your password');
       return;
     }
+    setState(() { _loading = true; _error = null; });
 
-    ref.read(currentUserProvider.notifier).login(user);
-    context.go(user.role.routePath);
-  }
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      final user = await repo.login(
+        email:    email,
+        password: _passCtrl.text,
+      );
 
-  void _quickLogin(String email) {
-    _emailCtrl.text = email;
-    _passCtrl.text  = 'demo123';
-    _login();
+      if (!mounted) return;
+      setState(() => _loading = false);
+
+      if (user == null) {
+        setState(() => _error = 'Invalid email or password. Please try again.');
+        return;
+      }
+
+      ref.read(currentUserProvider.notifier).login(user);
+      context.go(user.role.routePath);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Connection error. Please check your internet and try again.';
+      });
+    }
   }
 
   @override
@@ -103,15 +108,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Sign in',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 40, height: 40,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [AppColors.navy600, AppColors.navy400],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.asset(
+                                    'assets/images/logo.png',
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              const Text(
+                                'Sign in',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 8),
                           const Text(
                             'Enter your credentials to access the portal',
                             style: TextStyle(
@@ -190,7 +218,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: ElevatedButton(
                               onPressed: _loading ? null : _login,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.blue600,
+                                backgroundColor: AppColors.navy500,
                                 padding: const EdgeInsets.symmetric(
                                     vertical: 14),
                                 shape: RoundedRectangleBorder(
@@ -222,7 +250,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     const SizedBox(height: 24),
 
-                    // Demo accounts
+                    // Credentials reference
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -234,7 +262,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Demo accounts — tap to auto-fill',
+                            'Login credentials',
                             style: TextStyle(
                               color: AppColors.slate400,
                               fontSize: 12,
@@ -242,13 +270,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          ...MockDataSource.users.map(
-                            (u) => _DemoTile(
-                              name:  u.name,
-                              email: u.email,
-                              role:  u.role.displayName,
-                              onTap: () => _quickLogin(u.email),
-                            ),
+                          const _CredentialRow(
+                            email: 'vikram@hopeconnect.org',
+                            pass: 'vikram123',
+                            role: 'Super Admin',
+                          ),
+                          const SizedBox(height: 8),
+                          const _CredentialRow(
+                            email: 'priya@hopeconnect.org',
+                            pass: 'priya123',
+                            role: 'Admin',
+                          ),
+                          const SizedBox(height: 8),
+                          const _CredentialRow(
+                            email: 'anjali@hopeconnect.org',
+                            pass: 'anjali123',
+                            role: 'Member',
+                          ),
+                          const SizedBox(height: 8),
+                          const _CredentialRow(
+                            email: 'rahul@hopeconnect.org',
+                            pass: 'rahul123',
+                            role: 'Volunteer',
                           ),
                         ],
                       ),
@@ -289,23 +332,23 @@ class _DarkTextField extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final String                 hint;
-  final bool                   obscure;
-  final TextInputType?         keyboardType;
-  final Widget?                suffix;
+  final String hint;
+  final bool obscure;
+  final TextInputType? keyboardType;
+  final Widget? suffix;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
-      controller:    controller,
-      obscureText:   obscure,
-      keyboardType:  keyboardType,
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: InputDecoration(
-        hintText:       hint,
-        hintStyle:      const TextStyle(color: AppColors.slate500),
-        filled:         true,
-        fillColor:      const Color(0xFF0F172A),
+        hintText: hint,
+        hintStyle: const TextStyle(color: AppColors.slate500),
+        filled: true,
+        fillColor: const Color(0xFF0F172A),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFF334155)),
@@ -316,7 +359,7 @@ class _DarkTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.blue600, width: 2),
+          borderSide: const BorderSide(color: AppColors.navy500, width: 2),
         ),
         suffixIcon: suffix,
         contentPadding: const EdgeInsets.symmetric(
@@ -327,75 +370,73 @@ class _DarkTextField extends StatelessWidget {
   }
 }
 
-class _DemoTile extends StatelessWidget {
-  const _DemoTile({
-    required this.name,
+class _CredentialRow extends StatelessWidget {
+  const _CredentialRow({
     required this.email,
+    required this.pass,
     required this.role,
-    required this.onTap,
   });
 
-  final String       name;
-  final String       email;
-  final String       role;
-  final VoidCallback onTap;
+  final String email;
+  final String pass;
+  final String role;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF334155)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      email,
-                      style: const TextStyle(
-                        color: AppColors.slate500,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.blue600.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  role,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF334155)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  email,
                   style: const TextStyle(
-                    color: AppColors.blue400,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+                    color: AppColors.slate200,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
+                Text(
+                  'Password: $pass',
+                  style: const TextStyle(
+                    color: AppColors.slate500,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.navy600.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              role,
+              style: const TextStyle(
+                color: AppColors.navy100,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy_outlined,
+                color: AppColors.slate500, size: 16),
+            onPressed: () {
+              // Copy email to clipboard — handled by platform
+            },
+          ),
+        ],
       ),
     );
   }

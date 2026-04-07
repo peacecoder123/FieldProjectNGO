@@ -177,6 +177,7 @@ class _MemberCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final daysToRenewal = AppFormatters.daysUntil(member.renewalDate);
     final isExpiringSoon = daysToRenewal >= 0 && daysToRenewal <= 30;
 
@@ -195,13 +196,22 @@ class _MemberCard extends StatelessWidget {
               children: [
                 Text(
                   member.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: isDark ? AppColors.white : AppColors.slate900,
+                  ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   member.email,
-                  style: const TextStyle(color: AppColors.slate500, fontSize: 13),
+                  style: TextStyle(
+                    color: isDark ? AppColors.slate400 : AppColors.slate500,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     AppBadge(
@@ -212,11 +222,11 @@ class _MemberCard extends StatelessWidget {
                     if (isExpiringSoon)
                       Row(
                         children: [
-                          const Icon(Icons.warning_amber_rounded, size: 14, color: AppColors.amber600),
+                          Icon(Icons.warning_amber_rounded, size: 14, color: isDark ? AppColors.amber400 : AppColors.amber600),
                           const SizedBox(width: 4),
                           Text(
                             'Renews in $daysToRenewal days',
-                            style: const TextStyle(color: AppColors.amber600, fontSize: 11, fontWeight: FontWeight.w600),
+                            style: TextStyle(color: isDark ? AppColors.amber400 : AppColors.amber600, fontSize: 11, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -245,7 +255,9 @@ class _MemberCard extends StatelessWidget {
                     member.isPaid ? 'Paid' : 'Unpaid',
                     style: TextStyle(
                       fontSize: 11,
-                      color: member.isPaid ? AppColors.emerald600 : AppColors.amber600,
+                      color: member.isPaid
+                          ? (isDark ? AppColors.emerald400 : AppColors.emerald600)
+                          : (isDark ? AppColors.amber400 : AppColors.amber600),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -254,7 +266,7 @@ class _MemberCard extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 8),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.slate300),
+          Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.slate500 : AppColors.slate300),
         ],
       ),
     );
@@ -527,20 +539,24 @@ class _InfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: AppColors.slate100, borderRadius: BorderRadius.circular(8)),
-          child: Icon(icon, size: 16, color: AppColors.slate600),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.slate800 : AppColors.slate100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: isDark ? AppColors.slate400 : AppColors.slate600),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 10, color: AppColors.slate400, fontWeight: FontWeight.w600)),
-              Text(value.isEmpty ? 'Not provided' : value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              Text(label, style: TextStyle(fontSize: 10, color: isDark ? AppColors.slate500 : AppColors.slate400, fontWeight: FontWeight.w600)),
+              Text(value.isEmpty ? 'Not provided' : value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isDark ? AppColors.white : AppColors.slate900)),
             ],
           ),
         ),
@@ -555,13 +571,14 @@ class _TaskTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.slate50,
+        color: isDark ? AppColors.slate800 : AppColors.slate50,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.slate200),
+        border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
       ),
       child: Row(
         children: [
@@ -569,9 +586,9 @@ class _TaskTile extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                Text(task.title, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? AppColors.white : AppColors.slate900)),
                 const SizedBox(height: 2),
-                Text('Deadline: ${AppFormatters.displayDate(task.deadline)}', style: const TextStyle(fontSize: 11, color: AppColors.slate500)),
+                Text('Deadline: ${AppFormatters.displayDate(task.deadline)}', style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate500)),
               ],
             ),
           ),

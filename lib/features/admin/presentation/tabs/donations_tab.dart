@@ -1,6 +1,13 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+
+// PDF & Printing Imports
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
@@ -13,6 +20,10 @@ import 'package:ngo_volunteer_management/shared/data/mock_data_source.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
+
+// Services
+import 'package:ngo_volunteer_management/services/logging/audit_logger.dart';
+import 'package:ngo_volunteer_management/services/document_generation/document_generator.dart';
 
 class DonationsTab extends ConsumerStatefulWidget {
   const DonationsTab({super.key});
@@ -74,10 +85,10 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
                 return GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: isWide ? 3 : 1,
+                  crossAxisCount: isWide ? 3 : (constraints.maxWidth > 400 ? 2 : 1),
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: isWide ? 2.5 : 4,
+                  childAspectRatio: isWide ? 2.2 : 2.0,
                   children: [
                     StatCard(
                       title: 'Total Donations',
@@ -209,9 +220,9 @@ class _DonationTrendChart extends StatelessWidget {
               margin: EdgeInsets.zero,
               plotAreaBorderWidth: 0,
               primaryXAxis: const CategoryAxis(
-                axisLine: const AxisLine(width: 0),
-                majorTickLines: const MajorTickLines(size: 0),
-                labelStyle: const TextStyle(fontSize: 10, color: AppColors.slate400),
+                axisLine: AxisLine(width: 0),
+                majorTickLines: MajorTickLines(size: 0),
+                labelStyle: TextStyle(fontSize: 10, color: AppColors.slate400),
               ),
               primaryYAxis: const NumericAxis(
                 isVisible: false,
@@ -238,26 +249,88 @@ class _DonationItem extends ConsumerWidget {
   const _DonationItem({required this.donation});
   final DonationEntity donation;
 
+  Future<void> _showPdfPreview(BuildContext context) async {
+    final generator = DocumentGenerator();
+    
+    // Choose the correct template based on 80G status
+    final docType = donation.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
+    final template = generator.getTemplateForType(docType);
+    
+    // Resolve the dynamic template fields
+    final doc = generator.resolveTemplate(template, {
+      'receipt_number': donation.receiptNumber ?? 'REC-PENDING',
+      'donor_name': donation.donorName,
+      'amount': donation.amount.toString(),
+      'date': AppFormatters.displayDate(donation.date),
+      'payment_mode': donation.type.name,
+      'purpose': donation.purpose,
+    });
+
+    // Create the actual PDF layout
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(32),
+            child: pw.Text(
+              doc.generatedContent,
+              style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
+            ),
+          );
+        },
+      ),
+    );
+
+    final pdfBytes = await pdf.save();
+
+    // Show the interactive UI Dialog
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          insetPadding: const EdgeInsets.all(20),
+          child: SizedBox(
+            width: 800,
+            height: 600,
+            child: PdfPreview(
+              build: (format) => pdfBytes,
+              allowPrinting: true,
+              allowSharing: true,
+              canChangeOrientation: false,
+              canChangePageFormat: false,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AppCard(
       child: Row(
         children: [
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(color: AppColors.purple100, borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.currency_rupee_rounded, color: AppColors.purple600),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.purple600.withValues(alpha: 0.3) : AppColors.purple100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.currency_rupee_rounded, color: isDark ? AppColors.purple400 : AppColors.purple600),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(donation.donorName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                Text(donation.donorName, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: isDark ? AppColors.white : AppColors.slate900)),
                 Text(
                   '${AppFormatters.displayDate(donation.date)} • ${donation.type.name.toUpperCase()}',
-                  style: const TextStyle(color: AppColors.slate500, fontSize: 12),
+                  style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontSize: 12),
                 ),
               ],
             ),
@@ -267,14 +340,46 @@ class _DonationItem extends ConsumerWidget {
             children: [
               Text(
                 AppFormatters.inr(donation.amount),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.slate900),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? AppColors.white : AppColors.slate900),
               ),
               const SizedBox(height: 4),
               if (donation.receiptGenerated)
-                AppBadge(label: 'Receipt: ${donation.receiptNumber}', color: AppColors.emerald500)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppBadge(label: 'Receipt: ${donation.receiptNumber}', color: AppColors.emerald500),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.slate600, size: 20),
+                      tooltip: 'View Document',
+                      onPressed: () => _showPdfPreview(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                )
               else
                 TextButton(
-                  onPressed: () => ref.read(donationProvider.notifier).generateReceipt(donation.id),
+                  onPressed: () async {
+                    // 1. Generate Receipt in DB
+                    await ref.read(donationProvider.notifier).generateReceipt(donation.id);
+                    
+                    // 2. Fire Audit Log to Firebase
+                    await AuditLogger.logDocumentGeneration(
+                      documentType: donation.is80G ? '80G Certificate' : 'Donation Receipt',
+                      targetId: donation.id.toString(),
+                      generatedBy: 'System Admin', 
+                      additionalMetadata: {
+                        'donorName': donation.donorName,
+                        'amount': donation.amount,
+                      },
+                    );
+
+                    // 3. Open Preview
+                    if (context.mounted) {
+                      await _showPdfPreview(context);
+                    }
+                  },
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     minimumSize: Size.zero,
@@ -327,7 +432,7 @@ class _AddDonationFormState extends State<_AddDonationForm> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<DonationType>(
-            initialValue: selectedType,
+            value: selectedType,
             decoration: const InputDecoration(labelText: 'Payment Mode'),
             items: DonationType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.name.toUpperCase()))).toList(),
             onChanged: (val) => setState(() => selectedType = val!),

@@ -53,16 +53,28 @@ class UserEntity extends Equatable {
   List<Object?> get props => [id, name, email, role, avatar];
 
   // ── Serialisation (kept minimal — mock data only for now) ─────────────────
-  factory UserEntity.fromJson(Map<String, dynamic> json) => UserEntity(
-    id:     json['id']     as int,
-    name:   json['name']   as String,
-    email:  json['email']  as String,
-    role:   UserRole.values.firstWhere(
-      (r) => r.name == json['role'],
-      orElse: () => UserRole.volunteer,
-    ),
-    avatar: json['avatar'] as String?,
-  );
+  // ── Serialisation ───────────────────────────────────────────────────────
+  factory UserEntity.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id'];
+    int id;
+    if (rawId is int) {
+      id = rawId;
+    } else if (rawId is String && rawId.isNotEmpty) {
+      id = int.tryParse(rawId) ?? rawId.hashCode;
+    } else {
+      id = 0;
+    }
+    return UserEntity(
+      id:     id,
+      name:   json['name']   as String,
+      email:  json['email']  as String,
+      role:   UserRole.values.firstWhere(
+        (r) => r.name == json['role'],
+        orElse: () => UserRole.volunteer,
+      ),
+      avatar: json['avatar'] as String?,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id':     id,
