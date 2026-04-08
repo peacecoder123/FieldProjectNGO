@@ -23,8 +23,13 @@ class LandingScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset('assets/images/logo.png', width: 56, height: 56, fit: BoxFit.cover),
+                ),
+                const SizedBox(height: 12),
                 Text(
-                  'HopeConnect',
+                  'Jayashree Foundation',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: AppColors.white,
                         fontWeight: FontWeight.w700,

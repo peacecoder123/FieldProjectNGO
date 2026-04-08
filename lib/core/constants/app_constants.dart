@@ -3,9 +3,9 @@ abstract final class AppConstants {
   AppConstants._();
 
   // ── App identity ──────────────────────────────────────────────────────────
-  static const String appName    = 'HopeConnect';
+  static const String appName    = 'Jayashree Foundation';
   static const String appTagline = 'NGO Management';
-  static const String orgName    = 'HopeConnect NGO';
+  static const String orgName    = 'Jayashree Foundation';
   static const String orgRegNo   = 'MH-12345/2020';
   static const String orgWhatsApp = '+91-9876543210';
 

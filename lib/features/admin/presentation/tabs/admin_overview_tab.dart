@@ -53,7 +53,7 @@ class AdminOverviewTab extends ConsumerWidget {
               return ListView(
                 shrinkWrap: true,
                 physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
                 children: [
                   // ── Hero banner ────────────────────────────────────────
                   _HeroBanner(
@@ -62,57 +62,49 @@ class AdminOverviewTab extends ConsumerWidget {
                     activeMembers:    activeMems,
                     pendingRequests:  pendingReqs,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
 
                   // ── Stat cards ─────────────────────────────────────────
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final crossCount = constraints.maxWidth > 600 ? 4 : 2;
-                      return GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: crossCount,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: crossCount == 4 ? 1.4 : 1.5,
-                        children: [
-                          StatCard(
-                            title:          'Active Volunteers',
-                            value:          '$activeVols',
-                            subtitle:       '${volunteers.length} total',
-                            icon:           const Icon(Icons.volunteer_activism_rounded, size: 20, color: AppColors.blue600),
-                            iconBackground: AppColors.blue100,
-                            trend:          '12%',
-                            trendUp:        true,
-                          ),
-                          StatCard(
-                            title:          'Active Members',
-                            value:          '$activeMems',
-                            subtitle:       '${members.where((m) => m.membershipType == MembershipType.eightyG).length} with 80G',
-                            icon:           const Icon(Icons.people_rounded, size: 20, color: AppColors.emerald600),
-                            iconBackground: AppColors.emerald100,
-                            trend:          '8%',
-                            trendUp:        true,
-                          ),
-                          StatCard(
-                            title:          'Total Donations',
-                            value:          AppFormatters.inr(totalDonation),
-                            subtitle:       '${donations.where((d) => !d.receiptGenerated).length} receipts pending',
-                            icon:           const Icon(Icons.currency_rupee_rounded, size: 20, color: AppColors.purple600),
-                            iconBackground: AppColors.purple100,
-                            trend:          '23%',
-                            trendUp:        true,
-                          ),
-                          StatCard(
-                            title:          'Pending Requests',
-                            value:          '$pendingReqs',
-                            subtitle:       '$pendingTasks tasks need review',
-                            icon:           const Icon(Icons.inbox_rounded, size: 20, color: AppColors.amber600),
-                            iconBackground: AppColors.amber100,
-                          ),
-                        ],
-                      );
-                    },
+                  Column(
+                    children: [
+                      StatCard(
+                        title:          'Active Volunteers',
+                        value:          '$activeVols',
+                        subtitle:       '${volunteers.length} total',
+                        icon:           const Icon(Icons.volunteer_activism_rounded, size: 18, color: AppColors.navy500),
+                        iconBackground: AppColors.navy100,
+                        trend:          '12%',
+                        trendUp:        true,
+                      ),
+                      const SizedBox(height: 8),
+                      StatCard(
+                        title:          'Active Members',
+                        value:          '$activeMems',
+                        subtitle:       '${members.where((m) => m.membershipType == MembershipType.eightyG).length} with 80G',
+                        icon:           const Icon(Icons.people_rounded, size: 18, color: AppColors.emerald600),
+                        iconBackground: AppColors.emerald100,
+                        trend:          '8%',
+                        trendUp:        true,
+                      ),
+                      const SizedBox(height: 8),
+                      StatCard(
+                        title:          'Total Donations',
+                        value:          AppFormatters.inr(totalDonation),
+                        subtitle:       '${donations.where((d) => !d.receiptGenerated).length} receipts pending',
+                        icon:           const Icon(Icons.currency_rupee_rounded, size: 18, color: AppColors.purple600),
+                        iconBackground: AppColors.purple100,
+                        trend:          '23%',
+                        trendUp:        true,
+                      ),
+                      const SizedBox(height: 8),
+                      StatCard(
+                        title:          'Pending Requests',
+                        value:          '$pendingReqs',
+                        subtitle:       '$pendingTasks tasks need review',
+                        icon:           const Icon(Icons.inbox_rounded, size: 18, color: AppColors.amber600),
+                        iconBackground: AppColors.amber100,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
 
@@ -243,7 +235,7 @@ class _HeroBanner extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           const Text(
-            'HopeConnect NGO',
+            'Jayashree Foundation',
             style: TextStyle(
               color: Colors.white,
               fontSize: 20,
@@ -533,12 +525,12 @@ class _ActivityFeed extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(a.$1,
-                            style: const TextStyle(
-                                fontSize: 13, color: AppColors.slate700)),
+                            style: TextStyle(
+                                fontSize: 13, color: isDark ? AppColors.slate200 : AppColors.slate700)),
                         const SizedBox(height: 2),
                         Text(a.$2,
-                            style: const TextStyle(
-                                fontSize: 11, color: AppColors.slate400)),
+                            style: TextStyle(
+                                fontSize: 11, color: isDark ? AppColors.slate500 : AppColors.slate400)),
                       ],
                     ),
                   ),

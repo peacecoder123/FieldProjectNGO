@@ -228,7 +228,7 @@ class DocumentGenerator {
       bodyTemplate: '''
 ═══════════════════════════════════════════════════════
                     DONATION RECEIPT
-                  HopeConnect Foundation
+                  Jayashree Foundation
 ═══════════════════════════════════════════════════════
 
 Receipt No : {{receipt_number}}
@@ -328,7 +328,7 @@ Authorised Signatory: ________________________
 ═══════════════════════════════════════════════════════
       CERTIFICATE UNDER SECTION 80G OF THE
              INCOME TAX ACT, 1961
-           HopeConnect Foundation
+           Jayashree Foundation
 ═══════════════════════════════════════════════════════
 
 Receipt No       : {{receipt_number}}
@@ -396,7 +396,7 @@ Date: {{date}}
       bodyTemplate: '''
 ═══════════════════════════════════════════════════════
                    JOINING LETTER
-                HopeConnect Foundation
+                Jayashree Foundation
 ═══════════════════════════════════════════════════════
 
 Date: {{date}}
@@ -404,7 +404,7 @@ Date: {{date}}
 Dear {{name}},
 
 We are pleased to confirm your association with
-HopeConnect Foundation as a {{role}}.
+Jayashree Foundation as a {{role}}.
 
 Your tenure with us is: {{tenure}}.
 
@@ -413,7 +413,7 @@ We look forward to your valuable contribution.
 Warm regards,
 
 Authorised Signatory: ________________________
-HopeConnect Foundation
+Jayashree Foundation
 ═══════════════════════════════════════════════════════
 ''',
     );
@@ -459,7 +459,7 @@ HopeConnect Foundation
       bodyTemplate: '''
 ═══════════════════════════════════════════════════════
             CERTIFICATE OF {{certificate_type}}
-                HopeConnect Foundation
+                Jayashree Foundation
 ═══════════════════════════════════════════════════════
 
 Date: {{date}}
@@ -474,7 +474,7 @@ in recognition of their contribution.
 {{details}}
 
 Authorised Signatory: ________________________
-HopeConnect Foundation
+Jayashree Foundation
 ═══════════════════════════════════════════════════════
 ''',
     );
@@ -536,7 +536,7 @@ HopeConnect Foundation
       bodyTemplate: '''
 ═══════════════════════════════════════════════════════
         MEMORANDUM OF UNDERSTANDING (MOU)
-     Medical Assistance — HopeConnect Foundation
+     Medical Assistance — Jayashree Foundation
 ═══════════════════════════════════════════════════════
 
 Date: {{date}}
@@ -555,10 +555,10 @@ Name  : {{requester_name}}
 Phone : {{phone}}
 
 This document serves as an undertaking for medical
-assistance provided through HopeConnect Foundation.
+assistance provided through Jayashree Foundation.
 
 Authorised Signatory: ________________________
-HopeConnect Foundation
+Jayashree Foundation
 ═══════════════════════════════════════════════════════
 ''',
     );

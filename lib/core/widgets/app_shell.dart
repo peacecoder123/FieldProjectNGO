@@ -7,6 +7,7 @@ import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'app_avatar.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import '../../shared/providers/app_providers.dart';
+import '../../shared/providers/feature_providers.dart';
 
 /// Navigation item descriptor (mirrors the React `NavItem` interface).
 class NavItem {
@@ -59,6 +60,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      extendBodyBehindAppBar: false,
       drawer: isDesktop ? null : _buildDrawer(),
       body: Row(
         children: [
@@ -68,25 +70,33 @@ class _AppShellState extends ConsumerState<AppShell> {
             onTabChange: widget.onTabChange,
           ),
           Expanded(
-            child: Column(
-              children: [
-                _TopBar(
-                  scaffoldKey:   _scaffoldKey,
-                  isDesktop:     isDesktop,
-                  activeLabel:   _activeLabel,
-                  notifications: widget.notifications,
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(
-                      isDesktop
-                          ? AppConstants.pagePaddingDesktop
-                          : AppConstants.pagePadding,
-                    ),
-                    child: widget.body,
+            child: SafeArea(
+              top: !isDesktop,
+              child: Column(
+                children: [
+                  _TopBar(
+                    scaffoldKey:   _scaffoldKey,
+                    isDesktop:     isDesktop,
+                    activeLabel:   _activeLabel,
+                    notifications: widget.notifications,
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        isDesktop
+                            ? AppConstants.pagePaddingDesktop
+                            : AppConstants.pagePadding,
+                        isDesktop ? 12 : 0,
+                        isDesktop
+                            ? AppConstants.pagePaddingDesktop
+                            : AppConstants.pagePadding,
+                        20,
+                      ),
+                      child: widget.body,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -279,21 +289,13 @@ class _SidebarLogo extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Row(
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.blue500, AppColors.indigo600],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.favorite_rounded,
-                color: Colors.white,
-                size: 18,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
               ),
             ),
             const SizedBox(width: 10),
@@ -301,7 +303,7 @@ class _SidebarLogo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'HopeConnect',
+                  'Jayashree Foundation',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 13,
@@ -538,8 +540,6 @@ class _TopBar extends ConsumerStatefulWidget {
 }
 
 class _TopBarState extends ConsumerState<_TopBar> {
-  bool _showNotif = false;
-
   @override
   Widget build(BuildContext context) {
     final theme  = Theme.of(context);
@@ -559,7 +559,6 @@ class _TopBarState extends ConsumerState<_TopBar> {
       ),
       child: Row(
         children: [
-          // Hamburger (mobile only)
           if (!widget.isDesktop) ...[
             IconButton(
               icon: const Icon(Icons.menu_rounded),
@@ -568,8 +567,6 @@ class _TopBarState extends ConsumerState<_TopBar> {
             ),
             const SizedBox(width: 4),
           ],
-
-          // Page title
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -590,46 +587,7 @@ class _TopBarState extends ConsumerState<_TopBar> {
               ],
             ),
           ),
-
-          // Notification bell
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                icon: Icon(
-                  Icons.notifications_outlined,
-                  color: isDark ? AppColors.slate300 : AppColors.slate600,
-                ),
-                onPressed: () =>
-                    setState(() => _showNotif = !_showNotif),
-              ),
-              if (widget.notifications > 0)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: const BoxDecoration(
-                      color: AppColors.red500,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${widget.notifications}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-
-          // Theme toggle
+          _buildNotificationButton(isDark),
           IconButton(
             icon: Icon(
               isDark
@@ -640,14 +598,191 @@ class _TopBarState extends ConsumerState<_TopBar> {
             onPressed: () =>
                 ref.read(themeModeProvider.notifier).toggle(),
           ),
-
-          // User avatar
           AppAvatar(
             initials: user?.displayAvatar ?? '?',
             size: AvatarSize.small,
             role: user?.role,
           ),
           const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationButton(bool isDark) {
+    return Container(
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.notifications_outlined,
+                color: isDark ? AppColors.slate300 : AppColors.slate600,
+              ),
+              onPressed: () => _showNotificationsDialog(context),
+            ),
+            if (widget.notifications > 0)
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                margin: const EdgeInsets.only(top: 4, right: 4),
+                width: 16,
+                height: 16,
+                decoration: const BoxDecoration(
+                  color: AppColors.red500,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '${widget.notifications}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showNotificationsDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        final joining  = ref.watch(joiningLetterProvider).value ?? [];
+        final requests = ref.watch(generalRequestProvider).value ?? [];
+        final mou      = ref.watch(mouRequestProvider).value ?? [];
+
+        final items = <Widget>[];
+
+        for (final r in joining.where((r) => r.status.name == 'pending')) {
+          items.add(_buildNotifRow(
+            icon: Icons.file_present_rounded,
+            iconColor: AppColors.amber500,
+            isDark: isDark,
+            title: 'Joining Letter Request',
+            subtitle: '${r.name} requested on ${r.requestDate.toString().split(' ')[0]}',
+          ));
+        }
+        for (final r in requests.where((r) => r.status.name == 'pending')) {
+          items.add(_buildNotifRow(
+            icon: Icons.inbox_rounded,
+            iconColor: AppColors.blue500,
+            isDark: isDark,
+            title: 'General Request',
+            subtitle: '${r.requesterName}: ${r.requestType.displayLabel}',
+          ));
+        }
+        for (final r in mou.where((r) => r.status.name == 'pending')) {
+          items.add(_buildNotifRow(
+            icon: Icons.local_hospital_rounded,
+            iconColor: AppColors.red500,
+            isDark: isDark,
+            title: 'MOU Request',
+            subtitle: '${r.patientName} at ${r.hospital}',
+          ));
+        }
+
+        if (items.isEmpty) {
+          items.add(
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'No new notifications',
+                style: TextStyle(
+                  color: isDark ? AppColors.slate500 : AppColors.slate400,
+                ),
+              ),
+            ),
+          );
+        }
+
+        return AlertDialog(
+          titlePadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Notifications',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                child: const Text('Clear all', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Divider(height: 1),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 280),
+                  child: SingleChildScrollView(
+                    child: Column(children: items),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actionsPadding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        );
+      },
+    );
+  }
+
+  Widget _buildNotifRow({
+    required IconData icon,
+    required Color iconColor,
+    required bool isDark,
+    required String title,
+    required String subtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: iconColor),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? AppColors.white : AppColors.slate900,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? AppColors.slate400 : AppColors.slate500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

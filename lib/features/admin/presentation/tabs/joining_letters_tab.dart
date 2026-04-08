@@ -22,11 +22,12 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final requestsAsync = ref.watch(joiningLetterProvider);
 
     return requestsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, s) => const Center(child: Text('Error loading requests')),
       data: (requests) {
         final filtered = requests.where((r) => _statusFilter == null || r.status == _statusFilter).toList();
 
@@ -40,14 +41,14 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
               subtitle: 'Review and approve requests for official joining letters',
             ),
             const SizedBox(height: 16),
-            _buildFilters(),
+            _buildFilters(isDark: isDark),
             const SizedBox(height: 24),
 
             if (filtered.isEmpty)
-              const Center(
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Text('No requests found', style: TextStyle(color: AppColors.slate400)),
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Text('No requests found', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500)),
                 )
               )
             else
@@ -61,7 +62,7 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters({required bool isDark}) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -69,24 +70,28 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
           _FilterChip(
             label: 'All',
             isSelected: _statusFilter == null,
+            isDark: isDark,
             onSelected: () => setState(() => _statusFilter = null),
           ),
           const SizedBox(width: 8),
           _FilterChip(
             label: 'Pending',
             isSelected: _statusFilter == RequestStatus.pending,
+            isDark: isDark,
             onSelected: () => setState(() => _statusFilter = RequestStatus.pending),
           ),
           const SizedBox(width: 8),
           _FilterChip(
             label: 'Approved',
             isSelected: _statusFilter == RequestStatus.approved,
+            isDark: isDark,
             onSelected: () => setState(() => _statusFilter = RequestStatus.approved),
           ),
           const SizedBox(width: 8),
           _FilterChip(
             label: 'Rejected',
             isSelected: _statusFilter == RequestStatus.rejected,
+            isDark: isDark,
             onSelected: () => setState(() => _statusFilter = RequestStatus.rejected),
           ),
         ],
@@ -96,21 +101,28 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
 }
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.isSelected, required this.onSelected});
+  const _FilterChip({required this.label, required this.isSelected, required this.isDark, required this.onSelected});
   final String label;
   final bool isSelected;
+  final bool isDark;
   final VoidCallback onSelected;
 
   @override
   Widget build(BuildContext context) {
     return ChoiceChip(
-      label: Text(label),
+      label: Text(label, style: TextStyle(
+        color: isSelected
+          ? (isDark ? AppColors.white : AppColors.blue600)
+          : (isDark ? AppColors.slate400 : AppColors.slate600),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      )),
       selected: isSelected,
       onSelected: (_) => onSelected(),
-      selectedColor: AppColors.blue100,
-      labelStyle: TextStyle(
-        color: isSelected ? AppColors.blue600 : AppColors.slate600,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      selectedColor: isDark ? AppColors.blue600.withValues(alpha: 0.2) : AppColors.blue100,
+      backgroundColor: isDark ? AppColors.slate800 : AppColors.slate100,
+      side: BorderSide(color: isSelected
+        ? (isDark ? AppColors.blue500 : AppColors.blue600.withValues(alpha: 0.3))
+        : Colors.transparent,
       ),
     );
   }
@@ -122,6 +134,7 @@ class _JoiningRequestCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,11 +145,15 @@ class _JoiningRequestCard extends ConsumerWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(request.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(request.name, style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: isDark ? AppColors.white : AppColors.slate900,
+                  )),
                   const SizedBox(height: 2),
                   Text(
                     'Requested for ${request.type.displayLabel} on ${AppFormatters.displayDate(request.requestDate)}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                    style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500),
                   ),
                 ],
               ),
@@ -150,7 +167,9 @@ class _JoiningRequestCard extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => ref.read(joiningLetterProvider.notifier).reject(request.id),
-                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.red500),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: isDark ? AppColors.red500 : AppColors.red600,
+                    ),
                     child: const Text('Reject'),
                   ),
                 ),
@@ -170,16 +189,52 @@ class _JoiningRequestCard extends ConsumerWidget {
           ] else if (request.status == RequestStatus.approved) ...[
             const SizedBox(height: 12),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.emerald700.withValues(alpha: 0.2) : AppColors.emerald50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isDark ? AppColors.emerald600.withValues(alpha: 0.5) : AppColors.emerald200),
+              ),
               child: Row(
                 children: [
-                  const Icon(Icons.verified_user_rounded, size: 16, color: AppColors.emerald500),
+                  const Icon(Icons.verified_user_rounded, size: 16, color: AppColors.emerald400),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Approved by ${request.generatedBy} with tenure: ${request.tenure}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? AppColors.emerald200 : AppColors.emerald700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (request.status == RequestStatus.rejected) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.red.shade900.withValues(alpha: 0.2) : AppColors.red50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isDark ? Colors.red.shade700.withValues(alpha: 0.5) : AppColors.red100),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.cancel_rounded, size: 16, color: AppColors.red500),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Rejected',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? AppColors.red100 : AppColors.red600,
+                      ),
                     ),
                   ),
                 ],

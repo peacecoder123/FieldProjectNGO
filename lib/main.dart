@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'app/app.dart';
 import 'firebase_options.dart';
 import 'shared/providers/app_providers.dart';
+import 'services/data_seeder.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +40,9 @@ Future<void> main() async {
     // Re-throw to fail fast
     rethrow;
   }
+
+  // Seed Firestore with mock data on first launch
+  await seedFirestoreIfEmpty();
 
   runApp(
     ProviderScope(
