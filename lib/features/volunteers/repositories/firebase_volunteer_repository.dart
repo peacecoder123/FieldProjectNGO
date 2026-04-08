@@ -90,7 +90,10 @@ class FirebaseVolunteerRepository implements IVolunteerRepository {
         'tenure': v.tenure,
         'skills': v.skills,
         'avatar': v.avatar,
+        if (v.mentorId != null) 'mentorId': v.mentorId,
+        if (v.mentorName != null) 'mentorName': v.mentorName,
       };
+
 
   VolunteerEntity _fromMap(Map<String, dynamic> map) => VolunteerEntity(
         id: map['id'] as int,
@@ -105,5 +108,8 @@ class FirebaseVolunteerRepository implements IVolunteerRepository {
         tenure: map['tenure'] as String,
         skills: (map['skills'] as List<dynamic>).cast<String>(),
         avatar: map['avatar'] as String,
+        mentorId: map['mentorId'] as int?,
+        mentorName: map['mentorName'] as String?,
       );
+
 }

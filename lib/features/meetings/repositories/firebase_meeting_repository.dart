@@ -41,6 +41,16 @@ class FirebaseMeetingRepository implements IMeetingRepository {
   }
 
   @override
+  Future<MeetingEntity> addMeeting(MeetingEntity meeting) async {
+    // Generate a simple ID or use timestamp
+    final newId = DateTime.now().millisecondsSinceEpoch % 100000;
+    final entityToAdd = meeting.copyWith(id: newId);
+    
+    await _db.collection(_collectionPath).doc(entityToAdd.id.toString()).set(_toMap(entityToAdd));
+    return entityToAdd;
+  }
+
+  @override
   Future<MeetingEntity> addSummary(
     int meetingId, {
     required String summary,
@@ -64,6 +74,7 @@ class FirebaseMeetingRepository implements IMeetingRepository {
         'status': m.status.name,
         if (m.summary != null) 'summary': m.summary,
         if (m.addedBy != null) 'addedBy': m.addedBy,
+        if (m.link != null) 'link': m.link,
       };
 
   MeetingEntity _fromMap(Map<String, dynamic> map) => MeetingEntity(
@@ -79,6 +90,7 @@ class FirebaseMeetingRepository implements IMeetingRepository {
         ),
         summary: map['summary'] as String?,
         addedBy: map['addedBy'] as String?,
+        link: map['link'] as String?,
       );
 
   T enumValueOr<T extends Enum>(List<T> values, String name, T fallback) {

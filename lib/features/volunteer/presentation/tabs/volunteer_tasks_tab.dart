@@ -5,6 +5,8 @@ import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
+import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
+import 'package:ngo_volunteer_management/core/widgets/submit_task_form.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
@@ -130,12 +132,23 @@ class _VolunteerTasksTabState extends ConsumerState<VolunteerTasksTab> {
 
   void _handleSubmit(TaskEntity task) {
     if (task.requiresUpload) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Upload flow coming soon!')),
+      AppModal.show(
+        context: context,
+        title: 'Submit Task: ${task.title}',
+        child: SubmitTaskForm(
+          onSubmit: (imageUrl, geotag) {
+            ref.read(taskProvider.notifier).submit(task.id, imagePath: imageUrl, geotag: geotag);
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Task "${task.title}" submitted successfully')),
+            );
+          },
+        ),
       );
     } else {
+      ref.read(taskProvider.notifier).submit(task.id);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Task "${task.title}" submitted successfully')),
+        SnackBar(content: Text('Task "${task.title}" marked as complete')),
       );
     }
   }

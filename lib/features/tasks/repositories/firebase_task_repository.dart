@@ -103,6 +103,7 @@ class FirebaseTaskRepository implements ITaskRepository {
         'createdAt': t.createdAt,
         if (t.uploadedImage != null) 'uploadedImage': t.uploadedImage,
         if (t.submittedAt != null) 'submittedAt': t.submittedAt,
+        if (t.geotag != null) 'geotag': t.geotag,
       };
 
   TaskEntity _fromMap(Map<String, dynamic> map) => TaskEntity(
@@ -126,6 +127,7 @@ class FirebaseTaskRepository implements ITaskRepository {
         createdAt: map['createdAt'] as String,
         uploadedImage: map['uploadedImage'] as String?,
         submittedAt: map['submittedAt'] as String?,
+        geotag: map['geotag'] as String?,
       );
 
   T enumValueOr<T extends Enum>(List<T> values, String name, T fallback) {

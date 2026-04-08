@@ -594,7 +594,13 @@ class _TaskTile extends ConsumerWidget {
           ),
           _TaskStatusChip(status: task.status),
           if (task.status == TaskStatus.submitted) ...[
-            const SizedBox(width: 8),
+            if (task.uploadedImage != null)
+              IconButton(
+                icon: const Icon(Icons.image_rounded, color: AppColors.blue500, size: 20),
+                onPressed: () => _showImagePreview(context, task),
+                constraints: const BoxConstraints(),
+              ),
+            const SizedBox(width: 4),
             IconButton(
               icon: const Icon(Icons.check_rounded, color: AppColors.emerald500, size: 20),
               onPressed: () => ref.read(taskProvider.notifier).updateStatus(task.id, TaskStatus.approved),
@@ -603,6 +609,54 @@ class _TaskTile extends ConsumerWidget {
             ),
           ]
         ],
+      ),
+    );
+  }
+
+  void _showImagePreview(BuildContext context, TaskEntity task) {
+    if (task.uploadedImage == null) return;
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBar(
+                title: const Text('Task Evidence'),
+                centerTitle: true,
+                automaticallyImplyLeading: false,
+                actions: [
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(task.uploadedImage!, fit: BoxFit.contain),
+                ),
+              ),
+              if (task.geotag != null && task.geotag!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.location_on_rounded, size: 16, color: AppColors.red500),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Captured at: ${task.geotag}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate700),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -641,6 +695,8 @@ class _AddTaskFormState extends State<_AddTaskForm> {
   final _formKey = GlobalKey<FormState>();
   String title = '';
   DateTime deadline = DateTime.now().add(const Duration(days: 7));
+  bool _requiresUpload = false;
+
 
   @override
   Widget build(BuildContext context) {
@@ -670,7 +726,15 @@ class _AddTaskFormState extends State<_AddTaskForm> {
               if (picked != null) setState(() => deadline = picked);
             },
           ),
+          SwitchListTile.adaptive(
+            secondary: const Icon(Icons.image_rounded),
+            title: const Text('Requires Image Upload'),
+            subtitle: const Text('Member must upload camera proof with geotag'),
+            value: _requiresUpload,
+            onChanged: (val) => setState(() => _requiresUpload = val),
+          ),
           const SizedBox(height: 24),
+
           ElevatedButton(
             onPressed: () {
               if (_formKey.currentState?.validate() ?? false) {
@@ -684,7 +748,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
                   assignedToName: widget.member.name,
                   assignedToType: AssigneeType.member,
                   status: TaskStatus.pending,
-                  requiresUpload: false,
+                  requiresUpload: _requiresUpload,
                   createdAt: AppFormatters.today(),
                 ));
               }

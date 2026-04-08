@@ -6,6 +6,8 @@ import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:printing/printing.dart';
 
 class MemberPaymentsTab extends ConsumerWidget {
   const MemberPaymentsTab({super.key});
@@ -77,7 +79,29 @@ class MemberPaymentsTab extends ConsumerWidget {
                           ),
                           if (p.receiptGenerated) ...[
                             const SizedBox(height: 4),
-                            const Text('Receipt Available', style: TextStyle(fontSize: 10, color: AppColors.blue600, fontWeight: FontWeight.bold)),
+                            TextButton.icon(
+                              onPressed: () async {
+                                final parsedDate = DateTime.parse(p.date);
+                                final pdfData = await PdfGeneratorService.generateReceiptPdf(
+                                  receiptNo: 'REC-${parsedDate.year}-${p.id}',
+                                  date: parsedDate,
+                                  donorName: p.donorName,
+                                  amount: p.amount.toDouble(),
+                                  amountWords: 'Rupees ${p.amount} only',
+                                  paymentMode: p.type.name.toUpperCase(),
+                                  purpose: p.purpose,
+                                );
+                                await Printing.layoutPdf(onLayout: (format) => pdfData);
+                              },
+                              icon: const Icon(Icons.download_rounded, size: 14),
+                              label: const Text('Receipt', style: TextStyle(fontSize: 12)),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.blue600,
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(0, 0),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
                           ]
                         ],
                       ),

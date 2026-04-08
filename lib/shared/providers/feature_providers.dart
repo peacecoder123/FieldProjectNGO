@@ -17,6 +17,9 @@ import '../../features/requests/repositories/firebase_general_request_repository
 import '../../features/requests/repositories/firebase_mou_request_repository.dart';
 import '../../features/joining_letters/repositories/firebase_joining_letter_repository.dart';
 import '../../features/meetings/repositories/firebase_meeting_repository.dart';
+import '../../features/documents/repositories/document_request_repository.dart';
+import '../../features/documents/repositories/firebase_document_request_repository.dart';
+import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
 import '../../features/auth/repositories/firebase_auth_repository.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,6 +58,9 @@ final documentRepositoryProvider = Provider<IDocumentRepository>(
 );
 final meetingRepositoryProvider = Provider<IMeetingRepository>(
   (_) => FirebaseMeetingRepository(),
+);
+final documentRequestRepositoryProvider = Provider<IDocumentRequestRepository>(
+  (_) => FirebaseDocumentRequestRepository(),
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -159,7 +165,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<TaskEntity>>> {
     );
   }
 
-  Future<void> submit(int taskId, {String? imagePath}) async {
+  Future<void> submit(int taskId, {String? imagePath, String? geotag}) async {
     final repo = _repo;
     final current = state.value?.firstWhere((t) => t.id == taskId);
     if (current == null) return;
@@ -168,6 +174,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<TaskEntity>>> {
         status:        TaskStatus.submitted,
         submittedAt:   AppFormatters.today(),
         uploadedImage: imagePath ?? current.uploadedImage,
+        geotag:        geotag ?? current.geotag,
       ),
     );
     state = state.whenData(
@@ -407,6 +414,11 @@ class MeetingNotifier extends StateNotifier<AsyncValue<List<MeetingEntity>>> {
 
   Future<void> refresh() => _load();
 
+  Future<void> add(MeetingEntity meeting) async {
+    final created = await _repo.addMeeting(meeting);
+    state = state.whenData((list) => [...list, created]);
+  }
+
   Future<void> addSummary(
     int meetingId, {
     required String summary,
@@ -426,4 +438,55 @@ class MeetingNotifier extends StateNotifier<AsyncValue<List<MeetingEntity>>> {
 final meetingProvider =
     StateNotifierProvider<MeetingNotifier, AsyncValue<List<MeetingEntity>>>(
   (ref) => MeetingNotifier(ref.watch(meetingRepositoryProvider)),
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOCUMENT REQUEST STATE
+// ─────────────────────────────────────────────────────────────────────────────
+
+class DocumentRequestNotifier
+    extends StateNotifier<AsyncValue<List<DocumentRequestEntity>>> {
+  DocumentRequestNotifier(this._repository) : super(const AsyncValue.loading()) {
+    _listenToFirebase();
+  }
+
+  final IDocumentRequestRepository _repository;
+  StreamSubscription<List<DocumentRequestEntity>>? _subscription;
+
+  void _listenToFirebase() {
+    _subscription = _repository.watchAll().listen(
+      (requests) {
+        state = AsyncValue.data(requests);
+      },
+      onError: (error, stackTrace) {
+        debugPrint('Firebase Stream Error (DocumentRequest): $error');
+        state = AsyncValue.error(error, stackTrace);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> add(DocumentRequestEntity r) async {
+    await _repository.add(r);
+  }
+
+  Future<void> approve(String id, {required String approvedBy}) async {
+    final certNo = 'JF/CERT/${DateTime.now().year}/$id';
+    await _repository.updateStatus(id, DocumentRequestStatus.approved,
+        approvedBy: approvedBy, certificateNo: certNo);
+  }
+
+  Future<void> reject(String id) async {
+    await _repository.updateStatus(id, DocumentRequestStatus.rejected);
+  }
+}
+
+final documentRequestProvider = StateNotifierProvider<DocumentRequestNotifier,
+    AsyncValue<List<DocumentRequestEntity>>>(
+  (ref) => DocumentRequestNotifier(ref.watch(documentRequestRepositoryProvider)),
 );
