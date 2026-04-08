@@ -554,6 +554,21 @@ class _VolunteerMeetingsTabState extends ConsumerState<VolunteerMeetingsTab> {
                       ),
                     ],
                   ),
+                  if (meeting.link != null && meeting.link!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.link_rounded, size: 18, color: AppColors.blue500),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            meeting.link!,
+                            style: const TextStyle(fontSize: 14, color: AppColors.blue600, decoration: TextDecoration.underline),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   const Divider(),
                   const SizedBox(height: 16),
@@ -714,6 +729,22 @@ class _MeetingCard extends StatelessWidget {
                         Text('${AppFormatters.displayDate(meeting.date)} at ${meeting.time}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
                       ],
                     ),
+                    if (meeting.link != null && meeting.link!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.link_rounded, size: 14, color: AppColors.blue500),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              meeting.link!,
+                              style: const TextStyle(fontSize: 12, color: AppColors.blue600, decoration: TextDecoration.underline),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

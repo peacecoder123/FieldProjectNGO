@@ -7,6 +7,7 @@ import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
+import 'package:ngo_volunteer_management/features/admin/presentation/tabs/document_approvals_tab.dart';
 
 class RequestsTab extends ConsumerStatefulWidget {
   const RequestsTab({super.key});
@@ -21,7 +22,7 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
@@ -45,7 +46,7 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
       children: [
         const SectionHeader(
           title: 'Requests & Inquiries',
-          subtitle: 'Handle MOU requests and general inquiries from members and volunteers',
+          subtitle: 'Handle formal documents, MOU requests and general inquiries',
         ),
         const SizedBox(height: 24),
         TabBar(
@@ -63,14 +64,17 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
           tabs: const [
             Tab(text: 'General Requests'),
             Tab(text: 'MOU Requests'),
+            Tab(text: 'Certificates'),
           ],
         ),
         const SizedBox(height: 24),
 
         if (_tabController.index == 0)
           _GeneralRequestsList()
+        else if (_tabController.index == 1)
+          _MouRequestsList()
         else
-          _MouRequestsList(),
+          const DocumentApprovalsList(),
       ],
     );
   }

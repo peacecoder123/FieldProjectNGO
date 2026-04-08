@@ -6,6 +6,7 @@ import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
+import 'package:ngo_volunteer_management/core/widgets/submit_task_form.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
@@ -25,7 +26,11 @@ class MemberTasksTab extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (tasks) {
-        final myTasks = tasks.where((t) => t.assignedToId == currentUser.id).toList();
+        final myTasks = tasks
+            .where((t) =>
+                t.assignedToType == AssigneeType.member &&
+                t.assignedToId == currentUser.id)
+            .toList();
 
         return ListView(
           shrinkWrap: true,
@@ -141,87 +146,12 @@ class _MemberTaskItem extends ConsumerWidget {
     AppModal.show(
       context: context,
       title: 'Submit Task: ${task.title}',
-      child: _SubmitTaskForm(
-        onSubmit: (imageUrl) {
-          ref.read(taskProvider.notifier).submit(task.id, imagePath: imageUrl);
+      child: SubmitTaskForm(
+        onSubmit: (imageUrl, geotag) {
+          ref.read(taskProvider.notifier).submit(task.id, imagePath: imageUrl, geotag: geotag);
           Navigator.pop(context);
         },
       ),
     );
   }
-}
-
-class _SubmitTaskForm extends StatefulWidget {
-  const _SubmitTaskForm({required this.onSubmit});
-  final Function(String) onSubmit;
-
-  @override
-  State<_SubmitTaskForm> createState() => _SubmitTaskFormState();
-}
-
-class _SubmitTaskFormState extends State<_SubmitTaskForm> {
-  String _imageUrl = '';
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text(
-          'Please provide proof of completion (Image URL or photo)',
-          style: TextStyle(fontSize: 14, color: AppColors.slate600),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          height: 180,
-          decoration: BoxDecoration(
-            color: AppColors.slate50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.slate200, style: BorderStyle.solid),
-          ),
-          child: _imageUrl.isEmpty
-              ? InkWell(
-                  onTap: () => setState(() => _imageUrl = 'https://picsum.photos/seed/${DateTime.now().millisecond}/400/300'),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_a_photo_rounded, size: 48, color: AppColors.slate400),
-                      SizedBox(height: 8),
-                      Text('Tap to upload photo', style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.w500)),
-                    ],
-                  ),
-                )
-              : ClipRRect(
-                  borderRadius: BorderRadius.circular(11),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.network(_imageUrl, fit: BoxFit.cover),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: IconButton(
-                          onPressed: () => setState(() => _imageUrl = ''),
-                          icon: const Icon(Icons.cancel_rounded, color: Colors.white),
-                          style: IconButton.styleFrom(backgroundColor: Colors.black45),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-        ),
-        const SizedBox(height: 24),
-        ElevatedButton(
-          onPressed: _imageUrl.isEmpty ? null : () => widget.onSubmit(_imageUrl),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.emerald600,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          child: const Text('Confirm Submission'),
-        ),
-      ],
-    );
-  }
-}
+}

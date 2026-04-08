@@ -41,7 +41,10 @@ Future<void> main() async {
     rethrow;
   }
 
-  // Seed Firestore with mock data on first launch
+  // Clear old boolean-flag key in case it exists from a previous version
+  prefs.remove('firestore_seeded');
+
+  // Seed Firestore with consistent demo data (runs only when version changes)
   await seedFirestoreIfEmpty();
 
   runApp(

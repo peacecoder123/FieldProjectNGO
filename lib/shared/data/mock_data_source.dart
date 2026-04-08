@@ -19,7 +19,7 @@ abstract final class MockDataSource {
       name: 'Vikram Bose', email: 'vikram@hopeconnect.org', avatar: 'VB',
     ),
     UserEntity(
-      id: 1, role: UserRole.admin,
+      id: 3, role: UserRole.admin,
       name: 'Priya Sharma', email: 'priya@hopeconnect.org', avatar: 'PS',
     ),
     UserEntity(
@@ -27,22 +27,30 @@ abstract final class MockDataSource {
       name: 'Dr. Anjali Mehta', email: 'anjali@hopeconnect.org', avatar: 'AM',
     ),
     UserEntity(
-      id: 3, role: UserRole.volunteer,
-      name: 'Rahul Sharma', email: 'rahul@hopeconnect.org', avatar: 'RS',
+      id: 1, role: UserRole.volunteer,
+      name: 'Rahul Verma', email: 'rahul@hopeconnect.org', avatar: 'RV',
     ),
   ];
+
+
+
 
   // ── Volunteers ────────────────────────────────────────────────────────────
 
   static final List<VolunteerEntity> volunteers = [
     const VolunteerEntity(
-      id: 1, name: 'Rahul Sharma', email: 'rahul.sharma@email.com',
+      id: 1, name: 'Rahul Verma', email: 'rahul@hopeconnect.org',
       phone: '9876543210', address: 'Bandra, Mumbai',
       joinDate: '2024-01-15', status: PersonStatus.active,
       assignedAdmin: 'Priya Sharma',
       taskIds: [1, 2], tenure: 'Jan 2025', skills: ['Teaching', 'Healthcare'],
-      avatar: 'RS',
+      avatar: 'RV',
+
+
+      mentorId: 2,
+      mentorName: 'Dr. Anjali Mehta',
     ),
+
     const VolunteerEntity(
       id: 2, name: 'Sneha Kulkarni', email: 'sneha.k@email.com',
       phone: '9123456780', address: 'Pune, Maharashtra',
@@ -50,7 +58,10 @@ abstract final class MockDataSource {
       assignedAdmin: 'Arjun Kapoor',
       taskIds: [3], tenure: 'Mar 2025', skills: ['Cooking', 'Event Management'],
       avatar: 'SK',
+      mentorId: 2,
+      mentorName: 'Dr. Anjali Mehta',
     ),
+
     const VolunteerEntity(
       id: 3, name: 'Aditya Verma', email: 'aditya.v@email.com',
       phone: '9988776655', address: 'Andheri, Mumbai',
@@ -83,13 +94,14 @@ abstract final class MockDataSource {
 
   static final List<MemberEntity> members = [
     const MemberEntity(
-      id: 1, name: 'Dr. Anjali Mehta', email: 'anjali.mehta@email.com',
+      id: 1, name: 'Dr. Anjali Mehta', email: 'anjali@hopeconnect.org',
       phone: '9871234567', address: 'Colaba, Mumbai',
       joinDate: '2022-04-01', renewalDate: '2026-04-01',
       status: PersonStatus.active,
       membershipType: MembershipType.eightyG,
       taskIds: [7, 8], isPaid: true, avatar: 'AM',
     ),
+
     const MemberEntity(
       id: 2, name: 'Suresh Patil', email: 'suresh.p@email.com',
       phone: '9823456789', address: 'Nagpur, Maharashtra',
@@ -125,7 +137,7 @@ abstract final class MockDataSource {
       description: 'Coordinate food distribution at Dharavi community centre. '
           'Manage volunteers and ensure orderly queues.',
       deadline: '2025-04-15', assignedToId: 1,
-      assignedToName: 'Rahul Sharma', assignedToType: AssigneeType.volunteer,
+      assignedToName: 'Rahul Verma', assignedToType: AssigneeType.volunteer,
       status: TaskStatus.submitted, requiresUpload: true,
       uploadedImage: 'food_drive.jpg',
       submittedAt: '2025-04-10', createdAt: '2025-03-20',
@@ -134,7 +146,7 @@ abstract final class MockDataSource {
       id: 2, title: 'Health Camp Setup',
       description: 'Set up medical equipment and registration desks at Govandi.',
       deadline: '2025-05-01', assignedToId: 1,
-      assignedToName: 'Rahul Sharma', assignedToType: AssigneeType.volunteer,
+      assignedToName: 'Rahul Verma', assignedToType: AssigneeType.volunteer,
       status: TaskStatus.approved, requiresUpload: false,
       createdAt: '2025-03-25',
     ),
@@ -320,7 +332,7 @@ abstract final class MockDataSource {
 
   static final List<JoiningLetterRequestEntity> joiningLetterRequests = [
     const JoiningLetterRequestEntity(
-      id: 1, name: 'Rahul Sharma',
+      id: 1, name: 'Rahul Verma',
       type: JoiningLetterType.volunteer,
       requestDate: '2025-03-10', status: RequestStatus.pending,
       tenure: 'March 2025', isNewMember: false,
@@ -332,18 +344,13 @@ abstract final class MockDataSource {
       tenure: 'April 2025', isNewMember: false, generatedBy: 'Priya Sharma',
     ),
     const JoiningLetterRequestEntity(
-      id: 3, name: 'Neha Joshi',
-      type: JoiningLetterType.newMember,
-      requestDate: '2025-03-22', status: RequestStatus.pending,
-      tenure: 'FY 2025-26', isNewMember: true,
-    ),
-    const JoiningLetterRequestEntity(
-      id: 4, name: 'Dr. Anjali Mehta',
+      id: 3, name: 'Dr. Anjali Mehta',
       type: JoiningLetterType.member,
       requestDate: '2025-03-05', status: RequestStatus.approved,
-      tenure: 'FY 2025-26', isNewMember: false, generatedBy: 'Arjun Kapoor',
+      tenure: 'FY 2025-26', isNewMember: false, generatedBy: 'Priya Sharma',
     ),
   ];
+
 
   // ── Documents ─────────────────────────────────────────────────────────────
 

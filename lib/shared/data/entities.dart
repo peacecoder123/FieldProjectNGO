@@ -19,6 +19,8 @@ class VolunteerEntity extends Equatable {
     required this.tenure,
     required this.skills,
     required this.avatar,
+    this.mentorId,
+    this.mentorName,
   });
 
   final int          id;
@@ -33,6 +35,9 @@ class VolunteerEntity extends Equatable {
   final String       tenure;
   final List<String> skills;
   final String       avatar;
+  final int?          mentorId;
+  final String?       mentorName;
+
 
   VolunteerEntity copyWith({
     int?          id,
@@ -47,6 +52,8 @@ class VolunteerEntity extends Equatable {
     String?       tenure,
     List<String>? skills,
     String?       avatar,
+    int?          mentorId,
+    String?       mentorName,
   }) =>
       VolunteerEntity(
         id:            id            ?? this.id,
@@ -61,12 +68,14 @@ class VolunteerEntity extends Equatable {
         tenure:        tenure        ?? this.tenure,
         skills:        skills        ?? this.skills,
         avatar:        avatar        ?? this.avatar,
+        mentorId:      mentorId      ?? this.mentorId,
+        mentorName:    mentorName    ?? this.mentorName,
       );
 
   @override
   List<Object?> get props =>
       [id, name, email, phone, address, joinDate, status,
-       assignedAdmin, taskIds, tenure, skills, avatar];
+       assignedAdmin, taskIds, tenure, skills, avatar, mentorId, mentorName];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -155,6 +164,7 @@ class TaskEntity extends Equatable {
     required this.createdAt,
     this.uploadedImage,
     this.submittedAt,
+    this.geotag,
   });
 
   final int          id;
@@ -169,6 +179,7 @@ class TaskEntity extends Equatable {
   final String       createdAt;
   final String?      uploadedImage;
   final String?      submittedAt;
+  final String?      geotag;
 
   TaskEntity copyWith({
     int?          id,
@@ -183,6 +194,7 @@ class TaskEntity extends Equatable {
     String?       createdAt,
     String?       uploadedImage,
     String?       submittedAt,
+    String?       geotag,
   }) =>
       TaskEntity(
         id:             id             ?? this.id,
@@ -197,13 +209,14 @@ class TaskEntity extends Equatable {
         createdAt:      createdAt      ?? this.createdAt,
         uploadedImage:  uploadedImage  ?? this.uploadedImage,
         submittedAt:    submittedAt    ?? this.submittedAt,
+        geotag:         geotag         ?? this.geotag,
       );
 
   @override
   List<Object?> get props =>
       [id, title, description, deadline, assignedToId, assignedToName,
        assignedToType, status, requiresUpload, createdAt,
-       uploadedImage, submittedAt];
+       uploadedImage, submittedAt, geotag];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -465,6 +478,7 @@ class MeetingEntity extends Equatable {
     required this.status,
     this.summary,
     this.addedBy,
+    this.link,
   });
 
   final int           id;
@@ -475,6 +489,7 @@ class MeetingEntity extends Equatable {
   final MeetingStatus status;
   final String?       summary;
   final String?       addedBy;
+  final String?       link;
 
   MeetingEntity copyWith({
     int?           id,
@@ -485,6 +500,7 @@ class MeetingEntity extends Equatable {
     MeetingStatus? status,
     String?        summary,
     String?        addedBy,
+    String?        link,
   }) =>
       MeetingEntity(
         id:        id        ?? this.id,
@@ -495,11 +511,12 @@ class MeetingEntity extends Equatable {
         status:    status    ?? this.status,
         summary:   summary   ?? this.summary,
         addedBy:   addedBy   ?? this.addedBy,
+        link:      link      ?? this.link,
       );
 
   @override
   List<Object?> get props =>
-      [id, title, date, time, attendees, status, summary, addedBy];
+      [id, title, date, time, attendees, status, summary, addedBy, link];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -151,6 +151,8 @@ abstract interface class IMeetingRepository {
   Future<List<MeetingEntity>> getAll();
   Stream<List<MeetingEntity>> watchAll(); // Real-time Firebase support
   
+  Future<MeetingEntity>       addMeeting(MeetingEntity meeting);
+
   Future<MeetingEntity>       addSummary(
     int meetingId, {
     required String summary,

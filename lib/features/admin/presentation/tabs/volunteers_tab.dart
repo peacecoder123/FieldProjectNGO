@@ -370,16 +370,17 @@ class _VolunteerCard extends ConsumerWidget {
 // ADD VOLUNTEER FORM
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _AddVolunteerForm extends StatefulWidget {
+class _AddVolunteerForm extends ConsumerStatefulWidget {
   const _AddVolunteerForm({required this.onSubmit});
 
   final void Function(VolunteerEntity) onSubmit;
 
   @override
-  State<_AddVolunteerForm> createState() => _AddVolunteerFormState();
+  ConsumerState<_AddVolunteerForm> createState() => _AddVolunteerFormState();
 }
 
-class _AddVolunteerFormState extends State<_AddVolunteerForm> {
+class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
+
   final _formKey = GlobalKey<FormState>();
 
   String _name = '';
@@ -389,6 +390,9 @@ class _AddVolunteerFormState extends State<_AddVolunteerForm> {
   String _skills = '';
   String _assignedAdmin = '';
   String _tenure = 'monthly';
+  int? _mentorId;
+  String? _mentorName;
+
 
   @override
   Widget build(BuildContext context) {
@@ -473,7 +477,37 @@ class _AddVolunteerFormState extends State<_AddVolunteerForm> {
                 }
               },
             ),
+            const SizedBox(height: 12),
+            ref.watch(memberProvider).when(
+              data: (members) => DropdownButtonFormField<int?>(
+                decoration: const InputDecoration(
+                  labelText: 'Assign Mentor (Member)',
+                  prefixIcon: Icon(Icons.supervisor_account_rounded),
+                ),
+                value: _mentorId,
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('No Mentor')),
+                  ...members.map((m) => DropdownMenuItem(
+                    value: m.id,
+                    child: Text(m.name),
+                  )),
+                ],
+                onChanged: (val) {
+                  setState(() {
+                    _mentorId = val;
+                    if (val != null) {
+                      _mentorName = members.firstWhere((m) => m.id == val).name;
+                    } else {
+                      _mentorName = null;
+                    }
+                  });
+                },
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => const Text('Error loading members'),
+            ),
             const SizedBox(height: 24),
+
             ElevatedButton(
               onPressed: _handleSubmit,
               style: ElevatedButton.styleFrom(
@@ -510,6 +544,8 @@ class _AddVolunteerFormState extends State<_AddVolunteerForm> {
               .where((s) => s.isNotEmpty)
               .toList(),
           avatar: '',
+          mentorId: _mentorId,
+          mentorName: _mentorName,
         ),
       );
     }
@@ -678,6 +714,12 @@ class _VolunteerDetailsContent extends ConsumerWidget {
                 ? volunteer.assignedAdmin
                 : 'Not assigned',
             icon: Icons.shield_rounded,
+          ),
+          const Divider(height: 24),
+          _InfoRow(
+            label: 'Assigned Mentor (Member)',
+            value: volunteer.mentorName ?? 'Not assigned',
+            icon: Icons.supervisor_account_rounded,
           ),
           const Divider(height: 24),
           _InfoRow(
@@ -895,7 +937,7 @@ class _TaskItem extends ConsumerWidget {
                   children: [
                     if (task.uploadedImage != null)
                       TextButton.icon(
-                        onPressed: () => _showImagePreview(context, task.uploadedImage!),
+                        onPressed: () => _showImagePreview(context, task),
                         icon: const Icon(Icons.image_rounded, size: 16),
                         label: const Text('View'),
                         style: TextButton.styleFrom(
@@ -936,7 +978,9 @@ class _TaskItem extends ConsumerWidget {
     );
   }
 
-  void _showImagePreview(BuildContext context, String imageUrl) {
+  void _showImagePreview(BuildContext context, TaskEntity task) {
+    if (task.uploadedImage == null) return;
+    final imageUrl = task.uploadedImage!;
     showDialog(
       context: context,
       builder: (_) => Dialog(
@@ -984,6 +1028,21 @@ class _TaskItem extends ConsumerWidget {
                   ),
                 ),
               ),
+              if (task.geotag != null && task.geotag!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.location_on_rounded, size: 16, color: AppColors.red500),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Captured at: ${task.geotag}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate700),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),

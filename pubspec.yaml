@@ -49,6 +49,12 @@ dependencies:
   cloud_firestore: ^6.2.0
   pdf: ^3.12.0
   printing: ^5.14.3
+  image_picker: ^1.2.1
+  geolocator: ^14.0.2
+  geolocator_web: ^4.0.0
+  web: ^1.1.0
+
+
 
 dev_dependencies:
   flutter_test:

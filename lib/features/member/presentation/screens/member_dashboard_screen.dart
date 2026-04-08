@@ -7,6 +7,8 @@ import 'package:ngo_volunteer_management/features/member/presentation/tabs/membe
 import 'package:ngo_volunteer_management/features/member/presentation/tabs/hospital_mou_tab.dart';
 import 'package:ngo_volunteer_management/features/member/presentation/tabs/member_certificate_tab.dart';
 import 'package:ngo_volunteer_management/features/member/presentation/tabs/member_payments_tab.dart';
+import 'package:ngo_volunteer_management/features/member/presentation/tabs/member_volunteers_tab.dart';
+
 
 // ── Member Dashboard ──────────────────────────────────────────────────────────
 
@@ -25,7 +27,9 @@ class _MemberDashboardState extends ConsumerState<MemberDashboardScreen> {
     NavItem(id: 'meetings',    label: 'Minutes of Meeting', icon: Icons.calendar_today_rounded),
     NavItem(id: 'hospital-mou', label: 'Hospital MOU',     icon: Icons.local_hospital_rounded),
     NavItem(id: 'certificate', label: 'Certificate',        icon: Icons.workspace_premium_rounded),
+    NavItem(id: 'volunteers',  label: 'My Volunteers',     icon: Icons.people_outline_rounded),
     NavItem(id: 'payments',    label: 'Payments',           icon: Icons.credit_card_rounded),
+
   ];
 
   Widget _buildTab() => switch (_activeTab) {
@@ -33,7 +37,9 @@ class _MemberDashboardState extends ConsumerState<MemberDashboardScreen> {
     'meetings'     => const MemberMeetingsTab(),
     'hospital-mou' => const HospitalMouTab(),
     'certificate'  => const MemberCertificateTab(),
+    'volunteers'   => const MemberVolunteersTab(),
     'payments'     => const MemberPaymentsTab(),
+
     _              => const MemberTasksTab(),
   };
 

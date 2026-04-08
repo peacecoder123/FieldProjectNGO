@@ -315,6 +315,15 @@ class MockMeetingRepository implements IMeetingRepository {
   Stream<List<MeetingEntity>> watchAll() => Stream.fromFuture(getAll());
 
   @override
+  Future<MeetingEntity> addMeeting(MeetingEntity meeting) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    final newId = _data.isEmpty ? 1 : _data.map((m) => m.id).reduce((a, b) => a > b ? a : b) + 1;
+    final entityToAdd = meeting.copyWith(id: newId);
+    _data.add(entityToAdd);
+    return entityToAdd;
+  }
+
+  @override
   Future<MeetingEntity> addSummary(int meetingId, {required String summary, required String addedBy}) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((m) => m.id == meetingId);

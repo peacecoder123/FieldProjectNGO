@@ -89,6 +89,21 @@ class _MeetingItem extends ConsumerWidget {
               Text(meeting.time, style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
             ],
           ),
+          if (meeting.link != null && meeting.link!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.link_rounded, size: 14, color: AppColors.blue500),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    meeting.link!,
+                    style: const TextStyle(fontSize: 12, color: AppColors.blue600, decoration: TextDecoration.underline),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           if (meeting.summary != null && meeting.summary!.isNotEmpty)
             Container(
@@ -96,15 +111,18 @@ class _MeetingItem extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(8)),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Summary:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.slate400)),
-                  const SizedBox(height: 4),
-                  Text(meeting.summary!, style: const TextStyle(fontSize: 13, height: 1.4)),
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 16, color: AppColors.emerald500),
+                      SizedBox(width: 6),
+                      Text('Meeting Summary Submitted', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.emerald700)),
+                    ],
+                  ),
                 ],
               ),
             )
-          else if (isAttendee && isPast)
+          else if (isPast)
             ElevatedButton.icon(
               onPressed: () => _showAddSummaryModal(context, ref),
               icon: const Icon(Icons.edit_note_rounded, size: 18),
