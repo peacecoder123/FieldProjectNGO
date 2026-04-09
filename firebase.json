@@ -1,1 +1,31 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"jayashree-foundation07","configurations":{"android":"1:1093449762008:android:b7cf389701dea3a92883ad","ios":"1:1093449762008:ios:7e4f8decf0db9e402883ad","web":"1:1093449762008:web:705fe03d7b3d38d02883ad","windows":"1:1093449762008:web:c19611d8d481e6372883ad"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "jayashree-foundation07",
+          "configurations": {
+            "android": "1:1093449762008:android:b7cf389701dea3a92883ad",
+            "ios": "1:1093449762008:ios:7e4f8decf0db9e402883ad",
+            "web": "1:1093449762008:web:705fe03d7b3d38d02883ad",
+            "windows": "1:1093449762008:web:c19611d8d481e6372883ad"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
