@@ -1,0 +1,21 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
+    "ANTHROPIC_AUTH_TOKEN": "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",
+    "ANTHROPIC_API_KEY": "",
+    "ANTHROPIC_MODEL": "qwen/qwen3.6-plus:free"
+  },
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(flutter analyze:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(python -m code_review_graph --help)",
+      "Bash(python -c \"import code_review_graph; print\\(dir\\(code_review_graph\\)\\)\")",
+      "Bash(pip show:*)",
+      "Bash(python -m code_review_graph install --help)",
+      "mcp__code-review-graph__semantic_search_nodes_tool",
+      "Bash(flutter build:*)"
+    ]
+  }
+}

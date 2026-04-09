@@ -14,6 +14,9 @@ abstract interface class IAuthRepository {
     required String password,
   });
 
+  /// Authenticates using Google Sign-In and checks Firestore for whitelisting
+  Future<UserEntity?> loginWithGoogle();
+
   /// Real-time stream of the authentication state (useful for Firebase Auth)
   Stream<UserEntity?> watchAuthState();
 
