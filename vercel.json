@@ -1,8 +1,32 @@
 {
+  "buildCommand": "cp web/index.html build/web/index.html",
+  "devCommand": "flutter run -d chrome",
+  "installCommand": "echo 'No npm install needed'",
+  "outputDirectory": "build/web",
   "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/flutter.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, immutable" }
+      ]
+    },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" }
+      ]
     }
-  ]
+  ],
+  "github": {
+    "silent": true
+  }
 }

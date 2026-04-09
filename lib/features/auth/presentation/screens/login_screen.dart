@@ -65,6 +65,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _loginWithGoogle() async {
+    setState(() { _loading = true; _error = null; });
+
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      final user = await repo.loginWithGoogle();
+
+      if (!mounted) return;
+      setState(() => _loading = false);
+
+      if (user == null) {
+        // User canceled Google Sign-In, don't show error.
+        return;
+      }
+
+      ref.read(currentUserProvider.notifier).login(user);
+      context.go(user.role.routePath);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        // The exception message contains the whitelist error. Clean it up for UI.
+        final errorMsg = e.toString().contains('Exception:') 
+            ? e.toString().split('Exception:').last.trim() 
+            : 'Google Sign-in failed. Please try again.';
+        _error = errorMsg;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -242,6 +272,59 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         fontSize: 15,
                                       ),
                                     ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Google Sign-In Or Divider
+                          Row(
+                            children: [
+                              const Expanded(child: Divider(color: Color(0xFF334155))),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Text(
+                                  'OR',
+                                  style: TextStyle(
+                                    color: AppColors.slate500,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const Expanded(child: Divider(color: Color(0xFF334155))),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Google Auth Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: _loading ? null : _loginWithGoogle,
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                side: const BorderSide(color: Color(0xFF334155)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                backgroundColor: const Color(0xFF0F172A),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Minimalist generic icon or a custom Google svg
+                                  const Icon(Icons.g_mobiledata, color: Colors.white, size: 28),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Continue with Google',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
