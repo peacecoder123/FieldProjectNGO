@@ -18,6 +18,17 @@ class MockAuthRepository implements IAuthRepository {
   }
 
   @override
+  Future<UserEntity?> loginWithGoogle() async {
+    await Future.delayed(const Duration(milliseconds: 800));
+    try {
+      // Mocking google sign in by returning an admin
+      return MockDataSource.users.firstWhere((u) => u.email == 'admin@hopeconnect.org');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
   Stream<UserEntity?> watchAuthState() => Stream.value(null);
 
   @override

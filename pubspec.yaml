@@ -54,7 +54,7 @@ dependencies:
   geolocator_web: ^4.0.0
   web: ^1.1.0
   firebase_auth: ^6.3.0
-  google_sign_in: ^7.2.0
+  google_sign_in: ^6.2.1
 
 
 
