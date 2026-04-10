@@ -14,6 +14,7 @@ class UserEntity extends Equatable {
     required this.email,
     required this.role,
     this.avatar,
+    this.fcmToken,
   });
 
   final int      id;
@@ -24,6 +25,9 @@ class UserEntity extends Equatable {
   /// One or two-character initials used for the avatar widget.
   /// Falls back to derived initials if not supplied.
   final String? avatar;
+
+  /// Firebase Cloud Messaging device token.
+  final String? fcmToken;
 
   String get displayAvatar {
     if (avatar != null && avatar!.isNotEmpty) return avatar!;
@@ -38,21 +42,22 @@ class UserEntity extends Equatable {
     String?   email,
     UserRole? role,
     String?   avatar,
+    String?   fcmToken,
   }) {
     return UserEntity(
-      id:     id     ?? this.id,
-      name:   name   ?? this.name,
-      email:  email  ?? this.email,
-      role:   role   ?? this.role,
-      avatar: avatar ?? this.avatar,
+      id:       id       ?? this.id,
+      name:     name     ?? this.name,
+      email:    email    ?? this.email,
+      role:     role     ?? this.role,
+      avatar:   avatar   ?? this.avatar,
+      fcmToken: fcmToken ?? this.fcmToken,
     );
   }
 
   // ── Equatable ──────────────────────────────────────────────────────────────
   @override
-  List<Object?> get props => [id, name, email, role, avatar];
+  List<Object?> get props => [id, name, email, role, avatar, fcmToken];
 
-  // ── Serialisation (kept minimal — mock data only for now) ─────────────────
   // ── Serialisation ───────────────────────────────────────────────────────
   factory UserEntity.fromJson(Map<String, dynamic> json) {
     final rawId = json['id'];
@@ -72,15 +77,17 @@ class UserEntity extends Equatable {
         (r) => r.name == json['role'],
         orElse: () => UserRole.volunteer,
       ),
-      avatar: json['avatar'] as String?,
+      avatar:   json['avatar'] as String?,
+      fcmToken: json['fcmToken'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id':     id,
-    'name':   name,
-    'email':  email,
-    'role':   role.name,
-    'avatar': avatar,
+    'id':       id,
+    'name':     name,
+    'email':    email,
+    'role':     role.name,
+    'avatar':   avatar,
+    'fcmToken': fcmToken,
   };
 }

@@ -18,7 +18,9 @@ class FirebaseAuthRepository implements IAuthRepository {
 
   FirebaseAuthRepository() {
     _firebaseAuth = auth.FirebaseAuth.instance;
-    _googleSignIn = GoogleSignIn();
+    _googleSignIn = GoogleSignIn(
+      clientId: '1093449762008-placeholder.apps.googleusercontent.com',
+    );
     if (Firebase.apps.isNotEmpty) {
       _firestore = FirebaseFirestore.instance;
     }
@@ -133,10 +135,25 @@ class FirebaseAuthRepository implements IAuthRepository {
     );
   }
 
+  @override
+  Future<void> updateFcmToken(int userId, String? token) async {
+    try {
+      await _db.collection(_collectionPath).doc(userId.toString()).update({
+        'fcmToken': token,
+      });
+      debugPrint('Sync: FCM token updated for user $userId');
+    } catch (e) {
+      debugPrint('Sync Error: Failed to update FCM token: $e');
+    }
+  }
+
   UserRole _roleFromString(String role) {
-    return UserRole.values.firstWhere(
-      (r) => r.name == role.toLowerCase(),
-      orElse: () => UserRole.admin,
-    );
+    switch (role) {
+      case 'superAdmin': return UserRole.superAdmin;
+      case 'admin':      return UserRole.admin;
+      case 'member':     return UserRole.member;
+      case 'volunteer':  return UserRole.volunteer;
+      default:           return UserRole.volunteer;
+    }
   }
 }

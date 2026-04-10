@@ -1,21 +1,24 @@
 {
-  "name": "jayashree-foundation-functions",
-  "description": "Firebase Cloud Functions for Jayashree Foundation NGO",
+  "name": "functions",
+  "description": "Cloud Functions for Jayashree Foundation NGO",
   "scripts": {
-    "serve": "firebase emulators:start --only functions",
+    "serve": "firebase serve --only functions",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
   },
   "engines": {
-    "node": "22"
+    "node": "20"
   },
   "main": "index.js",
   "dependencies": {
-    "firebase-admin": "^12.1.0",
+    "firebase-admin": "^12.0.0",
     "firebase-functions": "^5.0.0",
     "razorpay": "^2.9.2"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.1.0"
   },
   "private": true
 }

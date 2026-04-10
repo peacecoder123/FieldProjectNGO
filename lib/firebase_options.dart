@@ -44,39 +44,39 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-  apiKey: 'AIzaSyClJI1xE6kr8_Eg3sjbobrFZkWLLFP2BD0',
-  appId: '1:562668242155:web:84bd5e517e52e5f9192aae',
-  messagingSenderId: '562668242155',
-  projectId: 'project-08d246f1-d6d3-42e6-a40',
-  authDomain: 'project-08d246f1-d6d3-42e6-a40.firebaseapp.com',
-  storageBucket: 'project-08d246f1-d6d3-42e6-a40.firebasestorage.app',
-  measurementId: 'G-R40MXX6M28',
-);
+    apiKey: 'AIzaSyClJI1xE6kr8_Eg3sjbobrFZkWLLFP2BD0',
+    appId: '1:562668242155:web:84bd5e517e52e5f9192aae',
+    messagingSenderId: '562668242155',
+    projectId: 'project-08d246f1-d6d3-42e6-a40',
+    authDomain: 'project-08d246f1-d6d3-42e6-a40.firebaseapp.com',
+    storageBucket: 'project-08d246f1-d6d3-42e6-a40.firebasestorage.app',
+    measurementId: 'G-R40MXX6M28',
+  );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAj32CS3f13ykXrtns43_rx-OgBVXabknw',
-    appId: '1:1093449762008:android:b7cf389701dea3a92883ad',
-    messagingSenderId: '1093449762008',
-    projectId: 'jayashree-foundation07',
-    storageBucket: 'jayashree-foundation07.firebasestorage.app',
+    apiKey: 'AIzaSyClJI1xE6kr8_Eg3sjbobrFZkWLLFP2BD0', // Using web key as fallback
+    appId: '1:562668242155:android:placeholder',
+    messagingSenderId: '562668242155',
+    projectId: 'project-08d246f1-d6d3-42e6-a40',
+    storageBucket: 'project-08d246f1-d6d3-42e6-a40.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDXswhGm_0jj3DB0R1DEFvTox-rASufWIk',
-    appId: '1:1093449762008:ios:7e4f8decf0db9e402883ad',
-    messagingSenderId: '1093449762008',
-    projectId: 'jayashree-foundation07',
-    storageBucket: 'jayashree-foundation07.firebasestorage.app',
+    apiKey: 'AIzaSyClJI1xE6kr8_Eg3sjbobrFZkWLLFP2BD0', // Using web key as fallback
+    appId: '1:562668242155:ios:placeholder',
+    messagingSenderId: '562668242155',
+    projectId: 'project-08d246f1-d6d3-42e6-a40',
+    storageBucket: 'project-08d246f1-d6d3-42e6-a40.firebasestorage.app',
     iosBundleId: 'com.jayashreefoundation.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCdFUzVBJ-15IPFQbmXag-AO1IZyZvDBJ8',
-    appId: '1:1093449762008:web:c19611d8d481e6372883ad',
-    messagingSenderId: '1093449762008',
-    projectId: 'jayashree-foundation07',
-    authDomain: 'jayashree-foundation07.firebaseapp.com',
-    storageBucket: 'jayashree-foundation07.firebasestorage.app',
-    measurementId: 'G-LQV3DLP8Y8',
+    apiKey: 'AIzaSyClJI1xE6kr8_Eg3sjbobrFZkWLLFP2BD0',
+    appId: '1:562668242155:web:84bd5e517e52e5f9192aae',
+    messagingSenderId: '562668242155',
+    projectId: 'project-08d246f1-d6d3-42e6-a40',
+    authDomain: 'project-08d246f1-d6d3-42e6-a40.firebaseapp.com',
+    storageBucket: 'project-08d246f1-d6d3-42e6-a40.firebasestorage.app',
+    measurementId: 'G-R40MXX6M28',
   );
 }

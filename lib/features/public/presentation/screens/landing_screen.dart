@@ -186,14 +186,14 @@ class _HeroSection extends StatelessWidget {
                 text: TextSpan(
                   style: TextStyle(fontSize: isWide ? 48 : 36, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900, height: 1.2),
                   children: const [
-                    TextSpan(text: 'Empowering Communities Through '),
-                    TextSpan(text: 'Compassion', style: TextStyle(color: AppColors.navy500)),
+                    TextSpan(text: 'Welcome to \n'),
+                    TextSpan(text: 'Jayashree Foundation', style: TextStyle(color: AppColors.navy500)),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                'Join us in creating lasting change. Jayashree Foundation brings together passionate volunteers to serve communities, provide education, healthcare, and hope to those who need it most.',
+                'A public charitable trust working for the benefit of all persons regardless of gender, caste, creed, or religion. Empowering Communities Since 2019.',
                 style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.5),
               ),
               const SizedBox(height: 32),
@@ -233,7 +233,7 @@ class _HeroSection extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: Image.network(
-                  'https://images.unsplash.com/photo-1761666507437-9fb5a6ef7b0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2b2x1bnRlZXIlMjBjb21tdW5pdHklMjBoZWxwaW5nfGVufDF8fHx8MTc3NDUzMDIxOXww&ixlib=rb-4.1.0&q=80&w=1080',
+                  'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1080&q=80',
                   height: 500, width: double.infinity, fit: BoxFit.cover,
                 ),
               ),
@@ -252,14 +252,14 @@ class _HeroSection extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppColors.navy500, AppColors.navy700]), borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.people_rounded, color: Colors.white),
+                        child: const Icon(Icons.favorite_rounded, color: Colors.white),
                       ),
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('500+', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
-                          Text('Active Volunteers', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                          Text('1,000+', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
+                          Text('Lives Impacted', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
                         ],
                       )
                     ],
@@ -275,7 +275,7 @@ class _HeroSection extends StatelessWidget {
               children: [
                 Expanded(flex: 1, child: leftColumn),
                 const SizedBox(width: 48),
-                Expanded(flex: 1, child: imageSection),
+                Expanded(flex: 1, child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 500), child: imageSection))),
               ],
             );
           }
@@ -294,15 +294,14 @@ class _RecentWorksSection extends StatelessWidget {
   final double screenWidth;
 
   final recentWorks = const [
-    { 'title': 'Education for All Initiative', 'category': 'Education', 'date': 'March 2026', 'image': 'https://images.unsplash.com/photo-1573288880964-292771cdff84?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaGlsZHJlbiUyMGVkdWNhdGlvbiUyMGNoYXJpdHl8ZW58MXx8fHwxNzc0NDk3MDE5fDA&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Provided quality education materials and tutoring to over 500 underprivileged children across 12 villages.' },
-    { 'title': 'Community Food Distribution', 'category': 'Relief', 'date': 'February 2026', 'image': 'https://images.unsplash.com/photo-1628717341663-0007b0ee2597?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb29kJTIwZGlzdHJpYnV0aW9uJTIwdm9sdW50ZWVyfGVufDF8fHx8MTc3NDUzMDIyMHww&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Distributed meals to 1,200 families affected by seasonal unemployment in rural areas.' },
-    { 'title': 'Free Medical Health Camp', 'category': 'Healthcare', 'date': 'January 2026', 'image': 'https://images.unsplash.com/photo-1741597727884-1ecd051cadb4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtZWRpY2FsJTIwaGVhbHRoJTIwY2FtcHxlbnwxfHx8fDE3NzQ1MzAyMjB8MA&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Organized comprehensive health checkups and free medicines for 800+ patients in underserved communities.' },
-    { 'title': 'Green Earth Tree Plantation', 'category': 'Environment', 'date': 'December 2025', 'image': 'https://images.unsplash.com/photo-1703012349431-95c3304d098f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbnZpcm9ubWVudCUyMHRyZWUlMjBwbGFudGluZ3xlbnwxfHx8fDE3NzQ1MzAyMjB8MA&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Planted 5,000 saplings with volunteers and local communities to combat climate change.' },
+    { 'title': 'Sponsored Education', 'category': 'Education', 'date': 'Latest', 'image': 'assets/images/sponsored_education.jpg', 'desc': 'We sponsored the education of students who were unable to pay their school fees.' },
+    { 'title': 'Tree Plantation Drive', 'category': 'Environment', 'date': 'Latest', 'image': 'assets/images/tree_plantation.jpg', 'desc': 'We conducted Tree plantation because tree plantation is very necessary to counter Global warming.' },
+    { 'title': 'Mask Distribution', 'category': 'Relief', 'date': 'Latest', 'image': 'assets/images/mask_distribution.png', 'desc': 'We distributed masks to the poor people in order to stop the spread of covid-19.' },
   ];
 
   @override
   Widget build(BuildContext context) {
-    int crossAxisCount = screenWidth > 1024 ? 4 : (screenWidth > 600 ? 2 : 1);
+    int crossAxisCount = screenWidth > 800 ? 3 : (screenWidth > 600 ? 2 : 1);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
@@ -355,7 +354,7 @@ class _WorkCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              Image.network(work['image']!, height: 150, width: double.infinity, fit: BoxFit.cover),
+              Image.asset(work['image']!, height: 180, width: double.infinity, fit: BoxFit.cover),
               Positioned(top: 8, left: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), decoration: BoxDecoration(color: isDark ? AppColors.slate900.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(12)), child: Text(work['category']!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
             ],
           ),
@@ -390,10 +389,10 @@ class _AchievementsSection extends StatelessWidget {
   final double screenWidth;
 
   final stats = const [
-    {'icon': Icons.people_rounded, 'num': '25,000+', 'label': 'Lives Impacted', 'colors': [AppColors.navy500, AppColors.cyan500]},
-    {'icon': Icons.emoji_events_rounded, 'num': '15+', 'label': 'Awards Won', 'colors': [AppColors.violet600, AppColors.purple600]},
-    {'icon': Icons.favorite_rounded, 'num': '500+', 'label': 'Active Volunteers', 'colors': [AppColors.orange500, AppColors.rose500]},
-    {'icon': Icons.trending_up_rounded, 'num': '200+', 'label': 'Projects Completed', 'colors': [AppColors.emerald500, AppColors.teal500]},
+    {'icon': Icons.favorite_rounded, 'num': '6,983+', 'label': 'Beneficiaries', 'colors': [AppColors.navy500, AppColors.cyan500]},
+    {'icon': Icons.timer_rounded, 'num': '43,099+', 'label': 'Volunteer Hours', 'colors': [AppColors.violet600, AppColors.purple600]},
+    {'icon': Icons.book_rounded, 'num': '5,538+', 'label': 'Books Distributed', 'colors': [AppColors.orange500, AppColors.rose500]},
+    {'icon': Icons.computer_rounded, 'num': '45+', 'label': 'E-Classes Conducted', 'colors': [AppColors.emerald500, AppColors.teal500]},
   ];
 
   @override
@@ -559,9 +558,9 @@ class _NewsSection extends StatelessWidget {
   final double screenWidth;
 
   final news = const [
-    { 'title': 'Jayashree Foundation Wins National NGO Excellence Award 2026', 'source': 'National Daily', 'date': 'March 15, 2026', 'image': 'https://images.unsplash.com/photo-1762345127396-ac4a970436c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhd2FyZCUyMGFjaGlldmVtZW50JTIwdHJvcGh5fGVufDF8fHx8MTc3NDUzMDIyMXww&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Recognized for outstanding contribution to community development and volunteer mobilization across India.' },
-    { 'title': 'Volunteers Rally Together for Rural Healthcare', 'source': 'Health Today', 'date': 'March 10, 2026', 'image': 'https://images.unsplash.com/photo-1751666526244-40239a251eae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb21tdW5pdHklMjBzZXJ2aWNlJTIwdm9sdW50ZWVyfGVufDF8fHx8MTc3NDUzMDIyMXww&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Jayashree Foundation volunteers conducted medical camps reaching remote villages with essential healthcare services.' },
-    { 'title': 'Partnership with Global Charity Network Announced', 'source': 'Education Weekly', 'date': 'February 28, 2026', 'image': 'https://images.unsplash.com/photo-1593113702251-272b1bc414a9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaGFyaXR5JTIwZG9uYXRpb24lMjBoZWxwaW5nfGVufDF8fHx8MTc3NDQ1NjEwN3ww&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Strategic collaboration to expand educational programs and provide scholarships to 2,000 students.' },
+    { 'title': 'Education Initiatives', 'source': 'Focus Area', 'date': '', 'image': 'https://images.unsplash.com/photo-1511629091441-ee46146481b6?auto=format&fit=crop&w=1080&q=80', 'desc': 'Holistic education and quality skill development of rural masses & women. We provide necessary support.' },
+    { 'title': 'Health & Wellbeing', 'source': 'Focus Area', 'date': '', 'image': 'assets/images/health_wellbeing.png', 'desc': 'Awareness & Guidance on Menstrual Health and Puberty amongst the masses to ensure better living.' },
+    { 'title': 'Environment Protection', 'source': 'Focus Area', 'date': '', 'image': 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1080&q=80', 'desc': 'Mentoring, Guiding and creating the entrepreneurial and self-reliance mindset while protecting nature.' },
   ];
 
   @override
@@ -573,9 +572,9 @@ class _NewsSection extends StatelessWidget {
       color: isDark ? AppColors.slate900 : Colors.white,
       child: Column(
         children: [
-          Text('Latest News', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
+          Text('Our Focus Areas', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
           const SizedBox(height: 16),
-          Text('Stay updated with our latest activities and media coverage', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
+          Text('The key pillars of our mission', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
           const SizedBox(height: 48),
           LayoutBuilder(
             builder: (ctx, constraints) {
@@ -616,7 +615,9 @@ class _NewsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.network(item['image']!, height: 140, width: double.infinity, fit: BoxFit.cover),
+          item['image']!.toString().startsWith('http') 
+              ? Image.network(item['image']!, height: 140, width: double.infinity, fit: BoxFit.cover)
+              : Image.asset(item['image']!, height: 140, width: double.infinity, fit: BoxFit.cover),
           Padding(
             padding: const EdgeInsets.all(8),
             child: Column(
@@ -676,11 +677,11 @@ class _AboutSection extends StatelessWidget {
             children: [
               Text('About Jayashree Foundation', style: TextStyle(fontSize: isWide ? 32 : 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
               const SizedBox(height: 16),
-              Text('Founded in 2015, Jayashree Foundation is a non-profit organization dedicated to transforming lives through community service, education, healthcare, and environmental initiatives. We believe in the power of collective action and the difference passionate individuals can make.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
+              Text('Jayashree Foundation is a Mumbai based Indian not-for-profit organization registered as a section 8 of The Companies Act 2013 in India started in 2019 and this NGO is led by Vaibhav Jadhav. We have projects all over India for education, health & development.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
               const SizedBox(height: 12),
-              Text('Our mission is to create sustainable change by empowering communities, supporting underprivileged families, and mobilizing volunteers who share our vision of a better tomorrow.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
+              Text('It is an initiative of like-minded people and various well-wishers who believe, "Goodness is the only investment that never fails" and at Jayashree foundation we believe in doing good.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
               const SizedBox(height: 12),
-              Text('With a dedicated team of volunteers and partners across India, we continue to expand our reach and impact, touching thousands of lives every year.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
+              Text('Be it big or small, efforts will make a difference. We are passionate about social work and you can start your journey too!', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
             ],
           );
 
@@ -692,9 +693,9 @@ class _AboutSection extends StatelessWidget {
               children: [
                 Text('Get In Touch', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
                 const SizedBox(height: 24),
-                _ContactRow(isDark: isDark, icon: Icons.location_on_rounded, title: 'Address', detail: '123 Hope Street, Community Center\nMumbai, Maharashtra 400001, India'),
+                _ContactRow(isDark: isDark, icon: Icons.location_on_rounded, title: 'Address', detail: 'Room No -17, Plot No. 46, Sahyadri Society\nSector 16 A, Nerul West, Navi Mumbai\nMaharashtra 400706'),
                 const SizedBox(height: 16),
-                _ContactRow(isDark: isDark, icon: Icons.phone_rounded, title: 'Phone', detail: '+91 22 1234 5678'),
+                _ContactRow(isDark: isDark, icon: Icons.phone_rounded, title: 'Phone', detail: '+91 9876543210'),
                 const SizedBox(height: 16),
                 _ContactRow(isDark: isDark, icon: Icons.mail_rounded, title: 'Email', detail: 'contact@jayashreefoundation.org'),
                 const SizedBox(height: 32),

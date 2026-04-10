@@ -13,6 +13,9 @@ class NgoApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router    = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
+    
+    // Trigger FCM Token Synchronization
+    ref.watch(fcmTokenSyncProvider);
 
     return MaterialApp.router(
       title: 'Jayashree Foundation', // <-- Updated App Name

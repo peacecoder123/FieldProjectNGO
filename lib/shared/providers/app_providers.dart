@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,6 +8,8 @@ import '../../core/constants/app_constants.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import '../../features/auth/domain/entities/user_entity.dart';
 import 'package:ngo_volunteer_management/services/document_generation/document_generator.dart';
+import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
+import 'package:ngo_volunteer_management/services/notification_service.dart';
 
 // ── Infrastructure ────────────────────────────────────────────────────────────
 
@@ -107,3 +110,27 @@ final currentRoleProvider = Provider<UserRole?>(
 final documentGeneratorProvider = Provider<DocumentGenerator>(
   (ref) => DocumentGenerator(),
 );
+
+/// Provider to synchronize the device's FCM token with the backend.
+/// It watches the currentUser state and triggers an update whenever a user logs in.
+final fcmTokenSyncProvider = Provider<void>((ref) {
+  final user = ref.watch(currentUserProvider);
+  final authRepo = ref.watch(authRepositoryProvider);
+
+  if (user != null) {
+    debugPrint('Sync: User ${user.email} detected. Attempting FCM sync...');
+    // Small delay to ensure browser/Firebase is fully settled
+    Future.delayed(const Duration(seconds: 2), () {
+      PushNotificationService.instance.getFcmToken().then((token) {
+        if (token != null) {
+          debugPrint('Sync: Token obtained successfully. Updating Firestore...');
+          authRepo.updateFcmToken(user.id, token);
+        } else {
+          debugPrint('Sync: Could not obtain FCM token. Check console for errors.');
+        }
+      });
+    });
+  } else {
+    debugPrint('Sync: No user logged in. FCM sync skipped.');
+  }
+});

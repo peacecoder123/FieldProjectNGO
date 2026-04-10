@@ -21,6 +21,9 @@ abstract interface class IAuthRepository {
   Stream<UserEntity?> watchAuthState();
 
   Future<void> logout();
+  
+  /// Syncs device FCM token with Firestore user document
+  Future<void> updateFcmToken(int userId, String? token);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

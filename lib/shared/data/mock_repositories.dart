@@ -35,6 +35,13 @@ class MockAuthRepository implements IAuthRepository {
   Future<void> logout() async {
     await Future.delayed(const Duration(milliseconds: 400));
   }
+
+  @override
+  Future<void> updateFcmToken(int userId, String? token) async {
+    // Mock implementation doesn't need to persist to a real DB
+    await Future.delayed(const Duration(milliseconds: 200));
+    print('Mock: FCM token updated for $userId to $token');
+  }
 }
 
 // ── Volunteers ───────────────────────────────────────────────────────────────
