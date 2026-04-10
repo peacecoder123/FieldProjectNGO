@@ -1,7 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
-import 'package:ngo_volunteer_management/features/auth/presentation/screens/login_screen.dart'; 
+import 'package:ngo_volunteer_management/features/auth/presentation/screens/login_screen.dart';
+import 'package:ngo_volunteer_management/features/public/presentation/widgets/donation_dialog.dart'; 
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -34,6 +35,7 @@ class _LandingScreenState extends State<LandingScreen> {
                 _HeroSection(isDark: isDark, onLoginTap: _navigateToLogin),
                 _RecentWorksSection(isDark: isDark, screenWidth: screenWidth),
                 _AchievementsSection(isDark: isDark, screenWidth: screenWidth),
+                _DonationSection(isDark: isDark, screenWidth: screenWidth),
                 _NewsSection(isDark: isDark, screenWidth: screenWidth),
                 _AboutSection(isDark: isDark, screenWidth: screenWidth),
                 _Footer(isDark: isDark),
@@ -97,6 +99,19 @@ class _LandingScreenState extends State<LandingScreen> {
                                 padding: const EdgeInsets.all(8),
                                 minimumSize: const Size(36, 36),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: isDark ? AppColors.slate700 : AppColors.slate200)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: () => DonationDialog.show(context),
+                              icon: const Icon(Icons.favorite_rounded, size: 16),
+                              label: const Text('Donate'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.rose500,
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -439,6 +454,100 @@ class _AchievementsSection extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DonationSection extends StatelessWidget {
+  const _DonationSection({required this.isDark, required this.screenWidth});
+  final bool isDark;
+  final double screenWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+      color: isDark ? AppColors.slate900 : Colors.white,
+      child: Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [AppColors.navy700.withValues(alpha: 0.4), AppColors.indigo600.withValues(alpha: 0.4)]
+                : [AppColors.blue50, AppColors.blue50],
+          ),
+          border: Border.all(
+            color: isDark ? AppColors.blue500.withValues(alpha: 0.2) : AppColors.blue100,
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.rose500.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.favorite_rounded, color: AppColors.rose500, size: 40),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Make a Difference Today',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : AppColors.slate900,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Your contribution helps us continue our mission of providing healthcare, education, and support to communities in need. Every rupee counts.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: isDark ? AppColors.slate300 : AppColors.slate600,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => DonationDialog.show(context),
+              icon: const Icon(Icons.volunteer_activism_rounded, size: 20),
+              label: const Text('Donate via Razorpay'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.rose500,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 4,
+                shadowColor: AppColors.rose500.withOpacity(0.4),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.shield_rounded, size: 16, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                const SizedBox(width: 6),
+                Text(
+                  '100% Secure Payments • 80G Tax Benefits Available',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? AppColors.slate400 : AppColors.slate500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

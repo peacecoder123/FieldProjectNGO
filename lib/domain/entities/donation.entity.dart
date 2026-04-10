@@ -16,6 +16,13 @@ class DonationEntity {
   final bool is80G;
   final String? receiptNumber;
 
+  // ── Razorpay payment fields ──────────────────────────────────────────────
+  final String? razorpayPaymentId;
+  final String? razorpayOrderId;
+  final PaymentStatus paymentStatus;
+  final String? donorEmail;
+  final String? donorPhone;
+
   const DonationEntity({
     required this.id,
     required this.donorName,
@@ -26,6 +33,11 @@ class DonationEntity {
     required this.purpose,
     required this.is80G,
     this.receiptNumber,
+    this.razorpayPaymentId,
+    this.razorpayOrderId,
+    this.paymentStatus = PaymentStatus.pending,
+    this.donorEmail,
+    this.donorPhone,
   });
 
   // Convert to Firebase document
@@ -40,6 +52,11 @@ class DonationEntity {
       'purpose': purpose,
       'is80G': is80G,
       'receiptNumber': receiptNumber,
+      'razorpayPaymentId': razorpayPaymentId,
+      'razorpayOrderId': razorpayOrderId,
+      'paymentStatus': paymentStatus.name,
+      'donorEmail': donorEmail,
+      'donorPhone': donorPhone,
     };
   }
 
@@ -58,6 +75,11 @@ class DonationEntity {
       purpose: map['purpose'] ?? '',
       is80G: map['is80G'] ?? false,
       receiptNumber: map['receiptNumber'],
+      razorpayPaymentId: map['razorpayPaymentId'],
+      razorpayOrderId: map['razorpayOrderId'],
+      paymentStatus: PaymentStatus.fromString(map['paymentStatus'] ?? 'pending'),
+      donorEmail: map['donorEmail'],
+      donorPhone: map['donorPhone'],
     );
   }
 
@@ -71,6 +93,11 @@ class DonationEntity {
     String? purpose,
     bool? is80G,
     String? receiptNumber,
+    String? razorpayPaymentId,
+    String? razorpayOrderId,
+    PaymentStatus? paymentStatus,
+    String? donorEmail,
+    String? donorPhone,
   }) {
     return DonationEntity(
       id: id ?? this.id,
@@ -82,6 +109,11 @@ class DonationEntity {
       purpose: purpose ?? this.purpose,
       is80G: is80G ?? this.is80G,
       receiptNumber: receiptNumber ?? this.receiptNumber,
+      razorpayPaymentId: razorpayPaymentId ?? this.razorpayPaymentId,
+      razorpayOrderId: razorpayOrderId ?? this.razorpayOrderId,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      donorEmail: donorEmail ?? this.donorEmail,
+      donorPhone: donorPhone ?? this.donorPhone,
     );
   }
 }

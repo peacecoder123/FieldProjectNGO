@@ -39,6 +39,7 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
   @override
   Widget build(BuildContext context) {
     final donationsAsync = ref.watch(donationProvider);
+    final monthlyDonations = ref.watch(monthlyDonationAggregationProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return donationsAsync.when(
@@ -115,7 +116,7 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
             const SizedBox(height: 20),
 
             // Charts
-            _DonationTrendChart(data: MockDataSource.monthlyDonations, isDark: isDark),
+            _DonationTrendChart(data: monthlyDonations, isDark: isDark),
             const SizedBox(height: 20),
 
             // Filters
@@ -328,9 +329,40 @@ class _DonationItem extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(donation.donorName, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: isDark ? AppColors.white : AppColors.slate900)),
-                Text(
-                  '${AppFormatters.displayDate(donation.date)} • ${donation.type.name.toUpperCase()}',
-                  style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontSize: 12),
+                Row(
+                  children: [
+                    Text(
+                      '${AppFormatters.displayDate(donation.date)} • ${donation.type.name.toUpperCase()}',
+                      style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontSize: 12),
+                    ),
+                    if (donation.type == DonationType.online) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: donation.paymentStatus == PaymentStatus.success 
+                              ? (isDark ? AppColors.emerald700.withValues(alpha: 0.3) : AppColors.emerald50) 
+                              : (isDark ? AppColors.red600.withValues(alpha: 0.3) : AppColors.red50),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: donation.paymentStatus == PaymentStatus.success 
+                                ? (isDark ? AppColors.emerald500 : AppColors.emerald200) 
+                                : (isDark ? AppColors.red500 : AppColors.red100),
+                          ),
+                        ),
+                        child: Text(
+                          donation.paymentStatus.displayName,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: donation.paymentStatus == PaymentStatus.success 
+                                ? (isDark ? AppColors.emerald400 : AppColors.emerald700) 
+                                : (isDark ? AppColors.red500 : AppColors.red600),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
