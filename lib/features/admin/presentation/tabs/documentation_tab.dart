@@ -7,6 +7,9 @@ import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
+import 'package:printing/printing.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:ngo_volunteer_management/services/download_service.dart';
 
 class DocumentationTab extends ConsumerWidget {
   const DocumentationTab({super.key});
@@ -93,14 +96,22 @@ class _DocumentCard extends StatelessWidget {
       _ => AppColors.slate500,
     };
 
+    Future<void> _handleDownload() async {
+      final pdfData = await PdfGeneratorService.generateGenericDocumentPdf(
+        title: doc.title,
+        category: doc.category,
+        date: AppFormatters.displayDate(doc.uploadDate),
+      );
+      DownloadService.downloadBytes(
+        pdfData, 
+        '${doc.title.replaceAll(' ', '_')}.pdf',
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: AppCard(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Opening ${doc.title}... (Download simulated)')),
-          );
-        },
+        onTap: _handleDownload,
         child: Row(
           children: [
             Container(
@@ -132,7 +143,7 @@ class _DocumentCard extends StatelessWidget {
             ),
             IconButton(
               icon: const Icon(Icons.download_for_offline_rounded, color: AppColors.slate400),
-              onPressed: () {},
+              onPressed: _handleDownload,
             ),
           ],
         ),

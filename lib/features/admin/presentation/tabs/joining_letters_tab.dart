@@ -9,6 +9,9 @@ import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:printing/printing.dart';
+import 'package:ngo_volunteer_management/services/download_service.dart';
 
 class JoiningLettersTab extends ConsumerStatefulWidget {
   const JoiningLettersTab({super.key});
@@ -208,6 +211,28 @@ class _JoiningRequestCard extends ConsumerWidget {
                         fontWeight: FontWeight.w500,
                         color: isDark ? AppColors.emerald200 : AppColors.emerald700,
                       ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final pdfData = await PdfGeneratorService.generateJoiningLetterPdf(
+                        name: request.name,
+                        tenure: request.tenure ?? '6 Months',
+                        requestDate: AppFormatters.displayDate(request.requestDate),
+                        approvedBy: request.generatedBy,
+                      );
+                      DownloadService.downloadBytes(
+                        pdfData, 
+                        'Joining_Letter_${request.name.replaceAll(' ', '_')}.pdf',
+                      );
+                    },
+                    icon: const Icon(Icons.download_rounded, size: 14),
+                    label: const Text('Download Letter', style: TextStyle(fontSize: 11)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark ? AppColors.emerald400 : AppColors.emerald700,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ],

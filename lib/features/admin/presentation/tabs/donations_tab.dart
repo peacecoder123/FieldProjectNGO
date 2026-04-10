@@ -20,6 +20,9 @@ import 'package:ngo_volunteer_management/shared/data/mock_data_source.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:printing/printing.dart';
+import 'package:ngo_volunteer_management/services/download_service.dart';
 
 // Services
 import 'package:ngo_volunteer_management/services/logging/audit_logger.dart';
@@ -349,12 +352,31 @@ class _DonationItem extends ConsumerWidget {
                   children: [
                     AppBadge(label: 'Receipt: ${donation.receiptNumber}', color: AppColors.emerald500),
                     const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.slate600, size: 20),
-                      tooltip: 'View Document',
-                      onPressed: () => _showPdfPreview(context),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final parsedDate = DateTime.parse(donation.date);
+                        final pdfData = await PdfGeneratorService.generateReceiptPdf(
+                          receiptNo: donation.receiptNumber ?? 'REC-${parsedDate.year}-${donation.id}',
+                          date: parsedDate,
+                          donorName: donation.donorName,
+                          amount: donation.amount.toDouble(),
+                          amountWords: 'Rupees ${donation.amount} only',
+                          paymentMode: donation.type.name.toUpperCase(),
+                          purpose: donation.purpose,
+                        );
+                        DownloadService.downloadBytes(
+                          pdfData, 
+                          'Receipt_${donation.receiptNumber?.replaceAll(' ', '_') ?? donation.id}.pdf',
+                        );
+                      },
+                      icon: const Icon(Icons.download_rounded, size: 14),
+                      label: const Text('Download Receipt', style: TextStyle(fontSize: 11)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: AppColors.slate600,
+                      ),
                     ),
                   ],
                 )
@@ -364,7 +386,7 @@ class _DonationItem extends ConsumerWidget {
                     // 1. Generate Receipt in DB
                     await ref.read(donationProvider.notifier).generateReceipt(donation.id);
                     
-                    // 2. Fire Audit Log to Firebase
+                    // 2. Fire Audit Log
                     await AuditLogger.logDocumentGeneration(
                       documentType: donation.is80G ? '80G Certificate' : 'Donation Receipt',
                       targetId: donation.id.toString(),
@@ -375,9 +397,14 @@ class _DonationItem extends ConsumerWidget {
                       },
                     );
 
-                    // 3. Open Preview
                     if (context.mounted) {
-                      await _showPdfPreview(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Receipt generated successfully!'),
+                          backgroundColor: AppColors.emerald600,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     }
                   },
                   style: TextButton.styleFrom(

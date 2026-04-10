@@ -540,5 +540,87 @@ class PdfGeneratorService {
     
     return pdf.save();
   }
-}
 
+  static Future<Uint8List> generateGenericDocumentPdf({
+    required String title,
+    required String category,
+    required String date,
+  }) async {
+    final pdf = pw.Document();
+    
+    pw.MemoryImage? logoImage;
+    try {
+      final logoBytes = await rootBundle.load('assets/images/logo.png');
+      logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
+    } catch (e) {}
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(50),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                   pw.Column(
+                     crossAxisAlignment: pw.CrossAxisAlignment.start,
+                     children: [
+                        pw.Text('JAYASHREE FOUNDATION', 
+                          style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: _navyBlue)
+                        ),
+                        pw.Text('Official NGO Document', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                     ]
+                   ),
+                   if (logoImage != null) pw.Container(height: 40, child: pw.Image(logoImage)),
+                ]
+              ),
+              pw.SizedBox(height: 10),
+              pw.Divider(thickness: 1, color: _navyBlue),
+              pw.SizedBox(height: 30),
+              
+              pw.Center(
+                child: pw.Text(title.toUpperCase(), 
+                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, decoration: pw.TextDecoration.underline)
+                ),
+              ),
+              pw.SizedBox(height: 30),
+              
+              pw.Text('Category: $category', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text('Document Date: $date'),
+              pw.SizedBox(height: 30),
+              
+              pw.Text('CONTENT SUMMARY', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Paragraph(
+                text: 'This document serves as an official record of Jayashree Foundation regarding "$title". The foundation adheres to all regulatory requirements and transparency standards in its operations.',
+                style: pw.TextStyle(fontSize: 12, lineSpacing: 4),
+              ),
+              pw.Paragraph(
+                text: 'Jayashree Foundation (Regd. No. MAH/509/2021/THANE) is committed to social empowerment and community development. This document is part of our standard operating protocol and holds official validity for its designated purpose within the organization.',
+                style: pw.TextStyle(fontSize: 12, lineSpacing: 4),
+              ),
+              
+              pw.Spacer(),
+              
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('(c) ${DateTime.now().year} Jayashree Foundation', style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                  pw.Text('Page 1 of 1', style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                ]
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    
+    return pdf.save();
+  }
+}
