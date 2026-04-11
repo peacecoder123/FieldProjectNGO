@@ -129,6 +129,26 @@ enum DonationType {
       );
 }
 
+// ── Payment status (Razorpay transaction result) ──────────────────────────────
+
+enum PaymentStatus {
+  pending,
+  success,
+  failed;
+
+  String get displayName => switch (this) {
+    PaymentStatus.pending => 'Pending',
+    PaymentStatus.success => 'Success',
+    PaymentStatus.failed  => 'Failed',
+  };
+
+  static PaymentStatus fromString(String value) =>
+      PaymentStatus.values.firstWhere(
+        (e) => e.name == value,
+        orElse: () => PaymentStatus.pending,
+      );
+}
+
 // ── Request type ──────────────────────────────────────────────────────────────
 
 enum GeneralRequestType {

@@ -1,19 +1,58 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
-import 'package:ngo_volunteer_management/features/auth/presentation/screens/login_screen.dart'; 
+import 'package:ngo_volunteer_management/features/public/presentation/widgets/donation_dialog.dart';
+import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 
-class LandingScreen extends StatefulWidget {
+class LandingScreen extends ConsumerStatefulWidget {
   const LandingScreen({super.key});
 
   @override
-  State<LandingScreen> createState() => _LandingScreenState();
+  ConsumerState<LandingScreen> createState() => _LandingScreenState();
 }
 
-class _LandingScreenState extends State<LandingScreen> {
+class _LandingScreenState extends ConsumerState<LandingScreen> {
 
   void _navigateToLogin() {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+    context.push('/login');
+  }
+
+  Future<void> _showExitConfirmation() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.slate800 : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Exit App', style: TextStyle(color: isDark ? Colors.white : AppColors.slate900)),
+        content: Text(
+          'Are you sure you want to exit?',
+          style: TextStyle(color: isDark ? AppColors.slate300 : AppColors.slate600),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.rose500,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+    if (shouldExit == true && mounted) {
+      SystemNavigator.pop();
+    }
   }
 
   @override
@@ -21,8 +60,15 @@ class _LandingScreenState extends State<LandingScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final topPadding = MediaQuery.paddingOf(context).top;
+    final isNarrow = screenWidth < 600;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _showExitConfirmation();
+      },
+      child: Scaffold(
       backgroundColor: isDark ? AppColors.slate900 : Colors.white,
       body: Stack(
         children: [
@@ -34,6 +80,7 @@ class _LandingScreenState extends State<LandingScreen> {
                 _HeroSection(isDark: isDark, onLoginTap: _navigateToLogin),
                 _RecentWorksSection(isDark: isDark, screenWidth: screenWidth),
                 _AchievementsSection(isDark: isDark, screenWidth: screenWidth),
+                _DonationSection(isDark: isDark, screenWidth: screenWidth),
                 _NewsSection(isDark: isDark, screenWidth: screenWidth),
                 _AboutSection(isDark: isDark, screenWidth: screenWidth),
                 _Footer(isDark: isDark),
@@ -72,25 +119,31 @@ class _LandingScreenState extends State<LandingScreen> {
                                 child: Image.asset('assets/images/logo.png', width: 36, height: 36, fit: BoxFit.cover),
                               ),
                               const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Jayashree Foundation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : AppColors.slate900), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                    Text('NGO', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                                  ],
+                              if (!isNarrow)
+                                Expanded(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Jayashree Foundation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : AppColors.slate900), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      Text('NGO', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                                    ],
+                                  ),
+                                )
+                              else
+                                Expanded(
+                                  child: Text('Jayashree', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? Colors.white : AppColors.slate900), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 ),
-                              )
                             ],
                           ),
                         ),
-                        // Actions
+                        // Actions — responsive
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            IconButton(
-                              onPressed: () {},
+                            // Theme toggle
+                            _HoverIconButton(
+                              onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
                               icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded, color: isDark ? Colors.yellow.shade400 : AppColors.slate600),
                               style: IconButton.styleFrom(
                                 backgroundColor: isDark ? AppColors.slate800 : Colors.white,
@@ -100,19 +153,40 @@ class _LandingScreenState extends State<LandingScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            ElevatedButton.icon(
+                            // Donate button
+                            _HoverButton(
+                              onPressed: () => DonationDialog.show(context),
+                              icon: isNarrow ? null : const Icon(Icons.favorite_rounded, size: 16),
+                              label: isNarrow ? const Icon(Icons.favorite_rounded, size: 18, color: Colors.white) : const Text('Donate'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.rose500,
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                padding: isNarrow
+                                    ? const EdgeInsets.all(10)
+                                    : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              isIconOnly: isNarrow,
+                            ),
+                            const SizedBox(width: 8),
+                            // Login button
+                            _HoverButton(
                               onPressed: _navigateToLogin,
-                              icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                              label: const Text('Login'),
+                              icon: isNarrow ? null : const Icon(Icons.arrow_forward_rounded, size: 16),
+                              label: isNarrow ? const Icon(Icons.login_rounded, size: 18, color: Colors.white) : const Text('Login'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.navy500,
                                 foregroundColor: Colors.white,
                                 elevation: 2,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: isNarrow
+                                    ? const EdgeInsets.all(10)
+                                    : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 textStyle: const TextStyle(fontSize: 14),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
-                            )
+                              isIconOnly: isNarrow,
+                            ),
                           ],
                         )
                       ],
@@ -123,6 +197,116 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
           ),
         ],
+      ),
+    ),
+    );
+  }
+}
+
+// ── Hover-aware button wrappers ─────────────────────────────────────────────
+
+class _HoverIconButton extends StatefulWidget {
+  const _HoverIconButton({required this.onPressed, required this.icon, required this.style});
+  final VoidCallback onPressed;
+  final Widget icon;
+  final ButtonStyle style;
+
+  @override
+  State<_HoverIconButton> createState() => _HoverIconButtonState();
+}
+
+class _HoverIconButtonState extends State<_HoverIconButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.1 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: IconButton(
+          onPressed: widget.onPressed,
+          icon: widget.icon,
+          style: widget.style,
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverButton extends StatefulWidget {
+  const _HoverButton({required this.onPressed, this.icon, required this.label, required this.style, this.isIconOnly = false});
+  final VoidCallback onPressed;
+  final Widget? icon;
+  final Widget label;
+  final ButtonStyle style;
+  final bool isIconOnly;
+
+  @override
+  State<_HoverButton> createState() => _HoverButtonState();
+}
+
+class _HoverButtonState extends State<_HoverButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.05 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: widget.isIconOnly
+            ? ElevatedButton(
+                onPressed: widget.onPressed,
+                style: widget.style,
+                child: widget.label,
+              )
+            : ElevatedButton.icon(
+                onPressed: widget.onPressed,
+                icon: widget.icon,
+                label: widget.label,
+                style: widget.style,
+              ),
+      ),
+    );
+  }
+}
+
+// ── Hover card wrapper (reused across all cards) ────────────────────────────
+
+class _HoverCard extends StatefulWidget {
+  const _HoverCard({required this.child});
+  final Widget child;
+
+  @override
+  State<_HoverCard> createState() => _HoverCardState();
+}
+
+class _HoverCardState extends State<_HoverCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          transform: Matrix4.translationValues(0.0, _hovered ? -6.0 : 0.0, 0.0),
+          decoration: BoxDecoration(
+            boxShadow: _hovered
+                ? [BoxShadow(color: AppColors.navy500.withValues(alpha: 0.15), blurRadius: 24, offset: const Offset(0, 8))]
+                : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+          ),
+          child: widget.child,
       ),
     );
   }
@@ -137,8 +321,12 @@ class _HeroSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < 600;
+
     return Container(
-      padding: const EdgeInsets.only(top: 120, bottom: 60, left: 24, right: 24),
+      padding: EdgeInsets.only(top: isNarrow ? 60 : 120, bottom: isNarrow ? 40 : 60, left: 24, right: 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
@@ -169,48 +357,35 @@ class _HeroSection extends StatelessWidget {
               const SizedBox(height: 24),
               RichText(
                 text: TextSpan(
-                  style: TextStyle(fontSize: isWide ? 48 : 36, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900, height: 1.2),
+                  style: TextStyle(fontSize: isWide ? 48 : (isNarrow ? 28 : 36), fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900, height: 1.2),
                   children: const [
-                    TextSpan(text: 'Empowering Communities Through '),
-                    TextSpan(text: 'Compassion', style: TextStyle(color: AppColors.navy500)),
+                    TextSpan(text: 'Welcome to \n'),
+                    TextSpan(text: 'Jayashree Foundation', style: TextStyle(color: AppColors.navy500)),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                'Join us in creating lasting change. Jayashree Foundation brings together passionate volunteers to serve communities, provide education, healthcare, and hope to those who need it most.',
-                style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.5),
+                'A public charitable trust working for the benefit of all persons regardless of gender, caste, creed, or religion. Empowering Communities Since 2019.',
+                style: TextStyle(fontSize: isNarrow ? 14 : 16, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.5),
               ),
               const SizedBox(height: 32),
-              Wrap(
-                spacing: 16, runSpacing: 16,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: onLoginTap,
-                    icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                    label: const Text('Get Started'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.navy500, foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: isDark ? Colors.white : AppColors.slate900,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      side: BorderSide(color: isDark ? AppColors.slate700 : AppColors.slate200),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Learn More'),
-                  ),
-                ],
+              // Only "Get Started" button — "Learn More" removed
+              _HoverButton(
+                onPressed: onLoginTap,
+                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                label: const Text('Get Started'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.navy500, foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ],
           );
+
+          final imageHeight = isNarrow ? screenHeight * 0.35 : (isWide ? 500.0 : 400.0);
 
           final imageSection = Stack(
             clipBehavior: Clip.none,
@@ -218,14 +393,22 @@ class _HeroSection extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: Image.network(
-                  'https://images.unsplash.com/photo-1761666507437-9fb5a6ef7b0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2b2x1bnRlZXIlMjBjb21tdW5pdHklMjBoZWxwaW5nfGVufDF8fHx8MTc3NDUzMDIxOXww&ixlib=rb-4.1.0&q=80&w=1080',
-                  height: 500, width: double.infinity, fit: BoxFit.cover,
+                  'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1080&q=80',
+                  height: imageHeight, width: double.infinity, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: imageHeight,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.slate800 : AppColors.slate100,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Center(child: Icon(Icons.image_rounded, size: 64, color: AppColors.slate400)),
+                  ),
                 ),
               ),
               Positioned(
-                bottom: -24, left: -24,
+                bottom: isNarrow ? -16 : -24, left: isNarrow ? -8 : -24,
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(isNarrow ? 12 : 16),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.slate800 : Colors.white,
                     borderRadius: BorderRadius.circular(16),
@@ -235,16 +418,16 @@ class _HeroSection extends StatelessWidget {
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(isNarrow ? 8 : 12),
                         decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppColors.navy500, AppColors.navy700]), borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.people_rounded, color: Colors.white),
+                        child: Icon(Icons.favorite_rounded, color: Colors.white, size: isNarrow ? 18 : 24),
                       ),
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('500+', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
-                          Text('Active Volunteers', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                          Text('1,000+', style: TextStyle(fontSize: isNarrow ? 18 : 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
+                          Text('Lives Impacted', style: TextStyle(fontSize: isNarrow ? 10 : 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
                         ],
                       )
                     ],
@@ -260,7 +443,7 @@ class _HeroSection extends StatelessWidget {
               children: [
                 Expanded(flex: 1, child: leftColumn),
                 const SizedBox(width: 48),
-                Expanded(flex: 1, child: imageSection),
+                Expanded(flex: 1, child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 500), child: imageSection))),
               ],
             );
           }
@@ -279,24 +462,23 @@ class _RecentWorksSection extends StatelessWidget {
   final double screenWidth;
 
   final recentWorks = const [
-    { 'title': 'Education for All Initiative', 'category': 'Education', 'date': 'March 2026', 'image': 'https://images.unsplash.com/photo-1573288880964-292771cdff84?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaGlsZHJlbiUyMGVkdWNhdGlvbiUyMGNoYXJpdHl8ZW58MXx8fHwxNzc0NDk3MDE5fDA&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Provided quality education materials and tutoring to over 500 underprivileged children across 12 villages.' },
-    { 'title': 'Community Food Distribution', 'category': 'Relief', 'date': 'February 2026', 'image': 'https://images.unsplash.com/photo-1628717341663-0007b0ee2597?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb29kJTIwZGlzdHJpYnV0aW9uJTIwdm9sdW50ZWVyfGVufDF8fHx8MTc3NDUzMDIyMHww&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Distributed meals to 1,200 families affected by seasonal unemployment in rural areas.' },
-    { 'title': 'Free Medical Health Camp', 'category': 'Healthcare', 'date': 'January 2026', 'image': 'https://images.unsplash.com/photo-1741597727884-1ecd051cadb4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtZWRpY2FsJTIwaGVhbHRoJTIwY2FtcHxlbnwxfHx8fDE3NzQ1MzAyMjB8MA&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Organized comprehensive health checkups and free medicines for 800+ patients in underserved communities.' },
-    { 'title': 'Green Earth Tree Plantation', 'category': 'Environment', 'date': 'December 2025', 'image': 'https://images.unsplash.com/photo-1703012349431-95c3304d098f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbnZpcm9ubWVudCUyMHRyZWUlMjBwbGFudGluZ3xlbnwxfHx8fDE3NzQ1MzAyMjB8MA&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Planted 5,000 saplings with volunteers and local communities to combat climate change.' },
+    { 'title': 'Sponsored Education', 'category': 'Education', 'date': 'Latest', 'image': 'assets/images/sponsored_education.jpg', 'desc': 'We sponsored the education of students who were unable to pay their school fees.' },
+    { 'title': 'Tree Plantation Drive', 'category': 'Environment', 'date': 'Latest', 'image': 'assets/images/tree_plantation.jpg', 'desc': 'We conducted Tree plantation because tree plantation is very necessary to counter Global warming.' },
+    { 'title': 'Mask Distribution', 'category': 'Relief', 'date': 'Latest', 'image': 'assets/images/mask_distribution.png', 'desc': 'We distributed masks to the poor people in order to stop the spread of covid-19.' },
   ];
 
   @override
   Widget build(BuildContext context) {
-    int crossAxisCount = screenWidth > 1024 ? 4 : (screenWidth > 600 ? 2 : 1);
+    int crossAxisCount = screenWidth > 800 ? 3 : (screenWidth > 600 ? 2 : 1);
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+      padding: EdgeInsets.symmetric(vertical: screenWidth < 600 ? 48 : 80, horizontal: screenWidth < 600 ? 16 : 24),
       color: isDark ? AppColors.slate900 : Colors.white,
       child: Column(
         children: [
-          Text('Our Recent Works', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
+          Text('Our Recent Works', style: TextStyle(fontSize: screenWidth < 600 ? 24 : 32, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
           const SizedBox(height: 16),
-          Text('Discover the latest initiatives and projects making a real difference in communities across the country', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
+          Text('Discover the latest initiatives and projects making a real difference in communities across the country', textAlign: TextAlign.center, style: TextStyle(fontSize: screenWidth < 600 ? 14 : 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
           const SizedBox(height: 48),
           LayoutBuilder(
             builder: (ctx, constraints) {
@@ -308,7 +490,9 @@ class _RecentWorksSection extends StatelessWidget {
                   final work = recentWorks[index];
                   return SizedBox(
                     width: cardWidth,
-                    child: _WorkCard(isDark: isDark, work: work, cardWidth: cardWidth),
+                    child: _HoverCard(
+                      child: _WorkCard(isDark: isDark, work: work, cardWidth: cardWidth),
+                    ),
                   );
                 }),
               );
@@ -340,8 +524,8 @@ class _WorkCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              Image.network(work['image']!, height: 150, width: double.infinity, fit: BoxFit.cover),
-              Positioned(top: 8, left: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), decoration: BoxDecoration(color: isDark ? AppColors.slate900.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(12)), child: Text(work['category']!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
+              Image.asset(work['image']!, height: 180, width: double.infinity, fit: BoxFit.cover),
+              Positioned(top: 8, left: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), decoration: BoxDecoration(color: isDark ? AppColors.slate900.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(12)), child: Text(work['category']!, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)))),
             ],
           ),
           Padding(
@@ -352,14 +536,7 @@ class _WorkCard extends StatelessWidget {
                 Text(work['title']!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 6),
                 Text(work['desc']!, style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.4), maxLines: 3, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded, size: 11, color: isDark ? AppColors.slate400 : AppColors.slate500),
-                    const SizedBox(width: 4),
-                    Text(work['date']!, style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                  ],
-                ),
+
               ],
             ),
           ),
@@ -375,18 +552,18 @@ class _AchievementsSection extends StatelessWidget {
   final double screenWidth;
 
   final stats = const [
-    {'icon': Icons.people_rounded, 'num': '25,000+', 'label': 'Lives Impacted', 'colors': [AppColors.navy500, AppColors.cyan500]},
-    {'icon': Icons.emoji_events_rounded, 'num': '15+', 'label': 'Awards Won', 'colors': [AppColors.violet600, AppColors.purple600]},
-    {'icon': Icons.favorite_rounded, 'num': '500+', 'label': 'Active Volunteers', 'colors': [AppColors.orange500, AppColors.rose500]},
-    {'icon': Icons.trending_up_rounded, 'num': '200+', 'label': 'Projects Completed', 'colors': [AppColors.emerald500, AppColors.teal500]},
+    {'icon': Icons.favorite_rounded, 'num': '6,983+', 'label': 'Beneficiaries', 'colors': [AppColors.navy500, AppColors.cyan500]},
+    {'icon': Icons.timer_rounded, 'num': '43,099+', 'label': 'Volunteer Hours', 'colors': [AppColors.violet600, AppColors.purple600]},
+    {'icon': Icons.book_rounded, 'num': '5,538+', 'label': 'Books Distributed', 'colors': [AppColors.orange500, AppColors.rose500]},
+    {'icon': Icons.computer_rounded, 'num': '45+', 'label': 'E-Classes Conducted', 'colors': [AppColors.emerald500, AppColors.teal500]},
   ];
 
   @override
   Widget build(BuildContext context) {
-    int crossAxisCount = screenWidth > 1024 ? 4 : (screenWidth > 600 ? 2 : 1);
+    int crossAxisCount = screenWidth > 1024 ? 4 : (screenWidth > 600 ? 2 : 2);
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+      padding: EdgeInsets.symmetric(vertical: screenWidth < 600 ? 48 : 80, horizontal: screenWidth < 600 ? 16 : 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
@@ -397,9 +574,9 @@ class _AchievementsSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text('Our Achievements', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
+          Text('Our Achievements', style: TextStyle(fontSize: screenWidth < 600 ? 24 : 32, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
           const SizedBox(height: 16),
-          Text('Milestones that reflect our commitment to creating positive change', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
+          Text('Milestones that reflect our commitment to creating positive change', textAlign: TextAlign.center, style: TextStyle(fontSize: screenWidth < 600 ? 14 : 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
           const SizedBox(height: 48),
           LayoutBuilder(
             builder: (ctx, constraints) {
@@ -411,26 +588,28 @@ class _AchievementsSection extends StatelessWidget {
                   final stat = stats[index];
                   return SizedBox(
                     width: cardWidth,
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.slate800 : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(gradient: LinearGradient(colors: stat['colors'] as List<Color>), borderRadius: BorderRadius.circular(16)),
-                            child: Icon(stat['icon'] as IconData, color: Colors.white, size: 32),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(stat['num'] as String, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 4),
-                          Text(stat['label'] as String, style: TextStyle(fontSize: 14, color: isDark ? AppColors.slate400 : AppColors.slate600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        ],
+                    child: _HoverCard(
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.slate800 : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(gradient: LinearGradient(colors: stat['colors'] as List<Color>), borderRadius: BorderRadius.circular(16)),
+                              child: Icon(stat['icon'] as IconData, color: Colors.white, size: screenWidth < 600 ? 24 : 32),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(stat['num'] as String, style: TextStyle(fontSize: screenWidth < 600 ? 22 : 28, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 4),
+                            Text(stat['label'] as String, style: TextStyle(fontSize: screenWidth < 600 ? 12 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -444,15 +623,112 @@ class _AchievementsSection extends StatelessWidget {
   }
 }
 
+class _DonationSection extends StatelessWidget {
+  const _DonationSection({required this.isDark, required this.screenWidth});
+  final bool isDark;
+  final double screenWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final isNarrow = screenWidth < 600;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: isNarrow ? 48 : 80, horizontal: isNarrow ? 16 : 24),
+      color: isDark ? AppColors.slate900 : Colors.white,
+      child: Container(
+        padding: EdgeInsets.all(isNarrow ? 24 : 40),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [AppColors.navy700.withValues(alpha: 0.4), AppColors.indigo600.withValues(alpha: 0.4)]
+                : [AppColors.blue50, AppColors.blue50],
+          ),
+          border: Border.all(
+            color: isDark ? AppColors.blue500.withValues(alpha: 0.2) : AppColors.blue100,
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.rose500.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.favorite_rounded, color: AppColors.rose500, size: 40),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Make a Difference Today',
+              style: TextStyle(
+                fontSize: isNarrow ? 24 : 32,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : AppColors.slate900,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Your contribution helps us continue our mission of providing healthcare, education, and support to communities in need. Every rupee counts.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isNarrow ? 14 : 16,
+                color: isDark ? AppColors.slate300 : AppColors.slate600,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            _HoverButton(
+              onPressed: () => DonationDialog.show(context),
+              icon: const Icon(Icons.volunteer_activism_rounded, size: 20),
+              label: const Text('Donate via Razorpay'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.rose500,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: isNarrow ? 20 : 32, vertical: 16),
+                textStyle: TextStyle(fontSize: isNarrow ? 15 : 18, fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 4,
+                shadowColor: AppColors.rose500.withValues(alpha: 0.4),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Icon(Icons.shield_rounded, size: 16, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                const SizedBox(width: 6),
+                Text(
+                  '100% Secure Payments • 80G Tax Benefits Available',
+                  style: TextStyle(
+                    fontSize: isNarrow ? 11 : 12,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? AppColors.slate400 : AppColors.slate500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _NewsSection extends StatelessWidget {
   const _NewsSection({required this.isDark, required this.screenWidth});
   final bool isDark;
   final double screenWidth;
 
   final news = const [
-    { 'title': 'Jayashree Foundation Wins National NGO Excellence Award 2026', 'source': 'National Daily', 'date': 'March 15, 2026', 'image': 'https://images.unsplash.com/photo-1762345127396-ac4a970436c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhd2FyZCUyMGFjaGlldmVtZW50JTIwdHJvcGh5fGVufDF8fHx8MTc3NDUzMDIyMXww&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Recognized for outstanding contribution to community development and volunteer mobilization across India.' },
-    { 'title': 'Volunteers Rally Together for Rural Healthcare', 'source': 'Health Today', 'date': 'March 10, 2026', 'image': 'https://images.unsplash.com/photo-1751666526244-40239a251eae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb21tdW5pdHklMjBzZXJ2aWNlJTIwdm9sdW50ZWVyfGVufDF8fHx8MTc3NDUzMDIyMXww&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Jayashree Foundation volunteers conducted medical camps reaching remote villages with essential healthcare services.' },
-    { 'title': 'Partnership with Global Charity Network Announced', 'source': 'Education Weekly', 'date': 'February 28, 2026', 'image': 'https://images.unsplash.com/photo-1593113702251-272b1bc414a9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaGFyaXR5JTIwZG9uYXRpb24lMjBoZWxwaW5nfGVufDF8fHx8MTc3NDQ1NjEwN3ww&ixlib=rb-4.1.0&q=80&w=1080', 'desc': 'Strategic collaboration to expand educational programs and provide scholarships to 2,000 students.' },
+    { 'title': 'Education Initiatives', 'source': 'Focus Area', 'date': '', 'image': 'https://images.unsplash.com/photo-1511629091441-ee46146481b6?auto=format&fit=crop&w=1080&q=80', 'desc': 'Holistic education and quality skill development of rural masses & women. We provide necessary support.' },
+    { 'title': 'Health & Wellbeing', 'source': 'Focus Area', 'date': '', 'image': 'assets/images/health_wellbeing.png', 'desc': 'Awareness & Guidance on Menstrual Health and Puberty amongst the masses to ensure better living.' },
+    { 'title': 'Environment Protection', 'source': 'Focus Area', 'date': '', 'image': 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1080&q=80', 'desc': 'Mentoring, Guiding and creating the entrepreneurial and self-reliance mindset while protecting nature.' },
   ];
 
   @override
@@ -460,13 +736,13 @@ class _NewsSection extends StatelessWidget {
     int crossAxisCount = screenWidth > 800 ? 3 : (screenWidth > 600 ? 2 : 1);
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+      padding: EdgeInsets.symmetric(vertical: screenWidth < 600 ? 48 : 80, horizontal: screenWidth < 600 ? 16 : 24),
       color: isDark ? AppColors.slate900 : Colors.white,
       child: Column(
         children: [
-          Text('Latest News', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
+          Text('Our Focus Areas', style: TextStyle(fontSize: screenWidth < 600 ? 24 : 32, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
           const SizedBox(height: 16),
-          Text('Stay updated with our latest activities and media coverage', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
+          Text('The key pillars of our mission', textAlign: TextAlign.center, style: TextStyle(fontSize: screenWidth < 600 ? 14 : 16, color: isDark ? AppColors.slate400 : AppColors.slate600)),
           const SizedBox(height: 48),
           LayoutBuilder(
             builder: (ctx, constraints) {
@@ -478,7 +754,9 @@ class _NewsSection extends StatelessWidget {
                   final item = news[index];
                   return SizedBox(
                     width: cardWidth,
-                    child: _NewsCard(isDark: isDark, item: item),
+                    child: _HoverCard(
+                      child: _NewsCard(isDark: isDark, item: item),
+                    ),
                   );
                 }),
               );
@@ -507,31 +785,23 @@ class _NewsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.network(item['image']!, height: 140, width: double.infinity, fit: BoxFit.cover),
+          item['image']!.toString().startsWith('http') 
+              ? Image.network(
+                  item['image']!, height: 140, width: double.infinity, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 140, color: isDark ? AppColors.slate700 : AppColors.slate100,
+                    child: const Center(child: Icon(Icons.image_rounded, size: 40, color: AppColors.slate400)),
+                  ),
+                )
+              : Image.asset(item['image']!, height: 140, width: double.infinity, fit: BoxFit.cover),
           Padding(
             padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(child: Text(item['source']!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.navy500), overflow: TextOverflow.ellipsis)),
-                    Flexible(child: Text(item['date']!, style: TextStyle(fontSize: 10, color: isDark ? AppColors.slate400 : AppColors.slate500), overflow: TextOverflow.ellipsis)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(item['title']!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(item['title']!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
                 Text(item['desc']!, style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.4), maxLines: 3, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Text('Read More', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.navy500)),
-                    const SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_rounded, size: 12, color: isDark ? AppColors.navy400 : AppColors.navy500),
-                  ],
-                )
               ],
             ),
           ),
@@ -548,8 +818,10 @@ class _AboutSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isNarrow = screenWidth < 600;
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+      padding: EdgeInsets.symmetric(vertical: isNarrow ? 48 : 80, horizontal: isNarrow ? 16 : 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
@@ -565,27 +837,27 @@ class _AboutSection extends StatelessWidget {
           final aboutColumn = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('About Jayashree Foundation', style: TextStyle(fontSize: isWide ? 32 : 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
+              Text('About Jayashree Foundation', style: TextStyle(fontSize: isWide ? 32 : (isNarrow ? 22 : 24), fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
               const SizedBox(height: 16),
-              Text('Founded in 2015, Jayashree Foundation is a non-profit organization dedicated to transforming lives through community service, education, healthcare, and environmental initiatives. We believe in the power of collective action and the difference passionate individuals can make.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
+              Text('Jayashree Foundation is a Mumbai based Indian not-for-profit organization registered as a section 8 of The Companies Act 2013 in India started in 2019 and this NGO is led by Vaibhav Jadhav. We have projects all over India for education, health & development.', style: TextStyle(fontSize: isNarrow ? 13 : (isWide ? 16 : 14), color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
               const SizedBox(height: 12),
-              Text('Our mission is to create sustainable change by empowering communities, supporting underprivileged families, and mobilizing volunteers who share our vision of a better tomorrow.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
+              Text('It is an initiative of like-minded people and various well-wishers who believe, "Goodness is the only investment that never fails" and at Jayashree foundation we believe in doing good.', style: TextStyle(fontSize: isNarrow ? 13 : (isWide ? 16 : 14), color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
               const SizedBox(height: 12),
-              Text('With a dedicated team of volunteers and partners across India, we continue to expand our reach and impact, touching thousands of lives every year.', style: TextStyle(fontSize: isWide ? 16 : 14, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
+              Text('Be it big or small, efforts will make a difference. We are passionate about social work and you can start your journey too!', style: TextStyle(fontSize: isNarrow ? 13 : (isWide ? 16 : 14), color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.6)),
             ],
           );
 
           final contactCard = Container(
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(isNarrow ? 20 : 32),
             decoration: BoxDecoration(color: isDark ? AppColors.slate800 : Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20)]),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Get In Touch', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
+                Text('Get In Touch', style: TextStyle(fontSize: isNarrow ? 20 : 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900)),
                 const SizedBox(height: 24),
-                _ContactRow(isDark: isDark, icon: Icons.location_on_rounded, title: 'Address', detail: '123 Hope Street, Community Center\nMumbai, Maharashtra 400001, India'),
+                _ContactRow(isDark: isDark, icon: Icons.location_on_rounded, title: 'Address', detail: 'Room No -17, Plot No. 46, Sahyadri Society\nSector 16 A, Nerul West, Navi Mumbai\nMaharashtra 400706'),
                 const SizedBox(height: 16),
-                _ContactRow(isDark: isDark, icon: Icons.phone_rounded, title: 'Phone', detail: '+91 22 1234 5678'),
+                _ContactRow(isDark: isDark, icon: Icons.phone_rounded, title: 'Phone', detail: '+91 9876543210'),
                 const SizedBox(height: 16),
                 _ContactRow(isDark: isDark, icon: Icons.mail_rounded, title: 'Email', detail: 'contact@jayashreefoundation.org'),
                 const SizedBox(height: 32),
@@ -595,11 +867,9 @@ class _AboutSection extends StatelessWidget {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    _SocialButton(isDark: isDark, icon: Icons.facebook_rounded),
+                    _SocialButton(isDark: isDark, icon: FontAwesomeIcons.facebook, url: 'https://www.facebook.com/people/Jayashree-Foundation/100080648706671/?mibextid=LQQJ4d'),
                     const SizedBox(width: 12),
-                    _SocialButton(isDark: isDark, icon: Icons.chat_bubble_rounded),
-                    const SizedBox(width: 12),
-                    _SocialButton(isDark: isDark, icon: Icons.camera_alt_rounded),
+                    _SocialButton(isDark: isDark, icon: FontAwesomeIcons.instagram, url: 'https://www.instagram.com/jayashree_foundation/?igshid=MzRlODBiNWFlZA%3D%3D'),
                   ],
                 )
               ],
@@ -645,17 +915,52 @@ class _ContactRow extends StatelessWidget {
   }
 }
 
-class _SocialButton extends StatelessWidget {
-  const _SocialButton({required this.isDark, required this.icon});
+class _SocialButton extends StatefulWidget {
+  const _SocialButton({required this.isDark, required this.icon, this.url});
   final bool isDark;
   final IconData icon;
+  final String? url;
+
+  @override
+  State<_SocialButton> createState() => _SocialButtonState();
+}
+
+class _SocialButtonState extends State<_SocialButton> {
+  bool _hovered = false;
+
+  Future<void> _openUrl() async {
+    if (widget.url != null) {
+      final uri = Uri.parse(widget.url!);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 40, height: 40,
-      decoration: BoxDecoration(color: isDark ? Colors.blue.shade900.withValues(alpha: 0.3) : AppColors.navy50, borderRadius: BorderRadius.circular(8)),
-      child: Icon(icon, size: 20, color: isDark ? AppColors.navy400 : AppColors.navy500),
+    return GestureDetector(
+      onTap: _openUrl,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedScale(
+          scale: _hovered ? 1.15 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          child: Container(
+            width: 44, height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _hovered
+                  ? (widget.isDark ? AppColors.navy700 : AppColors.navy100)
+                  : (widget.isDark ? Colors.blue.shade900.withValues(alpha: 0.3) : AppColors.navy50),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: FaIcon(widget.icon, size: 20, color: widget.isDark ? AppColors.navy400 : AppColors.navy500),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -666,29 +971,48 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isNarrow = MediaQuery.of(context).size.width < 600;
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      padding: EdgeInsets.symmetric(vertical: 24, horizontal: isNarrow ? 12 : 16),
       color: isDark ? AppColors.slate950 : AppColors.slate900,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+      child: isNarrow
+          ? Column(
               children: [
-                Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppColors.navy500, AppColors.navy700]), borderRadius: BorderRadius.circular(6)), child: const Icon(Icons.favorite_rounded, size: 14, color: Colors.white)),
-                const SizedBox(width: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppColors.navy500, AppColors.navy700]), borderRadius: BorderRadius.circular(6)), child: const Icon(Icons.favorite_rounded, size: 14, color: Colors.white)),
+                    const SizedBox(width: 12),
+                    const Text('Jayashree Foundation', style: TextStyle(color: AppColors.slate300, fontSize: 13, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('© 2026 All rights reserved.', style: TextStyle(color: isDark ? AppColors.slate500 : AppColors.slate400, fontSize: 11)),
+                const SizedBox(height: 4),
+                const Text('Making a Difference Together', style: TextStyle(color: AppColors.slate500, fontSize: 11)),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 Flexible(
-                  child: Text('© 2026 Jayashree Foundation. All rights reserved.', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate400, fontSize: 12), overflow: TextOverflow.ellipsis),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppColors.navy500, AppColors.navy700]), borderRadius: BorderRadius.circular(6)), child: const Icon(Icons.favorite_rounded, size: 14, color: Colors.white)),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text('© 2026 Jayashree Foundation. All rights reserved.', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate400, fontSize: 12), overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+                const Flexible(
+                  child: Text('Making a Difference Together', style: TextStyle(color: AppColors.slate500, fontSize: 11), overflow: TextOverflow.ellipsis),
                 ),
               ],
             ),
-          ),
-          const Flexible(
-            child: Text('Making a Difference Together', style: TextStyle(color: AppColors.slate500, fontSize: 11), overflow: TextOverflow.ellipsis),
-          ),
-        ],
-      ),
     );
   }
 }

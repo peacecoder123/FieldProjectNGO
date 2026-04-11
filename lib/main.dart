@@ -8,6 +8,7 @@ import 'app/app.dart';
 import 'firebase_options.dart';
 import 'shared/providers/app_providers.dart';
 import 'services/data_seeder.dart';
+import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,9 @@ Future<void> main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     debugPrint('Firebase initialized successfully');
+
+    // Initialize Push Notifications
+    await PushNotificationService.instance.initialize();
   } catch (e, stack) {
     debugPrint('Firebase initialization error: $e');
     debugPrint('Stack: $stack');

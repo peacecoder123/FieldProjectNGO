@@ -9,6 +9,9 @@ abstract interface class IAuthRepository {
   Future<UserEntity?> loginWithGoogle();
   Stream<UserEntity?> watchAuthState();
   Future<void> logout();
+  
+  /// Syncs device FCM token with Firestore user document
+  Future<void> updateFcmToken(String userId, String? token);
 }
 
 abstract interface class IVolunteerRepository {
@@ -43,8 +46,13 @@ abstract interface class ITaskRepository {
 
 abstract interface class IDonationRepository {
   Future<List<DonationEntity>> getAll();
-  Stream<List<DonationEntity>> watchAll();
-  Future<DonationEntity> add(DonationEntity donation);
+  Stream<List<DonationEntity>> watchAll(); // Real-time Firebase support
+  
+  Future<DonationEntity>       add(DonationEntity donation);
+  Future<DonationEntity>       update(DonationEntity donation);
+  Future<void>                 updatePaymentStatus(String donationId, PaymentStatus status);
+
+  /// Marks a donation as receipt-generated and stores the receipt number.
   Future<DonationEntity> generateReceipt(String donationId, String receiptNumber);
 }
 
@@ -79,7 +87,15 @@ abstract interface class IDocumentRepository {
 
 abstract interface class IMeetingRepository {
   Future<List<MeetingEntity>> getAll();
-  Stream<List<MeetingEntity>> watchAll();
-  Future<MeetingEntity> addMeeting(MeetingEntity meeting);
-  Future<MeetingEntity> addSummary(String meetingId, {required String summary, required String addedBy});
+  Stream<List<MeetingEntity>> watchAll(); // Real-time Firebase support
+  
+  Future<MeetingEntity>       addMeeting(MeetingEntity meeting);
+
+  Future<MeetingEntity>       addSummary(
+    String meetingId, {
+    required String summary,
+    required String addedBy,
+  });
+
+  Future<MeetingEntity>       markCompleted(String meetingId, {required String summaryAssignedTo});
 }

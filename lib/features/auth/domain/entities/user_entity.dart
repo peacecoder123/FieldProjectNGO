@@ -14,16 +14,20 @@ class UserEntity extends Equatable {
     required this.email,
     required this.role,
     this.avatar,
+    this.fcmToken,
     this.inviteEmailSentAt,
   });
 
-  final String    id;
+  final String    id; // Changed to String
   final String    name;
   final String    email;
   final UserRole  role;
   final String?   avatar;
-  final DateTime? inviteEmailSentAt;
+  final String?   fcmToken; // From merged3
+  final DateTime? inviteEmailSentAt; // From main
 
+  /// One or two-character initials used for the avatar widget.
+  /// Falls back to derived initials if not supplied.
   String get displayAvatar {
     if (avatar != null && avatar!.isNotEmpty) return avatar!;
     final parts = name.trim().split(' ').where((p) => p.isNotEmpty).toList();
@@ -37,6 +41,7 @@ class UserEntity extends Equatable {
     String?    email,
     UserRole?  role,
     String?    avatar,
+    String?    fcmToken,
     DateTime?  inviteEmailSentAt,
   }) {
     return UserEntity(
@@ -45,25 +50,27 @@ class UserEntity extends Equatable {
       email:             email             ?? this.email,
       role:              role              ?? this.role,
       avatar:            avatar            ?? this.avatar,
+      fcmToken:          fcmToken          ?? this.fcmToken,
       inviteEmailSentAt: inviteEmailSentAt ?? this.inviteEmailSentAt,
     );
   }
 
   // ── Equatable ──────────────────────────────────────────────────────────────
   @override
-  List<Object?> get props => [id, name, email, role, avatar, inviteEmailSentAt];
+  List<Object?> get props => [id, name, email, role, avatar, fcmToken, inviteEmailSentAt];
 
   // ── Serialisation ───────────────────────────────────────────────────────
   factory UserEntity.fromJson(Map<String, dynamic> json) {
     return UserEntity(
-      id:     (json['id'] ?? '').toString(),
-      name:   json['name']   as String,
-      email:  json['email']  as String,
-      role:   UserRole.values.firstWhere(
+      id:       (json['id'] ?? '').toString(),
+      name:     json['name']   as String,
+      email:    json['email']  as String,
+      role:     UserRole.values.firstWhere(
         (r) => r.name.toLowerCase() == (json['role'] as String? ?? '').toLowerCase().trim(),
         orElse: () => UserRole.volunteer,
       ),
-      avatar: json['avatar'] as String?,
+      avatar:   json['avatar'] as String?,
+      fcmToken: json['fcmToken'] as String?,
       inviteEmailSentAt: json['inviteEmailSentAt'] != null
           ? (json['inviteEmailSentAt'] is String
               ? DateTime.tryParse(json['inviteEmailSentAt'])
@@ -78,6 +85,7 @@ class UserEntity extends Equatable {
     'email':             email,
     'role':              role.name,
     'avatar':            avatar,
+    'fcmToken':          fcmToken,
     'inviteEmailSentAt': inviteEmailSentAt?.toIso8601String(),
   };
-}
+}

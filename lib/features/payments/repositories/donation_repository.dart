@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
 import 'package:ngo_volunteer_management/shared/data/repositories.dart';
+import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 
 class DonationRepository implements IDonationRepository {
   final String _collectionPath = 'donations';
@@ -70,5 +71,24 @@ class DonationRepository implements IDonationRepository {
 
     final updatedDoc = await docRef.get();
     return DonationEntity.fromMap({'id': updatedDoc.id, ...updatedDoc.data()!});
+  }
+
+  @override
+  Future<DonationEntity> update(DonationEntity donation) async {
+    await _db
+        .collection(_collectionPath)
+        .doc(donation.id.toString())
+        .update(donation.toMap());
+    return donation;
+  }
+
+  @override
+  Future<void> updatePaymentStatus(int donationId, PaymentStatus status) async {
+    await _db
+        .collection(_collectionPath)
+        .doc(donationId.toString())
+        .update({
+      'paymentStatus': status.name,
+    });
   }
 }

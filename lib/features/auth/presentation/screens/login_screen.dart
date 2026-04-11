@@ -120,12 +120,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // Back button
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: () => context.go('/'),
-                        icon: const Icon(Icons.arrow_back_ios_rounded,
-                            size: 14, color: AppColors.slate400),
-                        label: const Text('Back',
-                            style: TextStyle(color: AppColors.slate400)),
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            if (Navigator.of(context).canPop()) {
+                              Navigator.of(context).pop();
+                            } else {
+                              context.go('/');
+                            }
+                          },
+                          icon: const Icon(Icons.arrow_back_ios_rounded,
+                              size: 14, color: AppColors.slate400),
+                          label: const Text('Back',
+                              style: TextStyle(color: AppColors.slate400)),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),

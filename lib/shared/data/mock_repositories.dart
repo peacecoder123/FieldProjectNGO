@@ -35,6 +35,13 @@ class MockAuthRepository implements IAuthRepository {
   Future<void> logout() async {
     await Future.delayed(const Duration(milliseconds: 400));
   }
+
+  @override
+  Future<void> updateFcmToken(int userId, String? token) async {
+    // Mock implementation doesn't need to persist to a real DB
+    await Future.delayed(const Duration(milliseconds: 200));
+    print('Mock: FCM token updated for $userId to $token');
+  }
 }
 
 // ── Volunteers ───────────────────────────────────────────────────────────────
@@ -344,6 +351,17 @@ class MockMeetingRepository implements IMeetingRepository {
         addedBy: addedBy,
         status: MeetingStatus.completed,
       );
+      return _data[idx];
+    }
+    throw Exception('Not found');
+  }
+
+  @override
+  Future<MeetingEntity> markCompleted(int meetingId, {required String summaryAssignedTo}) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    final idx = _data.indexWhere((m) => m.id == meetingId);
+    if (idx != -1) {
+      _data[idx] = _data[idx].copyWith(status: MeetingStatus.completed, summaryAssignedTo: summaryAssignedTo);
       return _data[idx];
     }
     throw Exception('Not found');

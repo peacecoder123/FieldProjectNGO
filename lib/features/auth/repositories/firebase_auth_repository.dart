@@ -138,10 +138,22 @@ class FirebaseAuthRepository implements IAuthRepository {
     );
   }
 
+  @override
+  Future<void> updateFcmToken(String userId, String? token) async {
+    try {
+      await _db.collection(_collectionPath).doc(userId).update({
+        'fcmToken': token,
+      });
+      debugPrint('Sync: FCM token updated for user $userId');
+    } catch (e) {
+      debugPrint('Sync Error: Failed to update FCM token: $e');
+    }
+  }
+
   UserRole _roleFromString(String role) {
     return UserRole.values.firstWhere(
       (r) => r.name.toLowerCase() == role.toLowerCase().trim(),
-      orElse: () => UserRole.admin,
+      orElse: () => UserRole.volunteer,
     );
   }
 }

@@ -20,6 +20,7 @@ class AdminOverviewTab extends ConsumerWidget {
     final membersAsync    = ref.watch(memberProvider);
     final tasksAsync      = ref.watch(taskProvider);
     final donationsAsync  = ref.watch(donationProvider);
+    final monthlyDonations = ref.watch(monthlyDonationAggregationProvider);
     final joiningAsync    = ref.watch(joiningLetterProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -38,7 +39,9 @@ class AdminOverviewTab extends ConsumerWidget {
             data: (donations) {
               final activeVols    = volunteers.where((v) => v.status == PersonStatus.active).length;
               final activeMems    = members.where((m) => m.status == PersonStatus.active).length;
-              final totalDonation = donations.fold(0, (s, d) => s + d.amount);
+              final totalDonation = donations.where((d) => d.paymentStatus != PaymentStatus.failed).fold(0, (s, d) => s + d.amount);
+              final donationCount = donations.where((d) => d.paymentStatus != PaymentStatus.failed).length;
+              final onlineCount   = donations.where((d) => d.type == DonationType.online && d.paymentStatus == PaymentStatus.success).length;
               final pendingReqs   = joiningAsync.value?.where((r) => r.status == RequestStatus.pending).length ?? 0;
               final pendingTasks  = tasks.where((t) => t.status == TaskStatus.submitted).length;
 
@@ -73,46 +76,63 @@ class AdminOverviewTab extends ConsumerWidget {
                   const SizedBox(height: 12),
 
                   // ── Stat cards ─────────────────────────────────────────
-                  Column(
-                    children: [
-                      StatCard(
-                        title:          'Active Volunteers',
-                        value:          '$activeVols',
-                        subtitle:       '${volunteers.length} total',
-                        icon:           const Icon(Icons.volunteer_activism_rounded, size: 18, color: AppColors.navy500),
-                        iconBackground: AppColors.navy100,
-                        trend:          '12%',
-                        trendUp:        true,
-                      ),
-                      const SizedBox(height: 8),
-                      StatCard(
-                        title:          'Active Members',
-                        value:          '$activeMems',
-                        subtitle:       '${members.where((m) => m.membershipType == MembershipType.eightyG).length} with 80G',
-                        icon:           const Icon(Icons.people_rounded, size: 18, color: AppColors.emerald600),
-                        iconBackground: AppColors.emerald100,
-                        trend:          '8%',
-                        trendUp:        true,
-                      ),
-                      const SizedBox(height: 8),
-                      StatCard(
-                        title:          'Total Donations',
-                        value:          AppFormatters.inr(totalDonation),
-                        subtitle:       '${donations.where((d) => !d.receiptGenerated).length} receipts pending',
-                        icon:           const Icon(Icons.currency_rupee_rounded, size: 18, color: AppColors.purple600),
-                        iconBackground: AppColors.purple100,
-                        trend:          '23%',
-                        trendUp:        true,
-                      ),
-                      const SizedBox(height: 8),
-                      StatCard(
-                        title:          'Pending Requests',
-                        value:          '$pendingReqs',
-                        subtitle:       '$pendingTasks tasks need review',
-                        icon:           const Icon(Icons.inbox_rounded, size: 18, color: AppColors.amber600),
-                        iconBackground: AppColors.amber100,
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final crossCount = constraints.maxWidth > 900 ? 5 : (constraints.maxWidth > 600 ? 3 : 2);
+                      return GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: crossCount,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: crossCount == 4 ? 1.4 : 1.5,
+                        children: [
+                          StatCard(
+                            title:          'Active Volunteers',
+                            value:          '$activeVols',
+                            subtitle:       '${volunteers.length} total',
+                            icon:           const Icon(Icons.volunteer_activism_rounded, size: 20, color: AppColors.blue600),
+                            iconBackground: AppColors.blue100,
+                            trend:          '12%',
+                            trendUp:        true,
+                          ),
+                          StatCard(
+                            title:          'Active Members',
+                            value:          '$activeMems',
+                            subtitle:       '${members.where((m) => m.membershipType == MembershipType.eightyG).length} with 80G',
+                            icon:           const Icon(Icons.people_rounded, size: 20, color: AppColors.emerald600),
+                            iconBackground: AppColors.emerald100,
+                            trend:          '8%',
+                            trendUp:        true,
+                          ),
+                          StatCard(
+                            title:          'Total Donations',
+                            value:          AppFormatters.inr(totalDonation),
+                            subtitle:       '${donations.where((d) => !d.receiptGenerated).length} receipts pending',
+                            icon:           const Icon(Icons.currency_rupee_rounded, size: 20, color: AppColors.purple600),
+                            iconBackground: AppColors.purple100,
+                            trend:          '23%',
+                            trendUp:        true,
+                          ),
+                          StatCard(
+                            title:          'Online Payments',
+                            value:          '$onlineCount',
+                            subtitle:       'Via Razorpay checkout',
+                            icon:           const Icon(Icons.credit_card_rounded, size: 20, color: AppColors.rose600),
+                            iconBackground: AppColors.rose100,
+                            trend:          '15%',
+                            trendUp:        true,
+                          ),
+                          StatCard(
+                            title:          'Pending Requests',
+                            value:          '$pendingReqs',
+                            subtitle:       '$pendingTasks tasks need review',
+                            icon:           const Icon(Icons.inbox_rounded, size: 20, color: AppColors.amber600),
+                            iconBackground: AppColors.amber100,
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 20),
 
@@ -137,7 +157,7 @@ class AdminOverviewTab extends ConsumerWidget {
                             Expanded(
                               flex: 2,
                               child: _DonationChart(
-                                data: chartData,
+                                data: monthlyDonations,
                                 isDark: isDark,
                               ),
                             ),
@@ -155,7 +175,7 @@ class AdminOverviewTab extends ConsumerWidget {
                       return Column(
                         children: [
                           _DonationChart(
-                            data: chartData,
+                            data: monthlyDonations,
                             isDark: isDark,
                           ),
                           const SizedBox(height: 12),

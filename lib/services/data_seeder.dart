@@ -195,6 +195,13 @@ Future<void> seedFirestoreIfEmpty() async {
       {'id': '2', 'title': 'Q1 Review & Planning Session',   'date': '2025-03-28', 'time': '11:00 AM', 'attendees': ['Dr. Anjali Mehta', 'Vikram Bose', 'Priya Sharma'],  'status': 'completed', 'summary': 'Reviewed Q1 targets: food drives achieved 94% reach. Medical camp treated 320 patients. Decided to increase volunteer intake by 20% in Q2.', 'addedBy': 'Dr. Anjali Mehta'},
     ];
 
+    // ── Donations ─────────────────────────────────────────────
+    final donations = [
+      {'id': 1, 'donorName': 'Ramesh Gupta', 'amount': 25000, 'date': '2025-03-20', 'status': 'completed', 'paymentMethod': 'CASH'},
+      {'id': 2, 'donorName': 'Anonymous',    'amount': 10000, 'date': '2025-03-25', 'status': 'completed', 'paymentMethod': 'CASH'},
+      {'id': 3, 'donorName': 'Suresh Patil', 'amount': 5000,  'date': '2025-04-10', 'status': 'completed', 'paymentMethod': 'RAZORPAY', 'paymentId': 'pay_test_123'},
+    ];
+
     // ── Clean up stale docs from old seeder versions ─────────────────────────
     // Old seeder had wrong IDs (e.g. Rahul Verma was at users/"4", volunteers/"1")
     // We must delete them so Firestore queries (which go by email) don't find double entries.
@@ -217,6 +224,7 @@ Future<void> seedFirestoreIfEmpty() async {
     for (final g in generalRequests)  { await db.collection('general_requests').doc(g['id'].toString()).set(g); }
     for (final m in mouRequests)      { await db.collection('mou_requests').doc(m['id'].toString()).set(m); }
     for (final m in meetings)         { await db.collection('meetings').doc(m['id'].toString()).set(m); }
+    for (final d in donations)        { await db.collection('donations').doc(d['id'].toString()).set(d); }
 
     await prefs.setString('firestore_seeded_v', currentVersion);
     debugPrint('✅ Firestore re-seeded successfully (version: $currentVersion)');
