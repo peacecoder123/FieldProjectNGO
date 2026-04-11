@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/features/public/presentation/widgets/donation_dialog.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
@@ -827,7 +828,7 @@ class _AboutSection extends StatelessWidget {
                   children: [
                     _SocialButton(isDark: isDark, icon: Icons.facebook_rounded, url: 'https://www.facebook.com/people/Jayashree-Foundation/100080648706671/?mibextid=LQQJ4d'),
                     const SizedBox(width: 12),
-                    _SocialButton(isDark: isDark, icon: Icons.camera_alt_rounded, url: 'https://www.instagram.com/jayashree_foundation/?igshid=MzRlODBiNWFlZA%3D%3D'),
+                    _SocialButton(isDark: isDark, icon: FontAwesomeIcons.instagram, url: 'https://www.instagram.com/jayashree_foundation/?igshid=MzRlODBiNWFlZA%3D%3D'),
                   ],
                 )
               ],
@@ -914,7 +915,7 @@ class _SocialButtonState extends State<_SocialButton> {
                   : (widget.isDark ? Colors.blue.shade900.withValues(alpha: 0.3) : AppColors.navy50),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(widget.icon, size: 20, color: widget.isDark ? AppColors.navy400 : AppColors.navy500),
+            child: FaIcon(widget.icon, size: 20, color: widget.isDark ? AppColors.navy400 : AppColors.navy500),
           ),
         ),
       ),
