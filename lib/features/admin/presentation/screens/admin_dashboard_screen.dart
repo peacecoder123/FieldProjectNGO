@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
+import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_shell.dart';
 import '../../../../shared/providers/feature_providers.dart';
 import '../tabs/admin_overview_tab.dart';
@@ -11,6 +13,8 @@ import '../tabs/documentation_tab.dart';
 import '../tabs/admin_meetings_tab.dart';
 import '../tabs/joining_letters_tab.dart';
 import '../tabs/requests_tab.dart';
+import '../tabs/users_management_tab.dart';
+import '../screens/profile_screen.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key, required this.isSuperAdmin});
@@ -24,20 +28,26 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   String _activeTab = 'overview';
 
-  Widget _buildTab() => switch (_activeTab) {
-    'overview'        => AdminOverviewTab(isSuperAdmin: widget.isSuperAdmin),
-    'volunteers'      => VolunteersTab(isSuperAdmin: widget.isSuperAdmin),
+  Widget _buildTab(bool isActuallySuperAdmin) => switch (_activeTab) {
+    'overview'        => AdminOverviewTab(isSuperAdmin: isActuallySuperAdmin),
+    'volunteers'      => VolunteersTab(isSuperAdmin: isActuallySuperAdmin),
     'members'         => const MembersTab(),
     'donations'       => const DonationsTab(),
     'meetings'        => const AdminMeetingsTab(),
     'documentation'   => const DocumentationTab(),
     'joining-letters' => const JoiningLettersTab(),
     'requests'        => const RequestsTab(),
-    _                 => AdminOverviewTab(isSuperAdmin: widget.isSuperAdmin),
+    'users'           => const UsersManagementTab(),
+    'profile'         => const ProfileScreen(),
+    _                 => AdminOverviewTab(isSuperAdmin: isActuallySuperAdmin),
   };
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserProvider);
+    final bool isActuallySuperAdmin =
+        widget.isSuperAdmin || currentUser?.role == UserRole.superAdmin;
+
     final joining  = ref.watch(joiningLetterProvider).value ?? [];
     final requests = ref.watch(generalRequestProvider).value ?? [];
     final mou      = ref.watch(mouRequestProvider).value ?? [];
@@ -59,6 +69,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       const NavItem(id: 'documentation',  label: 'Documentation',   icon: Icons.folder_rounded),
       NavItem(id: 'joining-letters',label: 'Joining Letters', icon: Icons.file_present_rounded, badge: joiningPending > 0 ? joiningPending : null),
       NavItem(id: 'requests',       label: 'Requests',        icon: Icons.inbox_rounded, badge: requestsPending > 0 ? requestsPending : null),
+      if (isActuallySuperAdmin)
+        const NavItem(id: 'users',    label: 'Team Access',     icon: Icons.admin_panel_settings_rounded),
+      const NavItem(id: 'profile',    label: 'Profile',         icon: Icons.account_circle_rounded),
     ];
 
     return AppShell(
@@ -66,7 +79,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       activeTab:     _activeTab,
       onTabChange:   (id) => setState(() => _activeTab = id),
       notifications: totalNotifications,
-      body:          _buildTab(),
+      body:          _buildTab(isActuallySuperAdmin),
     );
   }
 }

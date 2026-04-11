@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
@@ -297,6 +300,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 16),
 
                           // Google Auth Button
+                          // Google Auth Button
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton(
@@ -327,6 +331,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          
+                          // Developer Tool: Quick Register
+                          if (kDebugMode)
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextButton.icon(
+                                onPressed: () async {
+                                  setState(() => _loading = true);
+                                  try {
+                                    final db = FirebaseFirestore.instance;
+                                    final google = GoogleSignIn(
+                                      clientId: kIsWeb ? '1093449762008-vau99kj7q90uou7aau2esvidn9unl2ak.apps.googleusercontent.com' : null,
+                                    );
+                                    final account = await google.signIn();
+                                    if (account == null) throw Exception("Sign in cancelled");
+                                    
+                                    await db.collection('users').add({
+                                      'email': account.email.toLowerCase().trim(),
+                                      'name': account.displayName ?? 'New User',
+                                      'role': 'superAdmin',
+                                      'avatar': (account.displayName ?? 'U').substring(0, 1),
+                                    });
+                                    
+                                    if (!mounted) return;
+                                    setState(() {
+                                      _loading = false;
+                                      _error = "Success! '${account.email}' is now whitelisted. You can now login.";
+                                    });
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    setState(() {
+                                      _loading = false;
+                                      _error = "Whitelist failed: $e";
+                                    });
+                                  }
+                                },
+                                icon: const Icon(Icons.security, size: 16, color: AppColors.slate500),
+                                label: const Text(
+                                  '[DEBUG] Whitelist My Google Account',
+                                  style: TextStyle(color: AppColors.slate500, fontSize: 11),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),

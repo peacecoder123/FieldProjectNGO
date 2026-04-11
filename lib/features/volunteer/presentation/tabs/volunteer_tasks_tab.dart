@@ -175,12 +175,17 @@ class _VolunteerTasksTabState extends ConsumerState<VolunteerTasksTab> {
             ? myTasks
             : myTasks.where((t) => t.status == _activeFilter).toList();
 
-        return ListView(
-          shrinkWrap: true, // Fixes unbounded height crash
-          physics: const ClampingScrollPhysics(), // Smooth scrolling behavior
-          padding: const EdgeInsets.all(20),
-          children: [
-            SectionHeader(
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(taskProvider);
+            await Future.delayed(const Duration(milliseconds: 800));
+          },
+          child: ListView(
+            shrinkWrap: true, // Fixes unbounded height crash
+            physics: const AlwaysScrollableScrollPhysics(), // Smooth scrolling behavior
+            padding: const EdgeInsets.all(20),
+            children: [
+              SectionHeader(
               title: 'My Tasks',
               subtitle: '$pendingCount pending · $submittedCount awaiting review',
             ),
@@ -198,10 +203,11 @@ class _VolunteerTasksTabState extends ConsumerState<VolunteerTasksTab> {
                 ),
               ),
           ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildFilterTabs(List<TaskEntity> tasks) {
     final filters = [

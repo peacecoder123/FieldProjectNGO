@@ -9,6 +9,7 @@ import 'package:ngo_volunteer_management/features/volunteer/presentation/tabs/vo
 import 'package:ngo_volunteer_management/features/volunteer/presentation/tabs/volunteer_meetings_tab.dart';
 import 'package:ngo_volunteer_management/features/volunteer/presentation/tabs/volunteer_certificate_tab.dart';
 import 'package:ngo_volunteer_management/features/volunteer/presentation/tabs/volunteer_joining_letter_tab.dart';
+import 'package:ngo_volunteer_management/features/admin/presentation/screens/profile_screen.dart';
 
 class VolunteerDashboardScreen extends ConsumerStatefulWidget {
   const VolunteerDashboardScreen({super.key});
@@ -25,6 +26,7 @@ class _VolunteerDashboardScreenState extends ConsumerState<VolunteerDashboardScr
     NavItem(id: 'meetings',    label: 'Meetings',    icon: Icons.video_camera_front_rounded),
     NavItem(id: 'joining',     label: 'Request',     icon: Icons.description_rounded),
     NavItem(id: 'certificate', label: 'Certificate', icon: Icons.badge_rounded),
+    NavItem(id: 'profile',     label: 'Profile',     icon: Icons.account_circle_rounded),
   ];
 
   Widget _buildTab() => switch (_activeTab) {
@@ -32,6 +34,7 @@ class _VolunteerDashboardScreenState extends ConsumerState<VolunteerDashboardScr
     'meetings'    => const VolunteerMeetingsTab(),
     'joining'     => const VolunteerJoiningLetterTab(),
     'certificate' => const VolunteerCertificateTab(),
+    'profile'     => const ProfileScreen(),
     _             => const VolunteerTasksTab(),
   };
 

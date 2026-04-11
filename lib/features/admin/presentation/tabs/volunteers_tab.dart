@@ -9,6 +9,7 @@ import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
+import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 
@@ -43,12 +44,17 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
       data: (volunteers) {
         final filtered = _filterVolunteers(volunteers);
 
-        return ListView(
-          shrinkWrap: true,
-          physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          children: [
-            SectionHeader(
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(volunteerProvider);
+            await Future.delayed(const Duration(milliseconds: 800));
+          },
+          child: ListView(
+            shrinkWrap: true,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            children: [
+              SectionHeader(
               title: 'Volunteers',
               subtitle: 'Manage NGO volunteers and their tasks',
               actions: Row(
@@ -78,10 +84,11 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
             else
               _buildVolunteerList(filtered),
           ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   List<VolunteerEntity> _filterVolunteers(List<VolunteerEntity> volunteers) {
     return volunteers.where((v) {
@@ -242,10 +249,7 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
       title: 'Add New Volunteer',
       size: ModalSize.medium,
       child: _AddVolunteerForm(
-        onSubmit: (v) {
-          ref.read(volunteerProvider.notifier).add(v);
-          Navigator.pop(context);
-        },
+        onSubmit: (v) => ref.read(volunteerProvider.notifier).add(v.copyWith(id: '')),
       ),
     );
   }
@@ -390,7 +394,7 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
   String _skills = '';
   String _assignedAdmin = '';
   String _tenure = 'monthly';
-  int? _mentorId;
+  String? _mentorId;
   String? _mentorName;
 
 
@@ -453,12 +457,30 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
               onSaved: (val) => _skills = val ?? '',
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Assigned Admin',
-                prefixIcon: Icon(Icons.shield_rounded),
+            ref.watch(usersManagementProvider).when(
+              data: (users) {
+                final admins = users.where((u) => u.role == UserRole.admin || u.role == UserRole.superAdmin).toList();
+                return DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Assigned Admin',
+                    prefixIcon: Icon(Icons.shield_rounded),
+                  ),
+                  value: _assignedAdmin.isEmpty ? null : _assignedAdmin,
+                  hint: const Text('Select Admin'),
+                  items: admins
+                      .map((u) => DropdownMenuItem(value: u.name, child: Text(u.name)))
+                      .toList(),
+                  onChanged: (val) => setState(() => _assignedAdmin = val ?? ''),
+                );
+              },
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Assigned Admin',
+                  prefixIcon: Icon(Icons.shield_rounded),
+                ),
+                onSaved: (val) => _assignedAdmin = val ?? '',
               ),
-              onSaved: (val) => _assignedAdmin = val ?? '',
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
@@ -479,7 +501,7 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
             ),
             const SizedBox(height: 12),
             ref.watch(memberProvider).when(
-              data: (members) => DropdownButtonFormField<int?>(
+              data: (members) => DropdownButtonFormField<String?>(
                 decoration: const InputDecoration(
                   labelText: 'Assign Mentor (Member)',
                   prefixIcon: Icon(Icons.supervisor_account_rounded),
@@ -528,7 +550,7 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
       _formKey.currentState?.save();
       widget.onSubmit(
         VolunteerEntity(
-          id: DateTime.now().millisecondsSinceEpoch,
+          id: '',
           name: _name.trim(),
           email: _email.trim(),
           phone: _phone.trim(),
@@ -953,9 +975,14 @@ class _TaskItem extends ConsumerWidget {
                         color: AppColors.emerald500,
                         size: 24,
                       ),
-                      onPressed: () => ref
-                          .read(taskProvider.notifier)
-                          .updateStatus(task.id, TaskStatus.approved),
+                      onPressed: () {
+                        final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
+                        ref.read(taskProvider.notifier).updateStatus(
+                          task.id, 
+                          TaskStatus.approved,
+                          approvedBy: adminName,
+                        );
+                      },
                       tooltip: 'Approve',
                     ),
                     IconButton(
@@ -1190,7 +1217,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
       _formKey.currentState?.save();
       widget.onSubmit(
         TaskEntity(
-          id: DateTime.now().millisecondsSinceEpoch,
+          id: '',
           title: _title.trim(),
           description: _description.trim(),
           deadline: AppFormatters.toIso(_deadline),

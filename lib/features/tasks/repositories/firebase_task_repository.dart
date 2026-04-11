@@ -30,68 +30,70 @@ class FirebaseTaskRepository implements ITaskRepository {
   @override
   Future<List<TaskEntity>> getAll() async {
     final snapshot = await _db.collection(_collectionPath).get();
-    return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+    return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
   }
 
   @override
   Stream<List<TaskEntity>> watchAll() {
     return _db.collection(_collectionPath).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+      return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
     });
   }
 
   @override
-  Future<List<TaskEntity>> getByAssignee(int assigneeId, AssigneeType type) async {
+  Future<List<TaskEntity>> getByAssignee(String assigneeId, AssigneeType type) async {
     final snapshot = await _db
         .collection(_collectionPath)
         .where('assignedToId', isEqualTo: assigneeId)
         .where('assignedToType', isEqualTo: type.name)
         .get();
-    return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+    return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
   }
 
   @override
-  Stream<List<TaskEntity>> watchByAssignee(int assigneeId, AssigneeType type) {
+  Stream<List<TaskEntity>> watchByAssignee(String assigneeId, AssigneeType type) {
     return _db
         .collection(_collectionPath)
         .where('assignedToId', isEqualTo: assigneeId)
         .where('assignedToType', isEqualTo: type.name)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+      return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
     });
   }
 
   @override
   Future<TaskEntity> add(TaskEntity task) async {
-    await _db
-        .collection(_collectionPath)
-        .doc(task.id.toString())
-        .set(_toMap(task));
-    return task;
+    final docRef = await _db.collection(_collectionPath).add(_toMap(task));
+    return task.copyWith(id: docRef.id);
   }
 
   @override
   Future<TaskEntity> update(TaskEntity task) async {
     await _db
         .collection(_collectionPath)
-        .doc(task.id.toString())
+        .doc(task.id)
         .update(_toMap(task));
     return task;
   }
 
   @override
-  Future<TaskEntity> updateStatus(int taskId, TaskStatus status) async {
+  Future<TaskEntity> updateStatus(String taskId, TaskStatus status, {String? approvedBy}) async {
+    final Map<String, dynamic> updates = {'status': status.name};
+    if (status == TaskStatus.approved && approvedBy != null) {
+      updates['approvedBy'] = approvedBy;
+      updates['approvedAt'] = DateTime.now().toIso8601String();
+    }
+    
     await _db
         .collection(_collectionPath)
-        .doc(taskId.toString())
-        .update({'status': status.name});
-    final doc = await _db.collection(_collectionPath).doc(taskId.toString()).get();
-    return _fromMap(doc.data()!);
+        .doc(taskId)
+        .update(updates);
+    final doc = await _db.collection(_collectionPath).doc(taskId).get();
+    return _fromMap(doc.id, doc.data()!);
   }
 
   Map<String, dynamic> _toMap(TaskEntity t) => {
-        'id': t.id,
         'title': t.title,
         'description': t.description,
         'deadline': t.deadline,
@@ -106,25 +108,25 @@ class FirebaseTaskRepository implements ITaskRepository {
         if (t.geotag != null) 'geotag': t.geotag,
       };
 
-  TaskEntity _fromMap(Map<String, dynamic> map) => TaskEntity(
-        id: map['id'] as int,
-        title: map['title'] as String,
-        description: map['description'] as String,
-        deadline: map['deadline'] as String,
-        assignedToId: map['assignedToId'] as int,
-        assignedToName: map['assignedToName'] as String,
+  TaskEntity _fromMap(String id, Map<String, dynamic> map) => TaskEntity(
+        id: id,
+        title: map['title'] as String? ?? 'Untitled',
+        description: map['description'] as String? ?? '',
+        deadline: map['deadline'] as String? ?? '',
+        assignedToId: map['assignedToId']?.toString() ?? '',
+        assignedToName: map['assignedToName'] as String? ?? 'Unknown',
         assignedToType: enumValueOr(
           AssigneeType.values,
-          map['assignedToType'] as String,
+          map['assignedToType'] as String? ?? '',
           AssigneeType.volunteer,
         ),
         status: enumValueOr(
           TaskStatus.values,
-          map['status'] as String,
+          map['status'] as String? ?? '',
           TaskStatus.pending,
         ),
         requiresUpload: map['requiresUpload'] as bool? ?? false,
-        createdAt: map['createdAt'] as String,
+        createdAt: map['createdAt'] as String? ?? '',
         uploadedImage: map['uploadedImage'] as String?,
         submittedAt: map['submittedAt'] as String?,
         geotag: map['geotag'] as String?,
