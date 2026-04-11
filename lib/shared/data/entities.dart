@@ -479,6 +479,7 @@ class MeetingEntity extends Equatable {
     this.summary,
     this.addedBy,
     this.link,
+    this.summaryAssignedTo,
   });
 
   final int           id;
@@ -490,6 +491,7 @@ class MeetingEntity extends Equatable {
   final String?       summary;
   final String?       addedBy;
   final String?       link;
+  final String?       summaryAssignedTo; // 'Admin' or 'Member'
 
   MeetingEntity copyWith({
     int?           id,
@@ -501,22 +503,24 @@ class MeetingEntity extends Equatable {
     String?        summary,
     String?        addedBy,
     String?        link,
+    String?        summaryAssignedTo,
   }) =>
       MeetingEntity(
-        id:        id        ?? this.id,
-        title:     title     ?? this.title,
-        date:      date      ?? this.date,
-        time:      time      ?? this.time,
-        attendees: attendees ?? this.attendees,
-        status:    status    ?? this.status,
-        summary:   summary   ?? this.summary,
-        addedBy:   addedBy   ?? this.addedBy,
-        link:      link      ?? this.link,
+        id:                 id                 ?? this.id,
+        title:              title              ?? this.title,
+        date:               date               ?? this.date,
+        time:               time               ?? this.time,
+        attendees:          attendees          ?? this.attendees,
+        status:             status             ?? this.status,
+        summary:            summary            ?? this.summary,
+        addedBy:            addedBy            ?? this.addedBy,
+        link:               link               ?? this.link,
+        summaryAssignedTo:  summaryAssignedTo  ?? this.summaryAssignedTo,
       );
 
   @override
   List<Object?> get props =>
-      [id, title, date, time, attendees, status, summary, addedBy, link];
+      [id, title, date, time, attendees, status, summary, addedBy, link, summaryAssignedTo];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

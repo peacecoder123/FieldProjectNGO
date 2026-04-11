@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -18,7 +19,40 @@ class LandingScreen extends ConsumerStatefulWidget {
 class _LandingScreenState extends ConsumerState<LandingScreen> {
 
   void _navigateToLogin() {
-    context.go('/login');
+    context.push('/login');
+  }
+
+  Future<void> _showExitConfirmation() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.slate800 : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Exit App', style: TextStyle(color: isDark ? Colors.white : AppColors.slate900)),
+        content: Text(
+          'Are you sure you want to exit?',
+          style: TextStyle(color: isDark ? AppColors.slate300 : AppColors.slate600),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.rose500,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+    if (shouldExit == true && mounted) {
+      SystemNavigator.pop();
+    }
   }
 
   @override
@@ -28,7 +62,13 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
     final topPadding = MediaQuery.paddingOf(context).top;
     final isNarrow = screenWidth < 600;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _showExitConfirmation();
+      },
+      child: Scaffold(
       backgroundColor: isDark ? AppColors.slate900 : Colors.white,
       body: Stack(
         children: [
@@ -158,6 +198,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 }
@@ -826,7 +867,7 @@ class _AboutSection extends StatelessWidget {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    _SocialButton(isDark: isDark, icon: Icons.facebook_rounded, url: 'https://www.facebook.com/people/Jayashree-Foundation/100080648706671/?mibextid=LQQJ4d'),
+                    _SocialButton(isDark: isDark, icon: FontAwesomeIcons.facebook, url: 'https://www.facebook.com/people/Jayashree-Foundation/100080648706671/?mibextid=LQQJ4d'),
                     const SizedBox(width: 12),
                     _SocialButton(isDark: isDark, icon: FontAwesomeIcons.instagram, url: 'https://www.instagram.com/jayashree_foundation/?igshid=MzRlODBiNWFlZA%3D%3D'),
                   ],
@@ -909,6 +950,7 @@ class _SocialButtonState extends State<_SocialButton> {
           duration: const Duration(milliseconds: 200),
           child: Container(
             width: 44, height: 44,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _hovered
                   ? (widget.isDark ? AppColors.navy700 : AppColors.navy100)

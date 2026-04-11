@@ -65,6 +65,16 @@ class FirebaseMeetingRepository implements IMeetingRepository {
     return _fromMap(doc.data()!);
   }
 
+  @override
+  Future<MeetingEntity> markCompleted(int meetingId, {required String summaryAssignedTo}) async {
+    await _db.collection(_collectionPath).doc(meetingId.toString()).update({
+      'status': MeetingStatus.completed.name,
+      'summaryAssignedTo': summaryAssignedTo,
+    });
+    final doc = await _db.collection(_collectionPath).doc(meetingId.toString()).get();
+    return _fromMap(doc.data()!);
+  }
+
   Map<String, dynamic> _toMap(MeetingEntity m) => {
         'id': m.id,
         'title': m.title,
@@ -75,6 +85,7 @@ class FirebaseMeetingRepository implements IMeetingRepository {
         if (m.summary != null) 'summary': m.summary,
         if (m.addedBy != null) 'addedBy': m.addedBy,
         if (m.link != null) 'link': m.link,
+        if (m.summaryAssignedTo != null) 'summaryAssignedTo': m.summaryAssignedTo,
       };
 
   MeetingEntity _fromMap(Map<String, dynamic> map) => MeetingEntity(
@@ -91,6 +102,7 @@ class FirebaseMeetingRepository implements IMeetingRepository {
         summary: map['summary'] as String?,
         addedBy: map['addedBy'] as String?,
         link: map['link'] as String?,
+        summaryAssignedTo: map['summaryAssignedTo'] as String?,
       );
 
   T enumValueOr<T extends Enum>(List<T> values, String name, T fallback) {

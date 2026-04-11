@@ -475,6 +475,13 @@ class MeetingNotifier extends StateNotifier<AsyncValue<List<MeetingEntity>>> {
       (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
     );
   }
+
+  Future<void> markCompleted(int meetingId, {required String summaryAssignedTo}) async {
+    final updated = await _repo.markCompleted(meetingId, summaryAssignedTo: summaryAssignedTo);
+    state = state.whenData(
+      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
+    );
+  }
 }
 
 final meetingProvider =

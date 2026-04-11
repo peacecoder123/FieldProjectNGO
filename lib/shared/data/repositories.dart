@@ -166,4 +166,6 @@ abstract interface class IMeetingRepository {
     required String summary,
     required String addedBy,
   });
+
+  Future<MeetingEntity>       markCompleted(int meetingId, {required String summaryAssignedTo});
 }

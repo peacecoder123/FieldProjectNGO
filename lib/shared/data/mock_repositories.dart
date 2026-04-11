@@ -355,4 +355,15 @@ class MockMeetingRepository implements IMeetingRepository {
     }
     throw Exception('Not found');
   }
+
+  @override
+  Future<MeetingEntity> markCompleted(int meetingId, {required String summaryAssignedTo}) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    final idx = _data.indexWhere((m) => m.id == meetingId);
+    if (idx != -1) {
+      _data[idx] = _data[idx].copyWith(status: MeetingStatus.completed, summaryAssignedTo: summaryAssignedTo);
+      return _data[idx];
+    }
+    throw Exception('Not found');
+  }
 }
