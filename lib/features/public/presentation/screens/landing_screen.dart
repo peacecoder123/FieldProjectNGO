@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/features/public/presentation/widgets/donation_dialog.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
@@ -493,14 +494,7 @@ class _WorkCard extends StatelessWidget {
                 Text(work['title']!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 6),
                 Text(work['desc']!, style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.4), maxLines: 3, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded, size: 11, color: isDark ? AppColors.slate400 : AppColors.slate500),
-                    const SizedBox(width: 4),
-                    Text(work['date']!, style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                  ],
-                ),
+
               ],
             ),
           ),
@@ -763,28 +757,9 @@ class _NewsCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(child: Text(item['source']!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.navy500), overflow: TextOverflow.ellipsis)),
-                    Flexible(child: Text(item['date']!, style: TextStyle(fontSize: 10, color: isDark ? AppColors.slate400 : AppColors.slate500), overflow: TextOverflow.ellipsis)),
-                  ],
-                ),
-                const SizedBox(height: 6),
                 Text(item['title']!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900), maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
                 Text(item['desc']!, style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate600, height: 1.4), maxLines: 3, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 6),
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: Row(
-                    children: [
-                      const Text('Read More', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.navy500)),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_rounded, size: 12, color: isDark ? AppColors.navy400 : AppColors.navy500),
-                    ],
-                  ),
-                )
               ],
             ),
           ),
@@ -850,11 +825,9 @@ class _AboutSection extends StatelessWidget {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    _SocialButton(isDark: isDark, icon: Icons.facebook_rounded),
+                    _SocialButton(isDark: isDark, icon: Icons.facebook_rounded, url: 'https://www.facebook.com/people/Jayashree-Foundation/100080648706671/?mibextid=LQQJ4d'),
                     const SizedBox(width: 12),
-                    _SocialButton(isDark: isDark, icon: Icons.chat_bubble_rounded),
-                    const SizedBox(width: 12),
-                    _SocialButton(isDark: isDark, icon: Icons.camera_alt_rounded),
+                    _SocialButton(isDark: isDark, icon: Icons.camera_alt_rounded, url: 'https://www.instagram.com/jayashree_foundation/?igshid=MzRlODBiNWFlZA%3D%3D'),
                   ],
                 )
               ],
@@ -901,9 +874,10 @@ class _ContactRow extends StatelessWidget {
 }
 
 class _SocialButton extends StatefulWidget {
-  const _SocialButton({required this.isDark, required this.icon});
+  const _SocialButton({required this.isDark, required this.icon, this.url});
   final bool isDark;
   final IconData icon;
+  final String? url;
 
   @override
   State<_SocialButton> createState() => _SocialButtonState();
@@ -912,24 +886,36 @@ class _SocialButton extends StatefulWidget {
 class _SocialButtonState extends State<_SocialButton> {
   bool _hovered = false;
 
+  Future<void> _openUrl() async {
+    if (widget.url != null) {
+      final uri = Uri.parse(widget.url!);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedScale(
-        scale: _hovered ? 1.15 : 1.0,
-        duration: const Duration(milliseconds: 200),
-        child: Container(
-          width: 44, height: 44,
-          decoration: BoxDecoration(
-            color: _hovered
-                ? (widget.isDark ? AppColors.navy700 : AppColors.navy100)
-                : (widget.isDark ? Colors.blue.shade900.withValues(alpha: 0.3) : AppColors.navy50),
-            borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onTap: _openUrl,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedScale(
+          scale: _hovered ? 1.15 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          child: Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: _hovered
+                  ? (widget.isDark ? AppColors.navy700 : AppColors.navy100)
+                  : (widget.isDark ? Colors.blue.shade900.withValues(alpha: 0.3) : AppColors.navy50),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(widget.icon, size: 20, color: widget.isDark ? AppColors.navy400 : AppColors.navy500),
           ),
-          child: Icon(widget.icon, size: 20, color: widget.isDark ? AppColors.navy400 : AppColors.navy500),
         ),
       ),
     );
