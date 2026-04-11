@@ -58,18 +58,18 @@ class MockVolunteerRepository implements IVolunteerRepository {
   Stream<List<VolunteerEntity>> watchAll() => Stream.fromFuture(getAll());
 
   @override
-  Future<VolunteerEntity?> getById(int id) async {
+  Future<VolunteerEntity?> getById(String id) async {
     await Future.delayed(const Duration(milliseconds: 300));
     return _data.where((v) => v.id == id).firstOrNull;
   }
 
   @override
-  Stream<VolunteerEntity?> watchById(int id) => Stream.fromFuture(getById(id));
+  Stream<VolunteerEntity?> watchById(String id) => Stream.fromFuture(getById(id));
 
   @override
   Future<VolunteerEntity> add(VolunteerEntity volunteer) async {
     await Future.delayed(const Duration(milliseconds: 600));
-    final newV = volunteer.copyWith(id: DateTime.now().millisecondsSinceEpoch);
+    final newV = volunteer.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString());
     _data.add(newV);
     return newV;
   }
@@ -83,7 +83,7 @@ class MockVolunteerRepository implements IVolunteerRepository {
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(String id) async {
     await Future.delayed(const Duration(milliseconds: 600));
     _data.removeWhere((v) => v.id == id);
   }
@@ -103,18 +103,18 @@ class MockMemberRepository implements IMemberRepository {
   Stream<List<MemberEntity>> watchAll() => Stream.fromFuture(getAll());
 
   @override
-  Future<MemberEntity?> getById(int id) async {
+  Future<MemberEntity?> getById(String id) async {
     await Future.delayed(const Duration(milliseconds: 300));
     return _data.where((m) => m.id == id).firstOrNull;
   }
 
   @override
-  Stream<MemberEntity?> watchById(int id) => Stream.fromFuture(getById(id));
+  Stream<MemberEntity?> watchById(String id) => Stream.fromFuture(getById(id));
 
   @override
   Future<MemberEntity> add(MemberEntity member) async {
     await Future.delayed(const Duration(milliseconds: 600));
-    final newM = member.copyWith(id: DateTime.now().millisecondsSinceEpoch);
+    final newM = member.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString());
     _data.add(newM);
     return newM;
   }
@@ -128,7 +128,7 @@ class MockMemberRepository implements IMemberRepository {
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(String id) async {
     await Future.delayed(const Duration(milliseconds: 600));
     _data.removeWhere((m) => m.id == id);
   }
@@ -148,18 +148,18 @@ class MockTaskRepository implements ITaskRepository {
   Stream<List<TaskEntity>> watchAll() => Stream.fromFuture(getAll());
 
   @override
-  Future<List<TaskEntity>> getByAssignee(int assigneeId, AssigneeType type) async {
+  Future<List<TaskEntity>> getByAssignee(String assigneeId, AssigneeType type) async {
     await Future.delayed(const Duration(milliseconds: 400));
     return _data.where((t) => t.assignedToId == assigneeId && t.assignedToType == type).toList();
   }
 
   @override
-  Stream<List<TaskEntity>> watchByAssignee(int assigneeId, AssigneeType type) => Stream.fromFuture(getByAssignee(assigneeId, type));
+  Stream<List<TaskEntity>> watchByAssignee(String assigneeId, AssigneeType type) => Stream.fromFuture(getByAssignee(assigneeId, type));
 
   @override
   Future<TaskEntity> add(TaskEntity task) async {
     await Future.delayed(const Duration(milliseconds: 600));
-    final newT = task.copyWith(id: DateTime.now().millisecondsSinceEpoch);
+    final newT = task.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString());
     _data.add(newT);
     return newT;
   }
@@ -173,11 +173,11 @@ class MockTaskRepository implements ITaskRepository {
   }
 
   @override
-  Future<TaskEntity> updateStatus(int taskId, TaskStatus status) async {
+  Future<TaskEntity> updateStatus(String taskId, TaskStatus status, {String? approvedBy}) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((t) => t.id == taskId);
     if (idx != -1) {
-      _data[idx] = _data[idx].copyWith(status: status);
+      _data[idx] = _data[idx].copyWith(status: status, approvedBy: approvedBy);
       return _data[idx];
     }
     throw Exception('Task not found');
@@ -200,17 +200,17 @@ class MockGeneralRequestRepository implements IGeneralRequestRepository {
   @override
   Future<GeneralRequestEntity> add(GeneralRequestEntity request) async {
     await Future.delayed(const Duration(milliseconds: 600));
-    final newR = request.copyWith(id: DateTime.now().millisecondsSinceEpoch);
+    final newR = request.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString());
     _data.add(newR);
     return newR;
   }
 
   @override
-  Future<GeneralRequestEntity> updateStatus(int id, RequestStatus status) async {
+  Future<GeneralRequestEntity> updateStatus(String id, RequestStatus status, {String? approvedBy}) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((r) => r.id == id);
     if (idx != -1) {
-      _data[idx] = _data[idx].copyWith(status: status);
+      _data[idx] = _data[idx].copyWith(status: status, approvedBy: approvedBy);
       return _data[idx];
     }
     throw Exception('Not found');
@@ -233,17 +233,17 @@ class MockMouRequestRepository implements IMouRequestRepository {
   @override
   Future<MouRequestEntity> add(MouRequestEntity request) async {
     await Future.delayed(const Duration(milliseconds: 600));
-    final newR = request.copyWith(id: DateTime.now().millisecondsSinceEpoch);
+    final newR = request.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString());
     _data.add(newR);
     return newR;
   }
 
   @override
-  Future<MouRequestEntity> updateStatus(int id, RequestStatus status) async {
+  Future<MouRequestEntity> updateStatus(String id, RequestStatus status, {String? approvedBy}) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((r) => r.id == id);
     if (idx != -1) {
-      _data[idx] = _data[idx].copyWith(status: status);
+      _data[idx] = _data[idx].copyWith(status: status, approvedBy: approvedBy);
       return _data[idx];
     }
     throw Exception('Not found');
@@ -266,13 +266,13 @@ class MockJoiningLetterRepository implements IJoiningLetterRepository {
   @override
   Future<JoiningLetterRequestEntity> add(JoiningLetterRequestEntity request) async {
     await Future.delayed(const Duration(milliseconds: 600));
-    final newR = request.copyWith(id: DateTime.now().millisecondsSinceEpoch);
+    final newR = request.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString());
     _data.add(newR);
     return newR;
   }
 
   @override
-  Future<JoiningLetterRequestEntity> approve(int id, {required String generatedBy, required String tenure}) async {
+  Future<JoiningLetterRequestEntity> approve(String id, {required String generatedBy, required String tenure}) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((r) => r.id == id);
     if (idx != -1) {
@@ -287,7 +287,7 @@ class MockJoiningLetterRepository implements IJoiningLetterRepository {
   }
 
   @override
-  Future<JoiningLetterRequestEntity> reject(int id) async {
+  Future<JoiningLetterRequestEntity> reject(String id) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((r) => r.id == id);
     if (idx != -1) {
@@ -335,14 +335,14 @@ class MockMeetingRepository implements IMeetingRepository {
   @override
   Future<MeetingEntity> addMeeting(MeetingEntity meeting) async {
     await Future.delayed(const Duration(milliseconds: 600));
-    final newId = _data.isEmpty ? 1 : _data.map((m) => m.id).reduce((a, b) => a > b ? a : b) + 1;
+    final newId = DateTime.now().millisecondsSinceEpoch.toString();
     final entityToAdd = meeting.copyWith(id: newId);
     _data.add(entityToAdd);
     return entityToAdd;
   }
 
   @override
-  Future<MeetingEntity> addSummary(int meetingId, {required String summary, required String addedBy}) async {
+  Future<MeetingEntity> addSummary(String meetingId, {required String summary, required String addedBy}) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((m) => m.id == meetingId);
     if (idx != -1) {

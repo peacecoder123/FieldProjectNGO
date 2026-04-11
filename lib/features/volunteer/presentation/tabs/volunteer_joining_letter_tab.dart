@@ -403,7 +403,7 @@ class _VolunteerJoiningLetterTabState extends ConsumerState<VolunteerJoiningLett
 
     ref.read(joiningLetterProvider.notifier).add(
       JoiningLetterRequestEntity(
-        id: DateTime.now().millisecondsSinceEpoch,
+        id: '',
         name: currentUser.name,
         type: JoiningLetterType.volunteer,
         requestDate: AppFormatters.today(),

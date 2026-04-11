@@ -37,7 +37,7 @@ class DonationRepository implements IDonationRepository {
         .get();
 
     return snapshot.docs
-        .map((doc) => DonationEntity.fromMap(doc.data()))
+        .map((doc) => DonationEntity.fromMap({'id': doc.id, ...doc.data()}))
         .toList();
   }
 
@@ -49,35 +49,28 @@ class DonationRepository implements IDonationRepository {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => DonationEntity.fromMap(doc.data()))
+          .map((doc) => DonationEntity.fromMap({'id': doc.id, ...doc.data()}))
           .toList();
     });
   }
 
   @override
   Future<DonationEntity> add(DonationEntity donation) async {
-    // Save to Firestore using the donation ID as the document ID
-    await _db
-        .collection(_collectionPath)
-        .doc(donation.id.toString())
-        .set(donation.toMap());
-
-    return donation;
+    final docRef = await _db.collection(_collectionPath).add(donation.toMap());
+    return donation.copyWith(id: docRef.id);
   }
 
   @override
-  Future<DonationEntity> generateReceipt(int donationId, String receiptNumber) async {
-    final docRef = _db.collection(_collectionPath).doc(donationId.toString());
+  Future<DonationEntity> generateReceipt(String donationId, String receiptNumber) async {
+    final docRef = _db.collection(_collectionPath).doc(donationId);
     
-    // Update the document in Firestore
     await docRef.update({
       'receiptGenerated': true,
       'receiptNumber': receiptNumber,
     });
 
-    // Fetch and return the updated document
     final updatedDoc = await docRef.get();
-    return DonationEntity.fromMap(updatedDoc.data()!);
+    return DonationEntity.fromMap({'id': updatedDoc.id, ...updatedDoc.data()!});
   }
 
   @override

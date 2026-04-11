@@ -119,7 +119,7 @@ class _HospitalMouTabState extends ConsumerState<HospitalMouTab> {
                     if (_formKey.currentState?.validate() ?? false) {
                       _formKey.currentState?.save();
                       ref.read(mouRequestProvider.notifier).add(MouRequestEntity(
-                        id: DateTime.now().millisecondsSinceEpoch,
+                        id: '',
                         requesterName: currentUser?.name ?? 'Member',
                         patientName: patientName,
                         patientAge: patientAge,

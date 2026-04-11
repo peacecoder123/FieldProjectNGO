@@ -23,7 +23,7 @@ class VolunteerEntity extends Equatable {
     this.mentorName,
   });
 
-  final int          id;
+  final String       id;
   final String       name;
   final String       email;
   final String       phone;
@@ -31,16 +31,16 @@ class VolunteerEntity extends Equatable {
   final String       joinDate;
   final PersonStatus status;
   final String       assignedAdmin;
-  final List<int>    taskIds;
+  final List<String> taskIds;
   final String       tenure;
   final List<String> skills;
   final String       avatar;
-  final int?          mentorId;
+  final String?       mentorId;
   final String?       mentorName;
 
 
   VolunteerEntity copyWith({
-    int?          id,
+    String?       id,
     String?       name,
     String?       email,
     String?       phone,
@@ -48,11 +48,11 @@ class VolunteerEntity extends Equatable {
     String?       joinDate,
     PersonStatus? status,
     String?       assignedAdmin,
-    List<int>?    taskIds,
+    List<String>? taskIds,
     String?       tenure,
     List<String>? skills,
     String?       avatar,
-    int?          mentorId,
+    String?       mentorId,
     String?       mentorName,
   }) =>
       VolunteerEntity(
@@ -98,7 +98,7 @@ class MemberEntity extends Equatable {
     required this.avatar,
   });
 
-  final int            id;
+  final String         id;
   final String         name;
   final String         email;
   final String         phone;
@@ -107,12 +107,12 @@ class MemberEntity extends Equatable {
   final String         renewalDate;
   final PersonStatus   status;
   final MembershipType membershipType;
-  final List<int>      taskIds;
+  final List<String>   taskIds;
   final bool           isPaid;
   final String         avatar;
 
   MemberEntity copyWith({
-    int?            id,
+    String?         id,
     String?         name,
     String?         email,
     String?         phone,
@@ -121,7 +121,7 @@ class MemberEntity extends Equatable {
     String?         renewalDate,
     PersonStatus?   status,
     MembershipType? membershipType,
-    List<int>?      taskIds,
+    List<String>?   taskIds,
     bool?           isPaid,
     String?         avatar,
   }) =>
@@ -165,13 +165,15 @@ class TaskEntity extends Equatable {
     this.uploadedImage,
     this.submittedAt,
     this.geotag,
+    this.approvedBy,
+    this.approvedAt,
   });
 
-  final int          id;
+  final String       id;
   final String       title;
   final String       description;
   final String       deadline;
-  final int          assignedToId;
+  final String       assignedToId;
   final String       assignedToName;
   final AssigneeType assignedToType;
   final TaskStatus   status;
@@ -180,13 +182,15 @@ class TaskEntity extends Equatable {
   final String?      uploadedImage;
   final String?      submittedAt;
   final String?      geotag;
+  final String?      approvedBy;
+  final String?      approvedAt;
 
   TaskEntity copyWith({
-    int?          id,
+    String?       id,
     String?       title,
     String?       description,
     String?       deadline,
-    int?          assignedToId,
+    String?       assignedToId,
     String?       assignedToName,
     AssigneeType? assignedToType,
     TaskStatus?   status,
@@ -195,6 +199,8 @@ class TaskEntity extends Equatable {
     String?       uploadedImage,
     String?       submittedAt,
     String?       geotag,
+    String?       approvedBy,
+    String?       approvedAt,
   }) =>
       TaskEntity(
         id:             id             ?? this.id,
@@ -210,70 +216,16 @@ class TaskEntity extends Equatable {
         uploadedImage:  uploadedImage  ?? this.uploadedImage,
         submittedAt:    submittedAt    ?? this.submittedAt,
         geotag:         geotag         ?? this.geotag,
+        approvedBy:     approvedBy     ?? this.approvedBy,
+        approvedAt:     approvedAt     ?? this.approvedAt,
       );
 
   @override
   List<Object?> get props =>
       [id, title, description, deadline, assignedToId, assignedToName,
        assignedToType, status, requiresUpload, createdAt,
-       uploadedImage, submittedAt, geotag];
+       uploadedImage, submittedAt, geotag, approvedBy, approvedAt];
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DONATION
-// ─────────────────────────────────────────────────────────────────────────────
-
-// class DonationEntity extends Equatable {
-//   const DonationEntity({
-//     required this.id,
-//     required this.donorName,
-//     required this.amount,
-//     required this.date,
-//     required this.type,
-//     required this.receiptGenerated,
-//     required this.purpose,
-//     required this.is80G,
-//     this.receiptNumber,
-//   });
-
-//   final int          id;
-//   final String       donorName;
-//   final int          amount;
-//   final String       date;
-//   final DonationType type;
-//   final bool         receiptGenerated;
-//   final String       purpose;
-//   final bool         is80G;
-//   final String?      receiptNumber;
-
-//   DonationEntity copyWith({
-//     int?          id,
-//     String?       donorName,
-//     int?          amount,
-//     String?       date,
-//     DonationType? type,
-//     bool?         receiptGenerated,
-//     String?       purpose,
-//     bool?         is80G,
-//     String?       receiptNumber,
-//   }) =>
-//       DonationEntity(
-//         id:               id               ?? this.id,
-//         donorName:        donorName        ?? this.donorName,
-//         amount:           amount           ?? this.amount,
-//         date:             date             ?? this.date,
-//         type:             type             ?? this.type,
-//         receiptGenerated: receiptGenerated ?? this.receiptGenerated,
-//         purpose:          purpose          ?? this.purpose,
-//         is80G:            is80G            ?? this.is80G,
-//         receiptNumber:    receiptNumber    ?? this.receiptNumber,
-//       );
-
-//   @override
-//   List<Object?> get props =>
-//       [id, donorName, amount, date, type, receiptGenerated,
-//        purpose, is80G, receiptNumber];
-// }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GENERAL REQUEST  (joining-letter | certificate)
@@ -288,24 +240,30 @@ class GeneralRequestEntity extends Equatable {
     required this.requestDate,
     required this.status,
     required this.details,
+    this.approvedBy,
+    this.approvedAt,
   });
 
-  final int                id;
+  final String             id;
   final GeneralRequestType requestType;
   final String             requesterName;
   final String             requesterType;   // 'volunteer' | 'member'
   final String             requestDate;
   final RequestStatus      status;
   final String             details;
+  final String?            approvedBy;
+  final String?            approvedAt;
 
   GeneralRequestEntity copyWith({
-    int?                id,
+    String?             id,
     GeneralRequestType? requestType,
     String?             requesterName,
-    String?             requesterType,
+    String?             requesterType,   // 'volunteer' | 'member'
     String?             requestDate,
     RequestStatus?      status,
     String?             details,
+    String?             approvedBy,
+    String?             approvedAt,
   }) =>
       GeneralRequestEntity(
         id:            id            ?? this.id,
@@ -315,12 +273,14 @@ class GeneralRequestEntity extends Equatable {
         requestDate:   requestDate   ?? this.requestDate,
         status:        status        ?? this.status,
         details:       details       ?? this.details,
+        approvedBy:    approvedBy    ?? this.approvedBy,
+        approvedAt:    approvedAt    ?? this.approvedAt,
       );
 
   @override
   List<Object?> get props =>
       [id, requestType, requesterName, requesterType,
-       requestDate, status, details];
+       requestDate, status, details, approvedBy, approvedAt];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -340,9 +300,11 @@ class MouRequestEntity extends Equatable {
     required this.phone,
     required this.address,
     required this.bloodGroup,
+    this.approvedBy,
+    this.approvedAt,
   });
 
-  final int           id;
+  final String        id;
   final String        patientName;
   final int           patientAge;
   final String        disease;
@@ -353,9 +315,11 @@ class MouRequestEntity extends Equatable {
   final String        phone;
   final String        address;
   final String        bloodGroup;
+  final String?       approvedBy;
+  final String?       approvedAt;
 
   MouRequestEntity copyWith({
-    int?           id,
+    String?        id,
     String?        patientName,
     int?           patientAge,
     String?        disease,
@@ -366,6 +330,8 @@ class MouRequestEntity extends Equatable {
     String?        phone,
     String?        address,
     String?        bloodGroup,
+    String?        approvedBy,
+    String?        approvedAt,
   }) =>
       MouRequestEntity(
         id:            id            ?? this.id,
@@ -379,12 +345,14 @@ class MouRequestEntity extends Equatable {
         phone:         phone         ?? this.phone,
         address:       address       ?? this.address,
         bloodGroup:    bloodGroup    ?? this.bloodGroup,
+        approvedBy:    approvedBy    ?? this.approvedBy,
+        approvedAt:    approvedAt    ?? this.approvedAt,
       );
 
   @override
   List<Object?> get props =>
       [id, patientName, patientAge, disease, hospital, requestDate,
-       status, requesterName, phone, address, bloodGroup];
+       status, requesterName, phone, address, bloodGroup, approvedBy, approvedAt];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -403,7 +371,7 @@ class JoiningLetterRequestEntity extends Equatable {
     this.generatedBy,
   });
 
-  final int               id;
+  final String            id;
   final String            name;
   final JoiningLetterType type;
   final String            requestDate;
@@ -413,7 +381,7 @@ class JoiningLetterRequestEntity extends Equatable {
   final String?           generatedBy;
 
   JoiningLetterRequestEntity copyWith({
-    int?               id,
+    String?            id,
     String?            name,
     JoiningLetterType? type,
     String?            requestDate,
@@ -439,6 +407,7 @@ class JoiningLetterRequestEntity extends Equatable {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // DOCUMENT
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -450,18 +419,39 @@ class DocumentEntity extends Equatable {
     required this.fileType,
     required this.size,
     required this.uploadDate,
+    this.downloadUrl,
   });
 
-  final int              id;
+  final String           id;
   final String           title;
   final String           category;
   final DocumentFileType fileType;
   final String           size;
   final String           uploadDate;
+  final String?          downloadUrl;
+
+  DocumentEntity copyWith({
+    String?           id,
+    String?           title,
+    String?           category,
+    DocumentFileType? fileType,
+    String?           size,
+    String?           uploadDate,
+    String?          downloadUrl,
+  }) =>
+      DocumentEntity(
+        id:          id          ?? this.id,
+        title:       title       ?? this.title,
+        category:    category    ?? this.category,
+        fileType:    fileType    ?? this.fileType,
+        size:        size        ?? this.size,
+        uploadDate:  uploadDate  ?? this.uploadDate,
+        downloadUrl: downloadUrl ?? this.downloadUrl,
+      );
 
   @override
   List<Object?> get props =>
-      [id, title, category, fileType, size, uploadDate];
+      [id, title, category, fileType, size, uploadDate, downloadUrl];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -482,7 +472,7 @@ class MeetingEntity extends Equatable {
     this.summaryAssignedTo,
   });
 
-  final int           id;
+  final String        id;
   final String        title;
   final String        date;
   final String        time;
@@ -494,7 +484,7 @@ class MeetingEntity extends Equatable {
   final String?       summaryAssignedTo; // 'Admin' or 'Member'
 
   MeetingEntity copyWith({
-    int?           id,
+    String?        id,
     String?        title,
     String?        date,
     String?        time,

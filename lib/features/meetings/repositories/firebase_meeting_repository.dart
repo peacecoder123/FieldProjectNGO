@@ -30,44 +30,40 @@ class FirebaseMeetingRepository implements IMeetingRepository {
   @override
   Future<List<MeetingEntity>> getAll() async {
     final snapshot = await _db.collection(_collectionPath).get();
-    return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+    return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
   }
 
   @override
   Stream<List<MeetingEntity>> watchAll() {
     return _db.collection(_collectionPath).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+      return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
     });
   }
 
   @override
   Future<MeetingEntity> addMeeting(MeetingEntity meeting) async {
-    // Generate a simple ID or use timestamp
-    final newId = DateTime.now().millisecondsSinceEpoch % 100000;
-    final entityToAdd = meeting.copyWith(id: newId);
-    
-    await _db.collection(_collectionPath).doc(entityToAdd.id.toString()).set(_toMap(entityToAdd));
-    return entityToAdd;
+    final docRef = await _db.collection(_collectionPath).add(_toMap(meeting));
+    return meeting.copyWith(id: docRef.id);
   }
 
   @override
   Future<MeetingEntity> addSummary(
-    int meetingId, {
+    String meetingId, {
     required String summary,
     required String addedBy,
   }) async {
-    await _db.collection(_collectionPath).doc(meetingId.toString()).update({
+    await _db.collection(_collectionPath).doc(meetingId).update({
       'summary': summary,
       'addedBy': addedBy,
       'status': MeetingStatus.completed.name,
     });
-    final doc = await _db.collection(_collectionPath).doc(meetingId.toString()).get();
-    return _fromMap(doc.data()!);
+    final doc = await _db.collection(_collectionPath).doc(meetingId).get();
+    return _fromMap(doc.id, doc.data()!);
   }
 
   @override
-  Future<MeetingEntity> markCompleted(int meetingId, {required String summaryAssignedTo}) async {
-    await _db.collection(_collectionPath).doc(meetingId.toString()).update({
+  Future<MeetingEntity> markCompleted(String meetingId, {required String summaryAssignedTo}) async {
+    await _db.collection(_collectionPath).doc(meetingId).update({
       'status': MeetingStatus.completed.name,
       'summaryAssignedTo': summaryAssignedTo,
     });
@@ -76,7 +72,6 @@ class FirebaseMeetingRepository implements IMeetingRepository {
   }
 
   Map<String, dynamic> _toMap(MeetingEntity m) => {
-        'id': m.id,
         'title': m.title,
         'date': m.date,
         'time': m.time,
@@ -88,15 +83,15 @@ class FirebaseMeetingRepository implements IMeetingRepository {
         if (m.summaryAssignedTo != null) 'summaryAssignedTo': m.summaryAssignedTo,
       };
 
-  MeetingEntity _fromMap(Map<String, dynamic> map) => MeetingEntity(
-        id: map['id'] as int,
-        title: map['title'] as String,
-        date: map['date'] as String,
-        time: map['time'] as String,
-        attendees: (map['attendees'] as List<dynamic>).cast<String>(),
+  MeetingEntity _fromMap(String id, Map<String, dynamic> map) => MeetingEntity(
+        id: id,
+        title: map['title'] as String? ?? 'Untitled',
+        date: map['date'] as String? ?? '',
+        time: map['time'] as String? ?? '',
+        attendees: (map['attendees'] as List<dynamic>?)?.cast<String>() ?? [],
         status: enumValueOr(
           MeetingStatus.values,
-          map['status'] as String,
+          map['status'] as String? ?? '',
           MeetingStatus.upcoming,
         ),
         summary: map['summary'] as String?,

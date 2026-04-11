@@ -48,6 +48,15 @@ Future<void> main() async {
   // Clear old boolean-flag key in case it exists from a previous version
   prefs.remove('firestore_seeded');
 
+  // If seeder version changed, also clear any cached user session so stale
+  // roles (e.g. 'admin' instead of 'superAdmin') don't persist across seeds.
+  const currentSeederVersion = 'v10';
+  final cachedSeederVersion = prefs.getString('firestore_seeded_v') ?? '';
+  if (cachedSeederVersion != currentSeederVersion) {
+    await prefs.remove('current_user_id'); // force fresh login after seed
+    debugPrint('🔄 Seed version changed — cleared cached user session.');
+  }
+
   // Seed Firestore with consistent demo data (runs only when version changes)
   await seedFirestoreIfEmpty();
 

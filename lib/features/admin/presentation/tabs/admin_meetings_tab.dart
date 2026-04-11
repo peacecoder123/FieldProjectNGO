@@ -49,7 +49,13 @@ class AdminMeetingsTab extends ConsumerWidget {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 48),
-                  child: Text('No meetings scheduled yet.', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                  child: Column(
+                    children: [
+                      Icon(Icons.groups_rounded, size: 48, color: isDark ? AppColors.slate600 : AppColors.slate300),
+                      const SizedBox(height: 12),
+                      Text('No meetings scheduled yet.', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                    ],
+                  ),
                 ),
               );
             }
@@ -58,16 +64,28 @@ class AdminMeetingsTab extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (upcoming.isNotEmpty) ...[
-                  Text('Upcoming Meetings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : AppColors.slate900)),
+                  Row(
+                    children: [
+                      Container(width: 4, height: 18, decoration: BoxDecoration(color: AppColors.blue600, borderRadius: BorderRadius.circular(4))),
+                      const SizedBox(width: 8),
+                      const Text('Upcoming Meetings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   ...upcoming.map((m) => _MeetingCard(meeting: m, isDark: isDark)),
                   const SizedBox(height: 24),
                 ],
                 if (completed.isNotEmpty) ...[
-                  Text('Completed Meetings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : AppColors.slate900)),
+                  Row(
+                    children: [
+                      Container(width: 4, height: 18, decoration: BoxDecoration(color: AppColors.emerald600, borderRadius: BorderRadius.circular(4))),
+                      const SizedBox(width: 8),
+                      const Text('Completed Meetings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   ...completed.map((m) => _MeetingCard(meeting: m, isDark: isDark)),
-                ]
+                ],
               ],
             );
           },
@@ -79,13 +97,13 @@ class AdminMeetingsTab extends ConsumerWidget {
   void _showAddMeetingDialog(BuildContext context, WidgetRef ref) {
     final titleCtrl = TextEditingController();
     final linkCtrl = TextEditingController();
-    final dateCtrl = TextEditingController();
-    final timeCtrl = TextEditingController();
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
+        builder: (ctx, setModalState) => AlertDialog(
           title: const Text('Schedule New Meeting'),
           content: SingleChildScrollView(
             child: Column(
@@ -93,56 +111,68 @@ class AdminMeetingsTab extends ConsumerWidget {
               children: [
                 TextField(
                   controller: titleCtrl,
-                  decoration: const InputDecoration(labelText: 'Meeting Title'),
+                  decoration: const InputDecoration(
+                    labelText: 'Meeting Title',
+                    prefixIcon: Icon(Icons.title_rounded),
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextField(
                   controller: linkCtrl,
-                  decoration: const InputDecoration(labelText: 'Meeting Link (Zoom, Meet, etc.)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Meeting Link (Zoom, Meet, etc.)',
+                    prefixIcon: Icon(Icons.link_rounded),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                // Date picker field
-                TextField(
-                  controller: dateCtrl,
+                const SizedBox(height: 16),
+                // Date Picker
+                TextFormField(
                   readOnly: true,
+                  controller: TextEditingController(
+                    text: selectedDate == null
+                        ? ''
+                        : AppFormatters.displayDate(AppFormatters.toIso(selectedDate!)),
+                  ),
                   decoration: const InputDecoration(
                     labelText: 'Date',
-                    suffixIcon: Icon(Icons.calendar_today_rounded),
+                    hintText: 'Select date',
+                    prefixIcon: Icon(Icons.calendar_today_rounded),
                   ),
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: ctx,
-                      initialDate: DateTime.now(),
+                      initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 1)),
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (picked != null) {
-                      setDialogState(() {
-                        dateCtrl.text = DateFormat('yyyy-MM-dd').format(picked);
-                      });
-                    }
+                    if (picked != null) setModalState(() => selectedDate = picked);
                   },
                 ),
-                const SizedBox(height: 12),
-                // Time picker field
-                TextField(
-                  controller: timeCtrl,
-                  readOnly: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Time',
-                    suffixIcon: Icon(Icons.schedule_rounded),
-                  ),
+                const SizedBox(height: 16),
+                // Time Picker
+                InkWell(
                   onTap: () async {
                     final picked = await showTimePicker(
                       context: ctx,
-                      initialTime: TimeOfDay.now(),
+                      initialTime: selectedTime ?? TimeOfDay.now(),
                     );
-                    if (picked != null) {
-                      setDialogState(() {
-                        timeCtrl.text = picked.format(ctx);
-                      });
-                    }
+                    if (picked != null) setModalState(() => selectedTime = picked);
                   },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Time',
+                      prefixIcon: Icon(Icons.schedule_rounded),
+                    ),
+                    child: Text(
+                      selectedTime == null
+                          ? 'Tap to select time'
+                          : selectedTime!.format(ctx),
+                      style: TextStyle(
+                        color: selectedTime == null ? Colors.grey : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -154,21 +184,30 @@ class AdminMeetingsTab extends ConsumerWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                if (titleCtrl.text.isEmpty || dateCtrl.text.isEmpty) return;
+                if (titleCtrl.text.trim().isEmpty || selectedDate == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter title and date')),
+                  );
+                  return;
+                }
 
                 final meeting = MeetingEntity(
-                  id: 0,
-                  title: titleCtrl.text,
-                  date: dateCtrl.text,
-                  time: timeCtrl.text.isNotEmpty ? timeCtrl.text : '10:00 AM',
+                  id: '',
+                  title: titleCtrl.text.trim(),
+                  date: AppFormatters.toIso(selectedDate!),
+                  time: selectedTime?.format(ctx) ?? '10:00 AM',
                   attendees: const ['All Members', 'All Volunteers'],
                   status: MeetingStatus.upcoming,
-                  link: linkCtrl.text,
+                  link: linkCtrl.text.trim(),
                 );
 
                 ref.read(meetingProvider.notifier).add(meeting);
                 Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Meeting scheduled successfully'), backgroundColor: AppColors.emerald600),
+                );
               },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.blue600, foregroundColor: Colors.white),
               child: const Text('Schedule'),
             ),
           ],
@@ -187,6 +226,10 @@ class _MeetingCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hasSummary = meeting.summary != null && meeting.summary!.isNotEmpty;
     final isUpcoming = meeting.status == MeetingStatus.upcoming;
+    final statusColor = isUpcoming ? AppColors.blue600 : AppColors.emerald600;
+    final statusBg = isUpcoming
+        ? (isDark ? AppColors.blue600.withValues(alpha: 0.15) : AppColors.blue50)
+        : (isDark ? AppColors.emerald600.withValues(alpha: 0.15) : AppColors.emerald50);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -205,16 +248,15 @@ class _MeetingCard extends ConsumerWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isUpcoming
-                        ? (isDark ? AppColors.blue600.withValues(alpha: 0.2) : AppColors.blue50)
-                        : (isDark ? AppColors.emerald600.withValues(alpha: 0.2) : AppColors.emerald50),
+                    color: statusBg,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     meeting.status.name.toUpperCase(),
-                    style: TextStyle(color: isUpcoming ? AppColors.blue600 : AppColors.emerald600, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -225,11 +267,19 @@ class _MeetingCard extends ConsumerWidget {
               children: [
                 Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
                 const SizedBox(width: 6),
-                Text(AppFormatters.displayDate(meeting.date), style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate600)),
-                const SizedBox(width: 16),
-                Icon(Icons.schedule_rounded, size: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
-                const SizedBox(width: 6),
-                Text(meeting.time, style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate600)),
+                Text(
+                  AppFormatters.displayDate(meeting.date),
+                  style: TextStyle(fontSize: 13, color: isDark ? AppColors.slate300 : AppColors.slate600),
+                ),
+                if (meeting.time.isNotEmpty) ...[
+                  const SizedBox(width: 16),
+                  Icon(Icons.schedule_rounded, size: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                  const SizedBox(width: 6),
+                  Text(
+                    meeting.time,
+                    style: TextStyle(fontSize: 13, color: isDark ? AppColors.slate300 : AppColors.slate600),
+                  ),
+                ],
               ],
             ),
             // Clickable meeting link
@@ -306,7 +356,6 @@ class _MeetingCard extends ConsumerWidget {
                 ),
               )
             else if (meeting.summaryAssignedTo == null || meeting.summaryAssignedTo == 'Admin')
-              // Admin can add summary only if assigned to Admin (or unassigned)
               ElevatedButton.icon(
                 onPressed: () => _showAddSummaryModal(context, ref),
                 icon: const Icon(Icons.edit_note_rounded, size: 18),
@@ -414,6 +463,17 @@ class _MeetingCard extends ConsumerWidget {
                   Icon(Icons.calendar_today_rounded, size: 13, color: isDark ? AppColors.slate400 : AppColors.slate500),
                   const SizedBox(width: 6),
                   Text('${AppFormatters.displayDate(meeting.date)} at ${meeting.time}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.people_rounded, size: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                  const SizedBox(width: 6),
+                  Text(
+                    meeting.attendees.join(', '),
+                    style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                  ),
                 ],
               ),
               if (meeting.addedBy != null) ...[

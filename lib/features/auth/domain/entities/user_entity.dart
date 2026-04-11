@@ -15,20 +15,19 @@ class UserEntity extends Equatable {
     required this.role,
     this.avatar,
     this.fcmToken,
+    this.inviteEmailSentAt,
   });
 
-  final int      id;
-  final String   name;
-  final String   email;
-  final UserRole role;
+  final String    id; // Changed to String
+  final String    name;
+  final String    email;
+  final UserRole  role;
+  final String?   avatar;
+  final String?   fcmToken; // From merged3
+  final DateTime? inviteEmailSentAt; // From main
 
   /// One or two-character initials used for the avatar widget.
   /// Falls back to derived initials if not supplied.
-  final String? avatar;
-
-  /// Firebase Cloud Messaging device token.
-  final String? fcmToken;
-
   String get displayAvatar {
     if (avatar != null && avatar!.isNotEmpty) return avatar!;
     final parts = name.trim().split(' ').where((p) => p.isNotEmpty).toList();
@@ -37,57 +36,56 @@ class UserEntity extends Equatable {
   }
 
   UserEntity copyWith({
-    int?      id,
-    String?   name,
-    String?   email,
-    UserRole? role,
-    String?   avatar,
-    String?   fcmToken,
+    String?    id,
+    String?    name,
+    String?    email,
+    UserRole?  role,
+    String?    avatar,
+    String?    fcmToken,
+    DateTime?  inviteEmailSentAt,
   }) {
     return UserEntity(
-      id:       id       ?? this.id,
-      name:     name     ?? this.name,
-      email:    email    ?? this.email,
-      role:     role     ?? this.role,
-      avatar:   avatar   ?? this.avatar,
-      fcmToken: fcmToken ?? this.fcmToken,
+      id:                id                ?? this.id,
+      name:              name              ?? this.name,
+      email:             email             ?? this.email,
+      role:              role              ?? this.role,
+      avatar:            avatar            ?? this.avatar,
+      fcmToken:          fcmToken          ?? this.fcmToken,
+      inviteEmailSentAt: inviteEmailSentAt ?? this.inviteEmailSentAt,
     );
   }
 
   // ── Equatable ──────────────────────────────────────────────────────────────
   @override
-  List<Object?> get props => [id, name, email, role, avatar, fcmToken];
+  List<Object?> get props => [id, name, email, role, avatar, fcmToken, inviteEmailSentAt];
 
   // ── Serialisation ───────────────────────────────────────────────────────
   factory UserEntity.fromJson(Map<String, dynamic> json) {
-    final rawId = json['id'];
-    int id;
-    if (rawId is int) {
-      id = rawId;
-    } else if (rawId is String && rawId.isNotEmpty) {
-      id = int.tryParse(rawId) ?? rawId.hashCode;
-    } else {
-      id = 0;
-    }
     return UserEntity(
-      id:     id,
-      name:   json['name']   as String,
-      email:  json['email']  as String,
-      role:   UserRole.values.firstWhere(
-        (r) => r.name == json['role'],
+      id:       (json['id'] ?? '').toString(),
+      name:     json['name']   as String,
+      email:    json['email']  as String,
+      role:     UserRole.values.firstWhere(
+        (r) => r.name.toLowerCase() == (json['role'] as String? ?? '').toLowerCase().trim(),
         orElse: () => UserRole.volunteer,
       ),
       avatar:   json['avatar'] as String?,
       fcmToken: json['fcmToken'] as String?,
+      inviteEmailSentAt: json['inviteEmailSentAt'] != null
+          ? (json['inviteEmailSentAt'] is String
+              ? DateTime.tryParse(json['inviteEmailSentAt'])
+              : (json['inviteEmailSentAt'] as dynamic).toDate())
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id':       id,
-    'name':     name,
-    'email':    email,
-    'role':     role.name,
-    'avatar':   avatar,
-    'fcmToken': fcmToken,
+    'id':                id,
+    'name':              name,
+    'email':             email,
+    'role':              role.name,
+    'avatar':            avatar,
+    'fcmToken':          fcmToken,
+    'inviteEmailSentAt': inviteEmailSentAt?.toIso8601String(),
   };
 }

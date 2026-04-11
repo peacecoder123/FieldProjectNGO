@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // For Ref
 
 import '../core/constants/app_constants.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
@@ -60,10 +59,11 @@ GoRouter appRouter(AppRouterRef ref) {
         builder: (context, state) => const AdminDashboardScreen(
           isSuperAdmin: false,
         ),
-        redirect: (context, state) => _requireRole(
-          authState,
-          const [UserRole.admin, UserRole.superAdmin],
-        ),
+        redirect: (context, state) {
+          // SuperAdmin should always use /superadmin route (not /admin)
+          if (authState?.role == UserRole.superAdmin) return '/superadmin';
+          return _requireRole(authState, const [UserRole.admin]);
+        },
       ),
       GoRoute(
         path: '/member',

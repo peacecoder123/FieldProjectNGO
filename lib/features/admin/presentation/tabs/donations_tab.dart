@@ -16,7 +16,6 @@ import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/core/widgets/stat_card.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
-import 'package:ngo_volunteer_management/shared/data/mock_data_source.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
@@ -53,12 +52,17 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
           return matchesSearch && matchesType;
         }).toList();
 
-        return ListView(
-          shrinkWrap: true,
-          physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          children: [
-            SectionHeader(
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(donationProvider);
+            await Future.delayed(const Duration(milliseconds: 800));
+          },
+          child: ListView(
+            shrinkWrap: true,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            children: [
+              SectionHeader(
               title: 'Donations',
               subtitle: 'Track financial contributions and generate receipts',
               actions: Row(
@@ -137,10 +141,11 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
                 child: _DonationItem(donation: d),
               )),
           ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildFilters() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -481,7 +486,7 @@ class _AddDonationFormState extends State<_AddDonationForm> {
               if (_formKey.currentState?.validate() ?? false) {
                 _formKey.currentState?.save();
                 widget.onSubmit(DonationEntity(
-                  id: DateTime.now().millisecondsSinceEpoch,
+                  id: '',
                   donorName: donorName,
                   amount: amount,
                   date: AppFormatters.today(),

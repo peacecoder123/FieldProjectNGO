@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 // Web-only geolocation — conditional import avoids mobile compilation issues
@@ -37,10 +38,12 @@ class GeolocationHelper {
 
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 15),
       );
       return '${position.latitude.toStringAsFixed(6)}, '
           '${position.longitude.toStringAsFixed(6)}';
     } catch (e) {
+      debugPrint('Geotagging error: $e');
       return 'Location unavailable';
     }
   }

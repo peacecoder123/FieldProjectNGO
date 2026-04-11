@@ -37,12 +37,17 @@ class _MembersTabState extends ConsumerState<MembersTab> {
           return matchesSearch && matchesStatus;
         }).toList();
 
-        return ListView(
-          shrinkWrap: true,
-          physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          children: [
-            SectionHeader(
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(memberProvider);
+            await Future.delayed(const Duration(milliseconds: 800));
+          },
+          child: ListView(
+            shrinkWrap: true,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            children: [
+              SectionHeader(
               title: 'Members',
               subtitle: 'Manage NGO members, memberships and renewals',
               actions: Row(
@@ -90,10 +95,11 @@ class _MembersTabState extends ConsumerState<MembersTab> {
                 ),
               )),
           ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildFilters() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -311,8 +317,21 @@ class _AddMemberFormState extends State<_AddMemberForm> {
           ),
           const SizedBox(height: 12),
           TextFormField(
-            decoration: const InputDecoration(labelText: 'Phone'),
+            decoration: const InputDecoration(
+              labelText: 'Phone',
+              prefixIcon: Icon(Icons.phone_rounded),
+            ),
+            keyboardType: TextInputType.phone,
             onSaved: (val) => phone = val ?? '',
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            decoration: const InputDecoration(
+              labelText: 'Address',
+              prefixIcon: Icon(Icons.location_on_rounded),
+            ),
+            maxLines: 2,
+            onSaved: (val) => address = val ?? '',
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<MembershipType>(
@@ -346,7 +365,7 @@ class _AddMemberFormState extends State<_AddMemberForm> {
               if (_formKey.currentState?.validate() ?? false) {
                 _formKey.currentState?.save();
                 widget.onSubmit(MemberEntity(
-                  id: DateTime.now().millisecondsSinceEpoch,
+                  id: '',
                   name: name,
                   email: email,
                   phone: phone,
@@ -740,7 +759,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
               if (_formKey.currentState?.validate() ?? false) {
                 _formKey.currentState?.save();
                 widget.onSubmit(TaskEntity(
-                  id: DateTime.now().millisecondsSinceEpoch,
+                  id: '',
                   title: title,
                   description: '',
                   deadline: AppFormatters.toIso(deadline),

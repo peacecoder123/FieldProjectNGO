@@ -5,16 +5,19 @@ import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
+import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
+import 'package:url_launcher/url_launcher.dart' hide launch;
 
 class DocumentationTab extends ConsumerWidget {
   const DocumentationTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final docsAsync = ref.watch(documentProvider);
+    final docsAsync = ref.watch(documentStorageProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentUser = ref.watch(currentUserProvider);
 
     return docsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -25,82 +28,198 @@ class DocumentationTab extends ConsumerWidget {
           grouped.putIfAbsent(d.category, () => []).add(d);
         }
 
-        return ListView(
-          shrinkWrap: true,
-          physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          children: [
-            SectionHeader(
+        return RefreshIndicator(
+          onRefresh: () => ref.refresh(documentStorageProvider.future),
+          child: ListView(
+            shrinkWrap: true,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            children: [
+              SectionHeader(
               title: 'Documentation',
-              subtitle: 'Access NGO policies, templates and reports',
-              actions: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    onPressed: () {}, // For future upload functionality
-                    icon: const Icon(Icons.upload_file_rounded, color: AppColors.blue600),
-                  ),
-                ],
+              subtitle: 'Upload and access NGO policies, templates and reports',
+              actions: ElevatedButton.icon(
+                onPressed: () => _uploadNewDocument(context, ref, currentUser?.name ?? 'Admin'),
+                icon: const Icon(Icons.upload_file_rounded, size: 18),
+                label: const Text('Upload Document'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.blue600,
+                  foregroundColor: Colors.white,
+                ),
               ),
             ),
             const SizedBox(height: 24),
 
-            ...grouped.keys.map((category) {
-              final categoryDocs = grouped[category]!;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Row(
-                      children: [
-                        Text(
-                          category,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.slate700),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: AppColors.slate100, borderRadius: BorderRadius.circular(12)),
-                          child: Text('${categoryDocs.length}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
+            if (docs.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 60),
+                  child: Column(
+                    children: [
+                      Icon(Icons.folder_open_rounded, size: 56, color: isDark ? AppColors.slate600 : AppColors.slate300),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No documents yet',
+                        style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Click "Upload Document" to add your first document',
+                        style: TextStyle(color: isDark ? AppColors.slate500 : AppColors.slate400, fontSize: 13),
+                      ),
+                    ],
                   ),
-                  ...categoryDocs.map((doc) => _DocumentCard(doc: doc, isDark: isDark)),
-                  const SizedBox(height: 8),
-                ],
-              );
-            }),
+                ),
+              )
+            else
+              ...grouped.keys.map((category) {
+                final categoryDocs = grouped[category]!;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        children: [
+                          Text(
+                            category,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: isDark ? AppColors.slate200 : AppColors.slate700,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppColors.slate700 : AppColors.slate100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${categoryDocs.length}',
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ...categoryDocs.map((doc) => _DocumentCard(
+                      doc: doc,
+                      isDark: isDark,
+                      onReplace: () => _replaceDocument(context, ref, doc, currentUser?.name ?? 'Admin'),
+                      onDelete: () => _confirmDelete(context, ref, doc),
+                    )),
+                    const SizedBox(height: 8),
+                  ],
+                );
+              }),
           ],
+        ),
+      );
+    },
+  );
+}
+
+  Future<void> _uploadNewDocument(BuildContext context, WidgetRef ref, String uploadedBy) async {
+    final scaffold = ScaffoldMessenger.of(context);
+    scaffold.showSnackBar(
+      const SnackBar(content: Row(children: [
+        SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+        SizedBox(width: 12),
+        Text('Selecting and uploading file...'),
+      ])),
+    );
+
+    try {
+      final doc = await ref.read(documentStorageRepoProvider).pickAndUpload(uploadedBy: uploadedBy);
+      scaffold.hideCurrentSnackBar();
+      if (doc != null) {
+        scaffold.showSnackBar(
+          SnackBar(content: Text('✅ "${doc.title}" uploaded successfully'), backgroundColor: AppColors.emerald600),
         );
-      },
+      }
+    } catch (e) {
+      scaffold.hideCurrentSnackBar();
+      scaffold.showSnackBar(
+        SnackBar(content: Text('Upload failed: $e'), backgroundColor: AppColors.red500),
+      );
+    }
+  }
+
+  Future<void> _replaceDocument(BuildContext context, WidgetRef ref, DocumentEntity doc, String uploadedBy) async {
+    final scaffold = ScaffoldMessenger.of(context);
+    scaffold.showSnackBar(
+      const SnackBar(content: Row(children: [
+        SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+        SizedBox(width: 12),
+        Text('Replacing document...'),
+      ])),
+    );
+    try {
+      await ref.read(documentStorageRepoProvider).replaceDocument(existing: doc, uploadedBy: uploadedBy);
+      scaffold.hideCurrentSnackBar();
+      scaffold.showSnackBar(
+        const SnackBar(content: Text('Document replaced successfully'), backgroundColor: AppColors.emerald600),
+      );
+    } catch (e) {
+      scaffold.hideCurrentSnackBar();
+      scaffold.showSnackBar(SnackBar(content: Text('Replace failed: $e'), backgroundColor: AppColors.red500));
+    }
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, DocumentEntity doc) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Document?'),
+        content: Text('Are you sure you want to delete "${doc.title}"? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref.read(documentStorageRepoProvider).deleteDocument(doc);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Document deleted'), backgroundColor: AppColors.red600),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red600, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _DocumentCard extends StatelessWidget {
-  const _DocumentCard({required this.doc, required this.isDark});
+  const _DocumentCard({
+    required this.doc,
+    required this.isDark,
+    required this.onReplace,
+    required this.onDelete,
+  });
+
   final DocumentEntity doc;
   final bool isDark;
+  final VoidCallback onReplace;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final iconColor = switch (doc.fileType) {
-      DocumentFileType.pdf => AppColors.red500,
-      DocumentFileType.doc => AppColors.blue500,
+      DocumentFileType.pdf  => AppColors.red500,
+      DocumentFileType.doc  => AppColors.blue500,
       DocumentFileType.xlsx => AppColors.emerald500,
-      _ => AppColors.slate500,
+      _                     => AppColors.slate500,
     };
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: AppCard(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Opening ${doc.title}... (Download simulated)')),
-          );
-        },
         child: Row(
           children: [
             Container(
@@ -110,29 +229,52 @@ class _DocumentCard extends StatelessWidget {
                 color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                _fileIcon(doc.fileType),
-                color: iconColor,
-                size: 24,
-              ),
+              child: Icon(_fileIcon(doc.fileType), color: iconColor, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(doc.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  Text(
+                    doc.title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: isDark ? AppColors.white : AppColors.slate900,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Text(
-                    '${doc.fileType.displayLabel} • ${doc.size} • Uploaded ${AppFormatters.displayDate(doc.uploadDate)}',
-                    style: const TextStyle(color: AppColors.slate500, fontSize: 12),
+                    '${doc.fileType.displayLabel} • ${doc.size} • ${AppFormatters.displayDate(doc.uploadDate)}',
+                    style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontSize: 12),
                   ),
                 ],
               ),
             ),
+            // Download
+            if (doc.downloadUrl != null)
+              IconButton(
+                icon: const Icon(Icons.download_for_offline_rounded, color: AppColors.blue500),
+                tooltip: 'Download',
+                onPressed: () async {
+                  final uri = Uri.parse(doc.downloadUrl!);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+            // Replace
             IconButton(
-              icon: const Icon(Icons.download_for_offline_rounded, color: AppColors.slate400),
-              onPressed: () {},
+              icon: Icon(Icons.swap_horiz_rounded, color: isDark ? AppColors.slate400 : AppColors.slate500),
+              tooltip: 'Replace',
+              onPressed: onReplace,
+            ),
+            // Delete
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.red500),
+              tooltip: 'Delete',
+              onPressed: onDelete,
             ),
           ],
         ),
@@ -142,9 +284,9 @@ class _DocumentCard extends StatelessWidget {
 
   IconData _fileIcon(DocumentFileType type) {
     return switch (type) {
-      DocumentFileType.pdf => Icons.picture_as_pdf_rounded,
+      DocumentFileType.pdf  => Icons.picture_as_pdf_rounded,
       DocumentFileType.xlsx => Icons.table_view_rounded,
-      _ => Icons.description_rounded,
+      _                     => Icons.description_rounded,
     };
   }
 }
