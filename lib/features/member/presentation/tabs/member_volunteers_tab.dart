@@ -340,7 +340,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
               if (_formKey.currentState?.validate() ?? false) {
                 _formKey.currentState?.save();
                 widget.onSubmit(TaskEntity(
-                  id: DateTime.now().millisecondsSinceEpoch,
+                  id: '',
                   title: _title,
                   description: '',
                   deadline: AppFormatters.toIso(_deadline),

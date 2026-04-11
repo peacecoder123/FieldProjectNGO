@@ -8,7 +8,6 @@ import '../../../../core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import '../../../../core/widgets/stat_card.dart';
 import '../../../../shared/data/entities.dart';
-import '../../../../shared/data/mock_data_source.dart';
 import '../../../../shared/providers/feature_providers.dart';
 
 class AdminOverviewTab extends ConsumerWidget {
@@ -50,12 +49,21 @@ class AdminOverviewTab extends ConsumerWidget {
                 _ChartPoint('Rejected',  tasks.where((t) => t.status == TaskStatus.rejected).length,  AppColors.red500),
               ];
 
-              return ListView(
-                shrinkWrap: true,
-                physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
-                children: [
-                  // ── Hero banner ────────────────────────────────────────
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(volunteerProvider);
+                  ref.invalidate(memberProvider);
+                  ref.invalidate(taskProvider);
+                  ref.invalidate(donationProvider);
+                  ref.invalidate(joiningLetterProvider);
+                  await Future.delayed(const Duration(milliseconds: 800));
+                },
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+                  children: [
+                    // ── Hero banner ────────────────────────────────────────
                   _HeroBanner(
                     isSuperAdmin:     isSuperAdmin,
                     activeVolunteers: activeVols,
@@ -112,6 +120,16 @@ class AdminOverviewTab extends ConsumerWidget {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final isWide = constraints.maxWidth > 700;
+                      
+                      final Map<String, int> monthlyTotals = {};
+                      for (final d in donations) {
+                        final month = AppFormatters.displayDate(d.date).split(' ')[1];
+                        monthlyTotals[month] = (monthlyTotals[month] ?? 0) + d.amount;
+                      }
+                      final List<MonthlyDonationPoint> chartData = monthlyTotals.entries
+                          .map((e) => MonthlyDonationPoint(month: e.key, amount: e.value))
+                          .toList();
+
                       if (isWide) {
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,7 +137,7 @@ class AdminOverviewTab extends ConsumerWidget {
                             Expanded(
                               flex: 2,
                               child: _DonationChart(
-                                data: MockDataSource.monthlyDonations,
+                                data: chartData,
                                 isDark: isDark,
                               ),
                             ),
@@ -137,7 +155,7 @@ class AdminOverviewTab extends ConsumerWidget {
                       return Column(
                         children: [
                           _DonationChart(
-                            data: MockDataSource.monthlyDonations,
+                            data: chartData,
                             isDark: isDark,
                           ),
                           const SizedBox(height: 12),
@@ -183,7 +201,8 @@ class AdminOverviewTab extends ConsumerWidget {
                       );
                     },
                   ),
-                ],
+                  ],
+                ),
               );
             },
           ),
@@ -501,43 +520,20 @@ class _ActivityFeed extends StatelessWidget {
         children: [
           Text('Recent Activity',
               style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 16),
-          ..._activities.map(
-            (a) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5),
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color:        a.$3,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(a.$1,
-                            style: TextStyle(
-                                fontSize: 13, color: isDark ? AppColors.slate200 : AppColors.slate700)),
-                        const SizedBox(height: 2),
-                        Text(a.$2,
-                            style: TextStyle(
-                                fontSize: 11, color: isDark ? AppColors.slate500 : AppColors.slate400)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+          const SizedBox(height: 24),
+          const Center(
+            child: Column(
+              children: [
+                Icon(Icons.history_rounded, size: 40, color: AppColors.slate300),
+                SizedBox(height: 12),
+                Text(
+                  'Activity tracking coming soon',
+                  style: TextStyle(color: AppColors.slate400, fontSize: 13),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: 24),
         ],
       ),
     );

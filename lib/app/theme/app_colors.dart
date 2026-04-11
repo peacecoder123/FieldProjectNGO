@@ -16,9 +16,11 @@ abstract final class AppColors {
   static const Color navy50  = Color(0xFFF2F4FA);
 
   // Kept for backward compat / charts
+  static const Color blue700 = navy600;
   static const Color blue600 = navy500;
   static const Color blue500 = navy400;
   static const Color blue400 = navy400;
+  static const Color blue200 = Color(0xFFBFDBFE);
   static const Color blue100 = navy100;
   static const Color blue50  = navy50;
 

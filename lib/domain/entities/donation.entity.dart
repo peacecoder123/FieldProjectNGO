@@ -6,7 +6,7 @@ import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 
 @immutable
 class DonationEntity {
-  final int id;
+  final String id;
   final String donorName;
   final int amount;
   final String date;
@@ -46,7 +46,7 @@ class DonationEntity {
   // Read from Firebase document
   factory DonationEntity.fromMap(Map<String, dynamic> map) {
     return DonationEntity(
-      id: map['id']?.toInt() ?? 0,
+      id: (map['id'] ?? '').toString(),
       donorName: map['donorName'] ?? '',
       amount: map['amount']?.toInt() ?? 0,
       date: map['date'] ?? '',
@@ -62,7 +62,7 @@ class DonationEntity {
   }
 
   DonationEntity copyWith({
-    int? id,
+    String? id,
     String? donorName,
     int? amount,
     String? date,
@@ -84,4 +84,4 @@ class DonationEntity {
       receiptNumber: receiptNumber ?? this.receiptNumber,
     );
   }
-}
+}

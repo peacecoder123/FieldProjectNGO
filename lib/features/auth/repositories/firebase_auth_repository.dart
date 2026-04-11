@@ -18,7 +18,9 @@ class FirebaseAuthRepository implements IAuthRepository {
 
   FirebaseAuthRepository() {
     _firebaseAuth = auth.FirebaseAuth.instance;
-    _googleSignIn = GoogleSignIn();
+    _googleSignIn = GoogleSignIn(
+      clientId: kIsWeb ? '1093449762008-vau99kj7q90uou7aau2esvidn9unl2ak.apps.googleusercontent.com' : null,
+    );
     if (Firebase.apps.isNotEmpty) {
       _firestore = FirebaseFirestore.instance;
     }
@@ -94,16 +96,20 @@ class FirebaseAuthRepository implements IAuthRepository {
 
       if (snapshot.docs.isEmpty) {
         // Not whitelisted! Rollback login
-        await _googleSignIn.disconnect();
+        await _googleSignIn.signOut(); // Use signOut instead of disconnect to allow retry
         await _firebaseAuth.signOut();
-        throw Exception("Access Denied: Your email ($email) is not whitelisted. Please contact the administrator.");
+        throw Exception("Whitelisting Required: The email '$email' is not in the Jayashree Foundation database. Please add it to the 'users' collection in Firestore first.");
       }
 
       final doc = snapshot.docs.first;
       return _userFromDoc(doc);
+    } on auth.FirebaseAuthException catch (e) {
+      debugPrint("Firebase Auth Error: ${e.code} - ${e.message}");
+      throw Exception("Authentication Service Error: ${e.message}");
     } catch (e) {
       debugPrint("Google Sign in error: $e");
-      rethrow;
+      if (e.toString().contains('Exception:')) rethrow;
+      throw Exception("Google Sign-In was interrupted or failed. Please check your internet and try again.");
     }
   }
 
@@ -121,8 +127,7 @@ class FirebaseAuthRepository implements IAuthRepository {
 
   UserEntity _userFromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
-    final rawId = doc.id;
-    final userId = int.tryParse(rawId) ?? (data['id'] is int ? data['id'] as int : rawId.hashCode);
+    final userId = doc.id;
 
     return UserEntity(
       id: userId,
@@ -135,7 +140,7 @@ class FirebaseAuthRepository implements IAuthRepository {
 
   UserRole _roleFromString(String role) {
     return UserRole.values.firstWhere(
-      (r) => r.name == role.toLowerCase(),
+      (r) => r.name.toLowerCase() == role.toLowerCase().trim(),
       orElse: () => UserRole.admin,
     );
   }

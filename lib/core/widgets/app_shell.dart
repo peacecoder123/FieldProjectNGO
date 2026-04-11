@@ -51,6 +51,29 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onRefresh() async {
+    ref.invalidate(volunteerProvider);
+    ref.invalidate(memberProvider);
+    ref.invalidate(taskProvider);
+    ref.invalidate(donationProvider);
+    ref.invalidate(joiningLetterProvider);
+    ref.invalidate(generalRequestProvider);
+    ref.invalidate(mouRequestProvider);
+    ref.invalidate(meetingProvider);
+    ref.invalidate(documentStorageProvider);
+    ref.invalidate(documentRequestProvider);
+    ref.invalidate(usersManagementProvider);
+    // Short delay so the spinner shows briefly even on fast connections
+    await Future.delayed(const Duration(milliseconds: 600));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,19 +104,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                     notifications: widget.notifications,
                   ),
                   Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        isDesktop
-                            ? AppConstants.pagePaddingDesktop
-                            : AppConstants.pagePadding,
-                        isDesktop ? 12 : 0,
-                        isDesktop
-                            ? AppConstants.pagePaddingDesktop
-                            : AppConstants.pagePadding,
-                        20,
-                      ),
-                      child: widget.body,
-                    ),
+                    child: widget.body,
                   ),
                 ],
               ),
@@ -544,7 +555,6 @@ class _TopBarState extends ConsumerState<_TopBar> {
   Widget build(BuildContext context) {
     final theme  = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final user   = ref.watch(currentUserProvider);
 
     return Container(
       height: 60,
@@ -590,18 +600,10 @@ class _TopBarState extends ConsumerState<_TopBar> {
           _buildNotificationButton(isDark),
           IconButton(
             icon: Icon(
-              isDark
-                  ? Icons.light_mode_rounded
-                  : Icons.dark_mode_rounded,
+              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
               color: isDark ? AppColors.amber400 : AppColors.slate600,
             ),
-            onPressed: () =>
-                ref.read(themeModeProvider.notifier).toggle(),
-          ),
-          AppAvatar(
-            initials: user?.displayAvatar ?? '?',
-            size: AvatarSize.small,
-            role: user?.role,
+            onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
           ),
           const SizedBox(width: 4),
         ],
@@ -719,7 +721,35 @@ class _TopBarState extends ConsumerState<_TopBar> {
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
               TextButton(
-                onPressed: () => Navigator.of(dialogCtx).pop(),
+                onPressed: () {
+                  final approver = ref.read(currentUserProvider)?.name ?? 'Admin';
+                  
+                  // Clear Joining Letters
+                  final joiningNotifier = ref.read(joiningLetterProvider.notifier);
+                  final joining = ref.read(joiningLetterProvider).value ?? [];
+                  for (final r in joining.where((r) => r.status == RequestStatus.pending)) {
+                    joiningNotifier.approve(r.id, generatedBy: approver, tenure: '6 Months');
+                  }
+
+                  // Clear General Requests
+                  final generalNotifier = ref.read(generalRequestProvider.notifier);
+                  final requests = ref.read(generalRequestProvider).value ?? [];
+                  for (final r in requests.where((r) => r.status == RequestStatus.pending)) {
+                    generalNotifier.approve(r.id, approvedBy: approver);
+                  }
+
+                  // Clear MOU Requests
+                  final mouNotifier = ref.read(mouRequestProvider.notifier);
+                  final mous = ref.read(mouRequestProvider).value ?? [];
+                  for (final r in mous.where((r) => r.status == RequestStatus.pending)) {
+                    mouNotifier.approve(r.id, approvedBy: approver);
+                  }
+
+                  Navigator.of(dialogCtx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('✅ All pending requests have been approved.'), backgroundColor: AppColors.emerald600),
+                  );
+                },
                 child: const Text('Clear all', style: TextStyle(fontSize: 12)),
               ),
             ],

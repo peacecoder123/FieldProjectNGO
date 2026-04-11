@@ -176,7 +176,8 @@ enum DocumentFileType {
   pdf,
   doc,
   xlsx,
-  jpg;
+  jpg,
+  png;
 
   String get displayLabel => name.toUpperCase();
 

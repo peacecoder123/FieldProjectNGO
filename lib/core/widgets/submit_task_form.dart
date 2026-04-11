@@ -47,9 +47,14 @@ class _SubmitTaskFormState extends State<SubmitTaskForm> {
 
   // ── Web camera flow ─────────────────────────────────────────────────────────
   Future<void> _startWebCamera() async {
-    setState(() => _isCapturing = true);
+    setState(() {
+      _isCapturing = true;
+      _geotag = 'Fetching GPS...';
+    });
     try {
-      _geotag = await GeolocationHelper.getCurrentGeotag();
+      final tag = await GeolocationHelper.getCurrentGeotag();
+      setState(() => _geotag = tag);
+      
       final success = await _cameraService!.startCamera();
       if (success) {
         setState(() {
@@ -60,10 +65,13 @@ class _SubmitTaskFormState extends State<SubmitTaskForm> {
         setState(() => _isCapturing = false);
       }
     } catch (e) {
-      setState(() => _isCapturing = false);
+      setState(() {
+        _isCapturing = false;
+        _geotag = 'Location Error';
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Camera/location error: $e')),
+          SnackBar(content: Text('Camera/location error: $e'), backgroundColor: AppColors.red600),
         );
       }
     }
@@ -90,9 +98,14 @@ class _SubmitTaskFormState extends State<SubmitTaskForm> {
 
   // ── Mobile camera flow ──────────────────────────────────────────────────────
   Future<void> _captureMobile() async {
-    setState(() => _isCapturing = true);
+    setState(() {
+      _isCapturing = true;
+      _geotag = 'Fetching GPS...';
+    });
     try {
-      _geotag = await GeolocationHelper.getCurrentGeotag();
+      final tag = await GeolocationHelper.getCurrentGeotag();
+      setState(() => _geotag = tag);
+
       final picker = ImagePicker();
       final XFile? image = await picker.pickImage(
         source: ImageSource.camera,
@@ -104,9 +117,10 @@ class _SubmitTaskFormState extends State<SubmitTaskForm> {
         setState(() => _capturedBytes = bytes);
       }
     } catch (e) {
+      setState(() => _geotag = 'Location Error');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.red600),
         );
       }
     } finally {

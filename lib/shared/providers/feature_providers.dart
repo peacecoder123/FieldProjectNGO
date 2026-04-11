@@ -5,7 +5,6 @@ import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import '../data/entities.dart';
-import '../data/mock_repositories.dart';
 import '../data/repositories.dart';
 
 // Firebase repositories
@@ -19,8 +18,11 @@ import '../../features/joining_letters/repositories/firebase_joining_letter_repo
 import '../../features/meetings/repositories/firebase_meeting_repository.dart';
 import '../../features/documents/repositories/document_request_repository.dart';
 import '../../features/documents/repositories/firebase_document_request_repository.dart';
+import '../../features/documents/repositories/firebase_document_storage_repository.dart';
 import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
 import '../../features/auth/repositories/firebase_auth_repository.dart';
+import '../../features/admin/data/user_repository.dart';
+import '../../features/auth/domain/entities/user_entity.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REPOSITORY PROVIDERS — All wired to Firebase (Firestore)
@@ -53,45 +55,49 @@ final mouRequestRepositoryProvider = Provider<IMouRequestRepository>(
 final joiningLetterRepositoryProvider = Provider<IJoiningLetterRepository>(
   (_) => FirebaseJoiningLetterRepository(),
 );
-final documentRepositoryProvider = Provider<IDocumentRepository>(
-  (_) => MockDocumentRepository(),
+// Document storage backed by Firebase Storage + Firestore
+final documentStorageRepoProvider = Provider<FirebaseDocumentStorageRepository>(
+  (_) => FirebaseDocumentStorageRepository(),
 );
+
 final meetingRepositoryProvider = Provider<IMeetingRepository>(
   (_) => FirebaseMeetingRepository(),
 );
 final documentRequestRepositoryProvider = Provider<IDocumentRequestRepository>(
   (_) => FirebaseDocumentRequestRepository(),
 );
+final userRepositoryProvider = Provider<UserRepository>(
+  (_) => UserRepository(),
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// VOLUNTEER STATE
+// VOLUNTEER STATE (REAL-TIME STREAM)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class VolunteerNotifier extends StateNotifier<AsyncValue<List<VolunteerEntity>>> {
-  VolunteerNotifier(this._repo) : super(const AsyncValue.loading()) {
-    _load();
-  }
-
   final IVolunteerRepository _repo;
+  StreamSubscription<List<VolunteerEntity>>? _subscription;
 
-  Future<void> _load() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.getAll);
+  VolunteerNotifier(this._repo) : super(const AsyncValue.loading()) {
+    _listen();
   }
 
-  Future<void> refresh() => _load();
-
-  Future<void> add(VolunteerEntity v) async {
-    final created = await _repo.add(v);
-    state = state.whenData((list) => [...list, created]);
-  }
-
-  Future<void> update(VolunteerEntity v) async {
-    final updated = await _repo.update(v);
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
+  void _listen() {
+    _subscription = _repo.watchAll().listen(
+      (list) => state = AsyncValue.data(list),
+      onError: (err, st) => state = AsyncValue.error(err, st),
     );
   }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> add(VolunteerEntity v) => _repo.add(v);
+  Future<void> update(VolunteerEntity v) => _repo.update(v);
+  Future<void> delete(String id) => _repo.delete(id);
 }
 
 final volunteerProvider = StateNotifierProvider<
@@ -100,34 +106,33 @@ final volunteerProvider = StateNotifierProvider<
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MEMBER STATE
+// MEMBER STATE (REAL-TIME STREAM)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class MemberNotifier extends StateNotifier<AsyncValue<List<MemberEntity>>> {
-  MemberNotifier(this._repo) : super(const AsyncValue.loading()) {
-    _load();
-  }
-
   final IMemberRepository _repo;
+  StreamSubscription<List<MemberEntity>>? _subscription;
 
-  Future<void> _load() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.getAll);
+  MemberNotifier(this._repo) : super(const AsyncValue.loading()) {
+    _listen();
   }
 
-  Future<void> refresh() => _load();
-
-  Future<void> add(MemberEntity m) async {
-    final created = await _repo.add(m);
-    state = state.whenData((list) => [...list, created]);
-  }
-
-  Future<void> update(MemberEntity m) async {
-    final updated = await _repo.update(m);
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
+  void _listen() {
+    _subscription = _repo.watchAll().listen(
+      (list) => state = AsyncValue.data(list),
+      onError: (err, st) => state = AsyncValue.error(err, st),
     );
   }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> add(MemberEntity m) => _repo.add(m);
+  Future<void> update(MemberEntity m) => _repo.update(m);
+  Future<void> delete(String id) => _repo.delete(id);
 }
 
 final memberProvider =
@@ -136,49 +141,45 @@ final memberProvider =
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TASK STATE
+// TASK STATE (REAL-TIME STREAM)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class TaskNotifier extends StateNotifier<AsyncValue<List<TaskEntity>>> {
-  TaskNotifier(this._repo) : super(const AsyncValue.loading()) {
-    _load();
-  }
-
   final ITaskRepository _repo;
+  StreamSubscription<List<TaskEntity>>? _subscription;
 
-  Future<void> _load() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.getAll);
+  TaskNotifier(this._repo) : super(const AsyncValue.loading()) {
+    _listen();
   }
 
-  Future<void> refresh() => _load();
-
-  Future<void> add(TaskEntity t) async {
-    final created = await _repo.add(t);
-    state = state.whenData((list) => [...list, created]);
-  }
-
-  Future<void> updateStatus(int taskId, TaskStatus status) async {
-    final updated = await _repo.updateStatus(taskId, status);
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
+  void _listen() {
+    _subscription = _repo.watchAll().listen(
+      (list) => state = AsyncValue.data(list),
+      onError: (err, st) => state = AsyncValue.error(err, st),
     );
   }
 
-  Future<void> submit(int taskId, {String? imagePath, String? geotag}) async {
-    final repo = _repo;
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> add(TaskEntity t) => _repo.add(t);
+
+  Future<void> updateStatus(String taskId, TaskStatus status, {String? approvedBy}) => 
+      _repo.updateStatus(taskId, status, approvedBy: approvedBy);
+
+  Future<void> submit(String taskId, {String? imagePath, String? geotag}) async {
     final current = state.value?.firstWhere((t) => t.id == taskId);
     if (current == null) return;
-    final updated = await repo.update(
+    await _repo.update(
       current.copyWith(
         status:        TaskStatus.submitted,
         submittedAt:   AppFormatters.today(),
         uploadedImage: imagePath ?? current.uploadedImage,
         geotag:        geotag ?? current.geotag,
       ),
-    );
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
     );
   }
 }
@@ -228,7 +229,7 @@ class DonationNotifier extends StateNotifier<AsyncValue<List<DonationEntity>>> {
     }
   }
 
-  Future<void> generateReceipt(int id) async {
+  Future<void> generateReceipt(String id) async {
     try {
       final receiptNum = 'REC-${DateTime.now().year}-$id';
       await _repository.generateReceipt(id, receiptNum);
@@ -251,37 +252,32 @@ final donationProvider =
 
 class GeneralRequestNotifier
     extends StateNotifier<AsyncValue<List<GeneralRequestEntity>>> {
-  GeneralRequestNotifier(this._repo) : super(const AsyncValue.loading()) {
-    _load();
-  }
-
   final IGeneralRequestRepository _repo;
+  StreamSubscription<List<GeneralRequestEntity>>? _subscription;
 
-  Future<void> _load() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.getAll);
+  GeneralRequestNotifier(this._repo) : super(const AsyncValue.loading()) {
+    _listen();
   }
 
-  Future<void> refresh() => _load();
-
-  Future<void> add(GeneralRequestEntity r) async {
-    final created = await _repo.add(r);
-    state = state.whenData((list) => [...list, created]);
-  }
-
-  Future<void> approve(int id) async {
-    final updated = await _repo.updateStatus(id, RequestStatus.approved);
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
+  void _listen() {
+    _subscription = _repo.watchAll().listen(
+      (list) => state = AsyncValue.data(list),
+      onError: (err, st) => state = AsyncValue.error(err, st),
     );
   }
 
-  Future<void> reject(int id) async {
-    final updated = await _repo.updateStatus(id, RequestStatus.rejected);
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
-    );
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
+
+  Future<void> add(GeneralRequestEntity r) => _repo.add(r);
+
+  Future<void> approve(String id, {String? approvedBy}) => 
+      _repo.updateStatus(id, RequestStatus.approved, approvedBy: approvedBy);
+
+  Future<void> reject(String id) => _repo.updateStatus(id, RequestStatus.rejected);
 }
 
 final generalRequestProvider = StateNotifierProvider<GeneralRequestNotifier,
@@ -296,37 +292,32 @@ final generalRequestProvider = StateNotifierProvider<GeneralRequestNotifier,
 
 class MouRequestNotifier
     extends StateNotifier<AsyncValue<List<MouRequestEntity>>> {
-  MouRequestNotifier(this._repo) : super(const AsyncValue.loading()) {
-    _load();
-  }
-
   final IMouRequestRepository _repo;
+  StreamSubscription<List<MouRequestEntity>>? _subscription;
 
-  Future<void> _load() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.getAll);
+  MouRequestNotifier(this._repo) : super(const AsyncValue.loading()) {
+    _listen();
   }
 
-  Future<void> refresh() => _load();
-
-  Future<void> add(MouRequestEntity r) async {
-    final created = await _repo.add(r);
-    state = state.whenData((list) => [...list, created]);
-  }
-
-  Future<void> approve(int id) async {
-    final updated = await _repo.updateStatus(id, RequestStatus.approved);
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
+  void _listen() {
+    _subscription = _repo.watchAll().listen(
+      (list) => state = AsyncValue.data(list),
+      onError: (err, st) => state = AsyncValue.error(err, st),
     );
   }
 
-  Future<void> reject(int id) async {
-    final updated = await _repo.updateStatus(id, RequestStatus.rejected);
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
-    );
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
+
+  Future<void> add(MouRequestEntity r) => _repo.add(r);
+
+  Future<void> approve(String id, {String? approvedBy}) => 
+      _repo.updateStatus(id, RequestStatus.approved, approvedBy: approvedBy);
+
+  Future<void> reject(String id) => _repo.updateStatus(id, RequestStatus.rejected);
 }
 
 final mouRequestProvider = StateNotifierProvider<MouRequestNotifier,
@@ -340,45 +331,39 @@ final mouRequestProvider = StateNotifierProvider<MouRequestNotifier,
 
 class JoiningLetterNotifier
     extends StateNotifier<AsyncValue<List<JoiningLetterRequestEntity>>> {
-  JoiningLetterNotifier(this._repo) : super(const AsyncValue.loading()) {
-    _load();
-  }
-
   final IJoiningLetterRepository _repo;
+  StreamSubscription<List<JoiningLetterRequestEntity>>? _subscription;
 
-  Future<void> _load() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.getAll);
+  JoiningLetterNotifier(this._repo) : super(const AsyncValue.loading()) {
+    _listen();
   }
 
-  Future<void> refresh() => _load();
-
-  Future<void> add(JoiningLetterRequestEntity r) async {
-    final created = await _repo.add(r);
-    state = state.whenData((list) => [...list, created]);
+  void _listen() {
+    _subscription = _repo.watchAll().listen(
+      (list) => state = AsyncValue.data(list),
+      onError: (err, st) => state = AsyncValue.error(err, st),
+    );
   }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> add(JoiningLetterRequestEntity r) => _repo.add(r);
 
   Future<void> approve(
-    int id, {
+    String id, {
     required String generatedBy,
     required String tenure,
-  }) async {
-    final updated = await _repo.approve(
+  }) => _repo.approve(
       id,
       generatedBy: generatedBy,
       tenure:      tenure,
     );
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
-    );
-  }
 
-  Future<void> reject(int id) async {
-    final updated = await _repo.reject(id);
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
-    );
-  }
+  Future<void> reject(String id) => _repo.reject(id);
 }
 
 final joiningLetterProvider = StateNotifierProvider<JoiningLetterNotifier,
@@ -390,10 +375,10 @@ final joiningLetterProvider = StateNotifierProvider<JoiningLetterNotifier,
 // DOCUMENT STATE
 // ─────────────────────────────────────────────────────────────────────────────
 
-final documentProvider =
-    FutureProvider<List<DocumentEntity>>((ref) async {
-  final repo = ref.watch(documentRepositoryProvider);
-  return repo.getAll();
+/// Live stream of all documents from Firestore (metadata) + Firebase Storage (files)
+final documentStorageProvider = StreamProvider<List<DocumentEntity>>((ref) {
+  final repo = ref.watch(documentStorageRepoProvider);
+  return repo.watchAll();
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -401,38 +386,37 @@ final documentProvider =
 // ─────────────────────────────────────────────────────────────────────────────
 
 class MeetingNotifier extends StateNotifier<AsyncValue<List<MeetingEntity>>> {
-  MeetingNotifier(this._repo) : super(const AsyncValue.loading()) {
-    _load();
-  }
-
   final IMeetingRepository _repo;
+  StreamSubscription<List<MeetingEntity>>? _subscription;
 
-  Future<void> _load() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.getAll);
+  MeetingNotifier(this._repo) : super(const AsyncValue.loading()) {
+    _listen();
   }
 
-  Future<void> refresh() => _load();
-
-  Future<void> add(MeetingEntity meeting) async {
-    final created = await _repo.addMeeting(meeting);
-    state = state.whenData((list) => [...list, created]);
+  void _listen() {
+    _subscription = _repo.watchAll().listen(
+      (list) => state = AsyncValue.data(list),
+      onError: (err, st) => state = AsyncValue.error(err, st),
+    );
   }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> add(MeetingEntity meeting) => _repo.addMeeting(meeting);
 
   Future<void> addSummary(
-    int meetingId, {
+    String meetingId, {
     required String summary,
     String? addedBy,
-  }) async {
-    final updated = await _repo.addSummary(
+  }) => _repo.addSummary(
       meetingId,
       summary:  summary,
       addedBy:  addedBy ?? 'Member',
     );
-    state = state.whenData(
-      (list) => list.map((e) => e.id == updated.id ? updated : e).toList(),
-    );
-  }
 }
 
 final meetingProvider =
@@ -489,4 +473,40 @@ class DocumentRequestNotifier
 final documentRequestProvider = StateNotifierProvider<DocumentRequestNotifier,
     AsyncValue<List<DocumentRequestEntity>>>(
   (ref) => DocumentRequestNotifier(ref.watch(documentRequestRepositoryProvider)),
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER MANAGEMENT STATE
+// ─────────────────────────────────────────────────────────────────────────────
+
+class UserManagementNotifier extends StateNotifier<AsyncValue<List<UserEntity>>> {
+  final UserRepository _repository;
+  StreamSubscription<List<UserEntity>>? _subscription;
+
+  UserManagementNotifier(this._repository) : super(const AsyncValue.loading()) {
+    _listen();
+  }
+
+  void _listen() {
+    _subscription = _repository.watchUsers().listen(
+      (users) {
+        state = AsyncValue.data(users);
+      },
+      onError: (err, st) => state = AsyncValue.error(err, st),
+    );
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> addUser(UserEntity user) => _repository.addUser(user);
+  Future<void> updateUser(UserEntity user) => _repository.updateUser(user);
+  Future<void> removeUser(String email) => _repository.removeUser(email);
+}
+
+final usersManagementProvider = StateNotifierProvider<UserManagementNotifier, AsyncValue<List<UserEntity>>>(
+  (ref) => UserManagementNotifier(ref.watch(userRepositoryProvider)),
 );

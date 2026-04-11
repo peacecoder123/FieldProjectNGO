@@ -5,6 +5,7 @@ import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
+import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/features/admin/presentation/tabs/document_approvals_tab.dart';
@@ -39,12 +40,19 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return ListView(
-      shrinkWrap: true,
-      physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.all(20),
-      children: [
-        const SectionHeader(
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(generalRequestProvider);
+        ref.invalidate(mouRequestProvider);
+        ref.invalidate(joiningLetterProvider);
+        await Future.delayed(const Duration(milliseconds: 800));
+      },
+      child: ListView(
+        shrinkWrap: true,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: [
+          const SectionHeader(
           title: 'Requests & Inquiries',
           subtitle: 'Handle formal documents, MOU requests and general inquiries',
         ),
@@ -75,7 +83,8 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
           _MouRequestsList()
         else
           const DocumentApprovalsList(),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -149,7 +158,10 @@ class _GeneralRequestsList extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => ref.read(generalRequestProvider.notifier).approve(req.id),
+                            onPressed: () {
+                              final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
+                              ref.read(generalRequestProvider.notifier).approve(req.id, approvedBy: adminName);
+                            },
                             style: ElevatedButton.styleFrom(backgroundColor: AppColors.emerald600, foregroundColor: Colors.white),
                             child: const Text('Approve'),
                           ),
@@ -233,7 +245,10 @@ class _MouRequestsList extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => ref.read(mouRequestProvider.notifier).approve(req.id),
+                            onPressed: () {
+                              final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
+                              ref.read(mouRequestProvider.notifier).approve(req.id, approvedBy: adminName);
+                            },
                             style: ElevatedButton.styleFrom(backgroundColor: AppColors.emerald600, foregroundColor: Colors.white),
                             child: const Text('Approve'),
                           ),
