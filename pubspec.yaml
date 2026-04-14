@@ -65,7 +65,7 @@ dependencies:
   flutter_local_notifications: ^21.0.0
   file_picker: ^8.1.4
   firebase_storage: ^13.2.0
-  url_launcher: ^6.3.1
+  razorpay_web: ^3.1.3
 
 
 

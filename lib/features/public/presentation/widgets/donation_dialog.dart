@@ -77,7 +77,7 @@ class _DonationDialogState extends ConsumerState<DonationDialog> {
       if (outcome.isSuccess) {
         // Save donation to Firestore
         final donation = DonationEntity(
-          id: DateTime.now().millisecondsSinceEpoch,
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
           donorName: _donorName,
           amount: _amount,
           date: AppFormatters.today(),

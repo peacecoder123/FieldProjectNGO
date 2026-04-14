@@ -117,7 +117,7 @@ class MemberPaymentsTab extends ConsumerWidget {
                               if (outcome.isSuccess) {
                                 // Save to donations collection
                                 final donation = DonationEntity(
-                                  id: DateTime.now().millisecondsSinceEpoch,
+                                  id: DateTime.now().millisecondsSinceEpoch.toString(),
                                   donorName: currentUser.name,
                                   amount: feeAmount,
                                   date: AppFormatters.today(),

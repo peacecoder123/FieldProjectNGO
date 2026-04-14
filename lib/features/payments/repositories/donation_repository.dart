@@ -83,10 +83,10 @@ class DonationRepository implements IDonationRepository {
   }
 
   @override
-  Future<void> updatePaymentStatus(int donationId, PaymentStatus status) async {
+  Future<void> updatePaymentStatus(String donationId, PaymentStatus status) async {
     await _db
         .collection(_collectionPath)
-        .doc(donationId.toString())
+        .doc(donationId)
         .update({
       'paymentStatus': status.name,
     });
