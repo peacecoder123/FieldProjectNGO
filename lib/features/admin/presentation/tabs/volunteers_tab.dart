@@ -9,7 +9,6 @@ import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
-import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 
@@ -38,57 +37,50 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
   Widget build(BuildContext context) {
     final volunteersAsync = ref.watch(volunteerProvider);
 
-    return volunteersAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      data: (volunteers) {
-        final filtered = _filterVolunteers(volunteers);
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(volunteerProvider);
-            await Future.delayed(const Duration(milliseconds: 800));
-          },
-          child: ListView(
-            shrinkWrap: true,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20),
+    return Column(
+      children: [
+        SectionHeader(
+          
+          subtitle: 'Manage NGO volunteers and their tasks',
+          actions: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              SectionHeader(
-              title: 'Volunteers',
-              subtitle: 'Manage NGO volunteers and their tasks',
-              actions: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddVolunteerModal(context),
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Add Volunteer'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.blue600,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+              ElevatedButton.icon(
+                onPressed: () => _showAddVolunteerModal(context),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Add Volunteer'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brand,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildFilters(),
-            const SizedBox(height: 24),
-
-            if (filtered.isEmpty)
-              _buildEmptyState()
-            else
-              _buildVolunteerList(filtered),
-          ],
+            ],
+          ),
         ),
-      );
-    },
-  );
-}
+        const SizedBox(height: 16),
+        _buildFilters(),
+        const SizedBox(height: 16),
+        Expanded(
+          child: volunteersAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (volunteers) {
+              final filtered = _filterVolunteers(volunteers);
+
+              if (filtered.isEmpty) {
+                return _buildEmptyState();
+              }
+
+              return _buildVolunteerList(filtered);
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
   List<VolunteerEntity> _filterVolunteers(List<VolunteerEntity> volunteers) {
     return volunteers.where((v) {
@@ -103,39 +95,36 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.slate100,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Icons.person_search_rounded,
-                size: 28,
-                color: AppColors.slate400,
-              ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.slate100,
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'No volunteers found',
-              style: TextStyle(
-                color: AppColors.slate500,
-                fontWeight: FontWeight.w600,
-              ),
+            child: const Icon(
+              Icons.person_search_rounded,
+              size: 28,
+              color: AppColors.slate400,
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'Try adjusting your search or filter',
-              style: TextStyle(color: AppColors.slate400, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No volunteers found',
+            style: TextStyle(
+              color: AppColors.slate500,
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Try adjusting your search or filter',
+            style: TextStyle(color: AppColors.slate400, fontSize: 12),
+          ),
+        ],
       ),
     );
   }
@@ -147,11 +136,9 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
 
         if (isWide) {
           return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 2.2,
+              childAspectRatio: 2.5,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
@@ -166,16 +153,16 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
           );
         }
 
-        return Column(
-          children: volunteers
-              .map((v) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _VolunteerCard(
-                      volunteer: v,
-                      onTap: () => _showVolunteerDetails(context, v),
-                    ),
-                  ))
-              .toList(),
+        return ListView.separated(
+          itemCount: volunteers.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final v = volunteers[index];
+            return _VolunteerCard(
+              volunteer: v,
+              onTap: () => _showVolunteerDetails(context, v),
+            );
+          },
         );
       },
     );
@@ -249,7 +236,37 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
       title: 'Add New Volunteer',
       size: ModalSize.medium,
       child: _AddVolunteerForm(
-        onSubmit: (v) => ref.read(volunteerProvider.notifier).add(v.copyWith(id: '')),
+        onSubmit: (v) async {
+          final volunteers = ref.read(volunteerProvider).value ?? [];
+          final isDuplicateName = volunteers.any((existing) =>
+              existing.name.toLowerCase().trim() == v.name.toLowerCase().trim());
+          final isDuplicatePhone = v.phone.isNotEmpty &&
+              volunteers.any((existing) => existing.phone.trim() == v.phone.trim());
+
+          if (isDuplicateName) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('A volunteer with this name already exists!'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+
+          if (isDuplicatePhone) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('A volunteer with this phone number already exists!'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+
+          await Future.delayed(const Duration(milliseconds: 1500));
+          await ref.read(volunteerProvider.notifier).add(v);
+          if (context.mounted) Navigator.pop(context);
+        },
       ),
     );
   }
@@ -305,23 +322,23 @@ class _VolunteerCard extends ConsumerWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   volunteer.name,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
-                    color: isDark ? AppColors.white : AppColors.slate900,
                   ),
                 ),
                 Text(
                   volunteer.email,
-                  style: TextStyle(
-                    color: isDark ? AppColors.slate400 : AppColors.slate500,
+                  style: const TextStyle(
+                    color: AppColors.slate500,
                     fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Icon(Icons.assignment_rounded,
@@ -339,28 +356,21 @@ class _VolunteerCard extends ConsumerWidget {
               ],
             ),
           ),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppBadge.personStatus(volunteer.status),
-                const SizedBox(height: 4),
-                Flexible(
-                  child: Text(
-                    volunteer.assignedAdmin.isNotEmpty
-                        ? 'Admin: ${volunteer.assignedAdmin}'
-                        : 'No admin',
-                    style: const TextStyle(
-                      color: AppColors.slate400,
-                      fontSize: 11,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              AppBadge.personStatus(volunteer.status),
+              const SizedBox(height: 4),
+              Text(
+                volunteer.assignedAdmin.isNotEmpty
+                    ? 'Admin: ${volunteer.assignedAdmin}'
+                    : 'No admin',
+                style: const TextStyle(
+                  color: AppColors.slate400,
+                  fontSize: 11,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           const SizedBox(width: 8),
           const Icon(Icons.chevron_right_rounded, color: AppColors.slate300),
@@ -374,19 +384,19 @@ class _VolunteerCard extends ConsumerWidget {
 // ADD VOLUNTEER FORM
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _AddVolunteerForm extends ConsumerStatefulWidget {
+class _AddVolunteerForm extends StatefulWidget {
   const _AddVolunteerForm({required this.onSubmit});
 
-  final void Function(VolunteerEntity) onSubmit;
+  final Future<void> Function(VolunteerEntity) onSubmit;
 
   @override
-  ConsumerState<_AddVolunteerForm> createState() => _AddVolunteerFormState();
+  State<_AddVolunteerForm> createState() => _AddVolunteerFormState();
 }
 
-class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
-
+class _AddVolunteerFormState extends State<_AddVolunteerForm> {
   final _formKey = GlobalKey<FormState>();
 
+  bool _isLoading = false;
   String _name = '';
   String _email = '';
   String _phone = '';
@@ -394,9 +404,6 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
   String _skills = '';
   String _assignedAdmin = '';
   String _tenure = 'monthly';
-  String? _mentorId;
-  String? _mentorName;
-
 
   @override
   Widget build(BuildContext context) {
@@ -457,30 +464,12 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
               onSaved: (val) => _skills = val ?? '',
             ),
             const SizedBox(height: 12),
-            ref.watch(usersManagementProvider).when(
-              data: (users) {
-                final admins = users.where((u) => u.role == UserRole.admin || u.role == UserRole.superAdmin).toList();
-                return DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Assigned Admin',
-                    prefixIcon: Icon(Icons.shield_rounded),
-                  ),
-                  value: _assignedAdmin.isEmpty ? null : _assignedAdmin,
-                  hint: const Text('Select Admin'),
-                  items: admins
-                      .map((u) => DropdownMenuItem(value: u.name, child: Text(u.name)))
-                      .toList(),
-                  onChanged: (val) => setState(() => _assignedAdmin = val ?? ''),
-                );
-              },
-              loading: () => const LinearProgressIndicator(),
-              error: (_, __) => TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Assigned Admin',
-                  prefixIcon: Icon(Icons.shield_rounded),
-                ),
-                onSaved: (val) => _assignedAdmin = val ?? '',
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Assigned Admin',
+                prefixIcon: Icon(Icons.shield_rounded),
               ),
+              onSaved: (val) => _assignedAdmin = val ?? '',
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
@@ -488,7 +477,7 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
                 labelText: 'Tenure',
                 prefixIcon: Icon(Icons.calendar_month_rounded),
               ),
-              initialValue: _tenure,
+              value: _tenure,
               items: const [
                 DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
                 DropdownMenuItem(value: 'annual', child: Text('Annual')),
@@ -499,45 +488,24 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
                 }
               },
             ),
-            const SizedBox(height: 12),
-            ref.watch(memberProvider).when(
-              data: (members) => DropdownButtonFormField<String?>(
-                decoration: const InputDecoration(
-                  labelText: 'Assign Mentor (Member)',
-                  prefixIcon: Icon(Icons.supervisor_account_rounded),
-                ),
-                value: _mentorId,
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('No Mentor')),
-                  ...members.map((m) => DropdownMenuItem(
-                    value: m.id,
-                    child: Text(m.name),
-                  )),
-                ],
-                onChanged: (val) {
-                  setState(() {
-                    _mentorId = val;
-                    if (val != null) {
-                      _mentorName = members.firstWhere((m) => m.id == val).name;
-                    } else {
-                      _mentorName = null;
-                    }
-                  });
-                },
-              ),
-              loading: () => const LinearProgressIndicator(),
-              error: (_, __) => const Text('Error loading members'),
-            ),
             const SizedBox(height: 24),
-
             ElevatedButton(
-              onPressed: _handleSubmit,
+              onPressed: _isLoading ? null : _handleSubmit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.blue600,
+                backgroundColor: AppColors.brand,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: const Text('Add Volunteer'),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text('Add Volunteer'),
             ),
           ],
         ),
@@ -545,31 +513,36 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
     );
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
-      widget.onSubmit(
-        VolunteerEntity(
-          id: '',
-          name: _name.trim(),
-          email: _email.trim(),
-          phone: _phone.trim(),
-          address: _address.trim(),
-          joinDate: AppFormatters.today(),
-          status: PersonStatus.active,
-          assignedAdmin: _assignedAdmin.trim(),
-          taskIds: const [],
-          tenure: _tenure,
-          skills: _skills
-              .split(',')
-              .map((s) => s.trim())
-              .where((s) => s.isNotEmpty)
-              .toList(),
-          avatar: '',
-          mentorId: _mentorId,
-          mentorName: _mentorName,
-        ),
-      );
+      setState(() => _isLoading = true);
+      try {
+        await widget.onSubmit(
+          VolunteerEntity(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            name: _name.trim(),
+            email: _email.trim(),
+            phone: _phone.trim(),
+            address: _address.trim(),
+            joinDate: AppFormatters.today(),
+            status: PersonStatus.active,
+            assignedAdmin: _assignedAdmin.trim(),
+            taskIds: const [],
+            tenure: _tenure,
+            skills: _skills
+                .split(',')
+                .map((s) => s.trim())
+                .where((s) => s.isNotEmpty)
+                .toList(),
+            avatar: '',
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
     }
   }
 }
@@ -736,12 +709,6 @@ class _VolunteerDetailsContent extends ConsumerWidget {
                 ? volunteer.assignedAdmin
                 : 'Not assigned',
             icon: Icons.shield_rounded,
-          ),
-          const Divider(height: 24),
-          _InfoRow(
-            label: 'Assigned Mentor (Member)',
-            value: volunteer.mentorName ?? 'Not assigned',
-            icon: Icons.supervisor_account_rounded,
           ),
           const Divider(height: 24),
           _InfoRow(
@@ -959,7 +926,7 @@ class _TaskItem extends ConsumerWidget {
                   children: [
                     if (task.uploadedImage != null)
                       TextButton.icon(
-                        onPressed: () => _showImagePreview(context, task),
+                        onPressed: () => _showImagePreview(context, task.uploadedImage!),
                         icon: const Icon(Icons.image_rounded, size: 16),
                         label: const Text('View'),
                         style: TextButton.styleFrom(
@@ -975,14 +942,9 @@ class _TaskItem extends ConsumerWidget {
                         color: AppColors.emerald500,
                         size: 24,
                       ),
-                      onPressed: () {
-                        final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
-                        ref.read(taskProvider.notifier).updateStatus(
-                          task.id, 
-                          TaskStatus.approved,
-                          approvedBy: adminName,
-                        );
-                      },
+                      onPressed: () => ref
+                          .read(taskProvider.notifier)
+                          .updateStatus(task.id, TaskStatus.approved),
                       tooltip: 'Approve',
                     ),
                     IconButton(
@@ -1005,9 +967,7 @@ class _TaskItem extends ConsumerWidget {
     );
   }
 
-  void _showImagePreview(BuildContext context, TaskEntity task) {
-    if (task.uploadedImage == null) return;
-    final imageUrl = task.uploadedImage!;
+  void _showImagePreview(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
       builder: (_) => Dialog(
@@ -1055,21 +1015,6 @@ class _TaskItem extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (task.geotag != null && task.geotag!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.location_on_rounded, size: 16, color: AppColors.red500),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Captured at: ${task.geotag}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate700),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
         ),
@@ -1188,7 +1133,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
             ElevatedButton(
               onPressed: _handleSubmit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.blue600,
+                backgroundColor: AppColors.brand,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -1217,7 +1162,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
       _formKey.currentState?.save();
       widget.onSubmit(
         TaskEntity(
-          id: '',
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: _title.trim(),
           description: _description.trim(),
           deadline: AppFormatters.toIso(_deadline),

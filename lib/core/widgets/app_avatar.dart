@@ -72,24 +72,15 @@ class AppAvatar extends StatelessWidget {
   /// Matches the `colors[initials.charCodeAt(0) % colors.length]` logic
   /// from the React source.
   static Color _colorFromInitials(String initials) {
-    const colors = [
-      AppColors.blue500,
-      AppColors.purple500,
-      AppColors.emerald500,
-      AppColors.orange500,
-      AppColors.rose500,
-      AppColors.cyan500,
-    ];
-    if (initials.isEmpty) return colors[0];
-    return colors[initials.codeUnitAt(0) % colors.length];
+    // Use brand color for all avatars for two-color consistency
+    return AppColors.brand;
   }
 
-  static LinearGradient _roleColors(UserRole role) => switch (role) {
-    UserRole.superAdmin => AppColors.superAdminGradient,
-    UserRole.admin      => AppColors.adminGradient,
-    UserRole.member     => AppColors.memberGradient,
-    UserRole.volunteer  => AppColors.volunteerGradient,
-  };
+  static LinearGradient _roleColors(UserRole role) => const LinearGradient(
+    colors: [AppColors.brand, Color(0xFF003870)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }
 
 enum AvatarSize { small, medium, large, xlarge }

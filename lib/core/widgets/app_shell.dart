@@ -104,7 +104,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                     notifications: widget.notifications,
                   ),
                   Expanded(
-                    child: widget.body,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: widget.body,
+                    ),
                   ),
                 ],
               ),
@@ -116,7 +119,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   Widget _buildDrawer() => Drawer(
-    backgroundColor: AppColors.slate900,
+    backgroundColor: AppColors.brand,
     child: _SidebarContent(
       navItems:  widget.navItems,
       activeTab: widget.activeTab,
@@ -154,7 +157,7 @@ class _Sidebar extends StatelessWidget {
     return SizedBox(
       width: AppConstants.sidebarWidth,
       child: Container(
-        color: AppColors.slate900,
+        color: AppColors.brand,
         child: _SidebarContent(
           navItems: navItems,
           activeTab: activeTab,
@@ -197,9 +200,7 @@ class _SidebarContent extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradientColors.colors.map((c) => c.withValues(alpha: 0.25)).toList(),
-              ),
+              color: AppColors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -240,14 +241,14 @@ class _SidebarContent extends ConsumerWidget {
         ),
 
         // ── Nav items ─────────────────────────────────────────────────────
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'NAVIGATION',
               style: TextStyle(
-                color: AppColors.slate500,
+                color: AppColors.white.withValues(alpha: 0.5),
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1,
@@ -259,7 +260,7 @@ class _SidebarContent extends ConsumerWidget {
 
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             itemCount: navItems.length,
             itemBuilder: (context, i) {
               final item     = navItems[i];
@@ -297,7 +298,7 @@ class _SidebarLogo extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
         child: Row(
           children: [
             ClipRRect(
@@ -364,13 +365,13 @@ class _NavTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: isActive
-                  ? AppColors.blue600
+                  ? AppColors.white.withValues(alpha: 0.2)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: AppColors.blue600.withValues(alpha: 0.3),
+                        color: AppColors.white.withValues(alpha: 0.1),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       )
@@ -420,15 +421,15 @@ class _NavTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (isActive)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4),
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      size: 14,
-                      color: AppColors.blue400,
+                  if (isActive)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
               ],
             ),
           ),
@@ -453,7 +454,7 @@ class _SignOutButton extends ConsumerWidget {
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          const Divider(color: AppColors.slate700, height: 1),
+          const Divider(color: Colors.white24, height: 1),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -560,10 +561,10 @@ class _TopBarState extends ConsumerState<_TopBar> {
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.slate800 : AppColors.white,
-        border: Border(
+        color: AppColors.white,
+        border: const Border(
           bottom: BorderSide(
-            color: isDark ? AppColors.slate700 : AppColors.slate200,
+            color: AppColors.slate200,
           ),
         ),
       ),

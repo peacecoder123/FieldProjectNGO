@@ -162,7 +162,7 @@ class _GeneralRequestsList extends ConsumerWidget {
                               final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
                               ref.read(generalRequestProvider.notifier).approve(req.id, approvedBy: adminName);
                             },
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.emerald600, foregroundColor: Colors.white),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
                             child: const Text('Approve'),
                           ),
                         ),
@@ -249,7 +249,7 @@ class _MouRequestsList extends ConsumerWidget {
                               final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
                               ref.read(mouRequestProvider.notifier).approve(req.id, approvedBy: adminName);
                             },
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.emerald600, foregroundColor: Colors.white),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
                             child: const Text('Approve'),
                           ),
                         ),

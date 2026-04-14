@@ -62,7 +62,7 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
             padding: const EdgeInsets.all(20),
             children: [
               SectionHeader(
-              title: 'Donations',
+              
               subtitle: 'Track financial contributions and generate receipts',
               actions: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -72,7 +72,7 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
                     icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
                     label: const Text('Add Donation'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.purple600,
+                      backgroundColor: AppColors.brand,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
@@ -477,7 +477,7 @@ class _AddDonationFormState extends State<_AddDonationForm> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.purple600,
+              backgroundColor: AppColors.brand,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),

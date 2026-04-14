@@ -26,56 +26,46 @@ class _MembersTabState extends ConsumerState<MembersTab> {
   Widget build(BuildContext context) {
     final membersAsync = ref.watch(memberProvider);
 
-    return membersAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      data: (members) {
-        final filtered = members.where((m) {
-          final matchesSearch = m.name.toLowerCase().contains(_searchQuery.toLowerCase()) || 
-                                m.email.toLowerCase().contains(_searchQuery.toLowerCase());
-          final matchesStatus = _statusFilter == null || m.status == _statusFilter;
-          return matchesSearch && matchesStatus;
-        }).toList();
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(memberProvider);
-            await Future.delayed(const Duration(milliseconds: 800));
-          },
-          child: ListView(
-            shrinkWrap: true,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20),
+    return Column(
+      children: [
+        SectionHeader(
+          
+          subtitle: 'Manage NGO members, memberships and renewals',
+          actions: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              SectionHeader(
-              title: 'Members',
-              subtitle: 'Manage NGO members, memberships and renewals',
-              actions: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddMemberModal(context),
-                    icon: const Icon(Icons.person_add_rounded, size: 18),
-                    label: const Text('Add Member'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.emerald600,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+              ElevatedButton.icon(
+                onPressed: () => _showAddMemberModal(context),
+                icon: const Icon(Icons.person_add_rounded, size: 18),
+                label: const Text('Add Member'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brand,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildFilters(),
-            const SizedBox(height: 24),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildFilters(),
+        const SizedBox(height: 16),
+        Expanded(
+          child: membersAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (members) {
+              final filtered = members.where((m) {
+                final matchesSearch = m.name.toLowerCase().contains(_searchQuery.toLowerCase()) || 
+                                     m.email.toLowerCase().contains(_searchQuery.toLowerCase());
+                final matchesStatus = _statusFilter == null || m.status == _statusFilter;
+                return matchesSearch && matchesStatus;
+              }).toList();
 
-            if (filtered.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
+              if (filtered.isEmpty) {
+                return const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -84,22 +74,26 @@ class _MembersTabState extends ConsumerState<MembersTab> {
                       Text('No members found', style: TextStyle(color: AppColors.slate500)),
                     ],
                   ),
-                ),
-              )
-            else
-              ...filtered.map((m) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _MemberCard(
-                  member: m,
-                  onTap: () => _showMemberDetails(context, m),
-                ),
-              )),
-          ],
+                );
+              }
+
+              return ListView.separated(
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final m = filtered[index];
+                  return _MemberCard(
+                    member: m,
+                    onTap: () => _showMemberDetails(context, m),
+                  );
+                },
+              );
+            },
+          ),
         ),
-      );
-    },
-  );
-}
+      ],
+    );
+  }
 
   Widget _buildFilters() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -158,9 +152,36 @@ class _MembersTabState extends ConsumerState<MembersTab> {
       title: 'Add New Member',
       size: ModalSize.medium,
       child: _AddMemberForm(
-        onSubmit: (m) {
-          ref.read(memberProvider.notifier).add(m);
-          Navigator.pop(context);
+        onSubmit: (m) async {
+          final members = ref.read(memberProvider).value ?? [];
+          final isDuplicateName = members.any((existing) =>
+              existing.name.toLowerCase().trim() == m.name.toLowerCase().trim());
+          final isDuplicatePhone = m.phone.isNotEmpty &&
+              members.any((existing) => existing.phone.trim() == m.phone.trim());
+
+          if (isDuplicateName) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('A member with this name already exists!'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+
+          if (isDuplicatePhone) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('A member with this phone number already exists!'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+
+          await Future.delayed(const Duration(milliseconds: 1500));
+          await ref.read(memberProvider.notifier).add(m);
+          if (context.mounted) Navigator.pop(context);
         },
       ),
     );
@@ -183,7 +204,6 @@ class _MemberCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final daysToRenewal = AppFormatters.daysUntil(member.renewalDate);
     final isExpiringSoon = daysToRenewal >= 0 && daysToRenewal <= 30;
 
@@ -199,25 +219,17 @@ class _MemberCard extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   member.name,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                    color: isDark ? AppColors.white : AppColors.slate900,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                 ),
-                const SizedBox(height: 2),
                 Text(
                   member.email,
-                  style: TextStyle(
-                    color: isDark ? AppColors.slate400 : AppColors.slate500,
-                    fontSize: 13,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.slate500, fontSize: 13),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     AppBadge(
@@ -228,11 +240,11 @@ class _MemberCard extends StatelessWidget {
                     if (isExpiringSoon)
                       Row(
                         children: [
-                          Icon(Icons.warning_amber_rounded, size: 14, color: isDark ? AppColors.amber400 : AppColors.amber600),
+                          const Icon(Icons.warning_amber_rounded, size: 14, color: AppColors.amber600),
                           const SizedBox(width: 4),
                           Text(
                             'Renews in $daysToRenewal days',
-                            style: TextStyle(color: isDark ? AppColors.amber400 : AppColors.amber600, fontSize: 11, fontWeight: FontWeight.w600),
+                            style: const TextStyle(color: AppColors.amber600, fontSize: 11, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -261,9 +273,7 @@ class _MemberCard extends StatelessWidget {
                     member.isPaid ? 'Paid' : 'Unpaid',
                     style: TextStyle(
                       fontSize: 11,
-                      color: member.isPaid
-                          ? (isDark ? AppColors.emerald400 : AppColors.emerald600)
-                          : (isDark ? AppColors.amber400 : AppColors.amber600),
+                      color: member.isPaid ? AppColors.emerald600 : AppColors.amber600,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -272,7 +282,7 @@ class _MemberCard extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 8),
-          Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.slate500 : AppColors.slate300),
+          const Icon(Icons.chevron_right_rounded, color: AppColors.slate300),
         ],
       ),
     );
@@ -281,7 +291,7 @@ class _MemberCard extends StatelessWidget {
 
 class _AddMemberForm extends StatefulWidget {
   const _AddMemberForm({required this.onSubmit});
-  final Function(MemberEntity) onSubmit;
+  final Future<void> Function(MemberEntity) onSubmit;
 
   @override
   State<_AddMemberForm> createState() => _AddMemberFormState();
@@ -289,6 +299,7 @@ class _AddMemberForm extends StatefulWidget {
 
 class _AddMemberFormState extends State<_AddMemberForm> {
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
   String name = '';
   String email = '';
   String phone = '';
@@ -302,7 +313,6 @@ class _AddMemberFormState extends State<_AddMemberForm> {
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
         children: [
           TextFormField(
             decoration: const InputDecoration(labelText: 'Full Name'),
@@ -317,25 +327,12 @@ class _AddMemberFormState extends State<_AddMemberForm> {
           ),
           const SizedBox(height: 12),
           TextFormField(
-            decoration: const InputDecoration(
-              labelText: 'Phone',
-              prefixIcon: Icon(Icons.phone_rounded),
-            ),
-            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'Phone'),
             onSaved: (val) => phone = val ?? '',
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            decoration: const InputDecoration(
-              labelText: 'Address',
-              prefixIcon: Icon(Icons.location_on_rounded),
-            ),
-            maxLines: 2,
-            onSaved: (val) => address = val ?? '',
-          ),
-          const SizedBox(height: 12),
           DropdownButtonFormField<MembershipType>(
-            initialValue: membershipType,
+            value: membershipType,
             decoration: const InputDecoration(labelText: 'Membership Type'),
             items: MembershipType.values.map((t) => DropdownMenuItem(
               value: t,
@@ -361,35 +358,53 @@ class _AddMemberFormState extends State<_AddMemberForm> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () {
-              if (_formKey.currentState?.validate() ?? false) {
-                _formKey.currentState?.save();
-                widget.onSubmit(MemberEntity(
-                  id: '',
-                  name: name,
-                  email: email,
-                  phone: phone,
-                  address: address,
-                  joinDate: AppFormatters.today(),
-                  renewalDate: AppFormatters.toIso(renewalDate),
-                  status: PersonStatus.active,
-                  membershipType: membershipType,
-                  taskIds: const [],
-                  isPaid: false,
-                  avatar: '',
-                ));
-              }
-            },
+            onPressed: _isLoading ? null : _handleSubmit,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.emerald600,
+              backgroundColor: AppColors.brand,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: const Text('Create Membership'),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text('Create Membership'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleSubmit() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      _formKey.currentState?.save();
+      setState(() => _isLoading = true);
+      try {
+        await widget.onSubmit(MemberEntity(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          address: address.trim(),
+          joinDate: AppFormatters.today(),
+          renewalDate: AppFormatters.toIso(renewalDate),
+          status: PersonStatus.active,
+          membershipType: membershipType,
+          taskIds: const [],
+          isPaid: false,
+          avatar: '',
+        ));
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    }
   }
 }
 
@@ -402,107 +417,105 @@ class _MemberDetailsContent extends ConsumerWidget {
     final tasksAsync = ref.watch(taskProvider);
     final daysToRenewal = AppFormatters.daysUntil(member.renewalDate);
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              AppAvatar(
-                initials: AppFormatters.initials(member.name),
-                size: AvatarSize.xlarge,
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      member.name,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    ),
-                    Text(member.email, style: const TextStyle(color: AppColors.slate500)),
-                    const SizedBox(height: 8),
-                    AppBadge(
-                      label: member.membershipType.displayLabel,
-                      color: member.membershipType == MembershipType.eightyG ? AppColors.primary : AppColors.purple500,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          const Text('Membership Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _StatBox(
-                  label: 'Renewal Date',
-                  value: AppFormatters.displayDate(member.renewalDate),
-                  subtitle: daysToRenewal < 0 ? 'Expired' : '$daysToRenewal days left',
-                  color: daysToRenewal < 30 ? AppColors.red500 : AppColors.emerald500,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatBox(
-                  label: 'Fees Payment',
-                  value: member.isPaid ? 'Paid' : 'Pending',
-                  subtitle: member.isPaid ? 'FY 2024-25' : 'Action Required',
-                  color: member.isPaid ? AppColors.emerald500 : AppColors.amber500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          const Text('Contact Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          AppCard(
-            child: Column(
-              children: [
-                _InfoTile(label: 'Phone', value: member.phone, icon: Icons.phone_android_rounded),
-                const Divider(height: 24),
-                _InfoTile(label: 'Address', value: member.address, icon: Icons.location_on_rounded),
-                const Divider(height: 24),
-                _InfoTile(label: 'Joined On', value: AppFormatters.displayDate(member.joinDate), icon: Icons.verified_user_rounded),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            AppAvatar(
+              initials: AppFormatters.initials(member.name),
+              size: AvatarSize.xlarge,
             ),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Assigned Tasks', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              TextButton.icon(
-                onPressed: () => _showAddTaskModal(context, ref),
-                icon: const Icon(Icons.add_task_rounded, size: 18),
-                label: const Text('Assign Task'),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    member.name,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  Text(member.email, style: const TextStyle(color: AppColors.slate500)),
+                  const SizedBox(height: 8),
+                  AppBadge(
+                    label: member.membershipType.displayLabel,
+                    color: member.membershipType == MembershipType.eightyG ? AppColors.primary : AppColors.purple500,
+                  ),
+                ],
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        const Text('Membership Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatBox(
+                label: 'Renewal Date',
+                value: AppFormatters.displayDate(member.renewalDate),
+                subtitle: daysToRenewal < 0 ? 'Expired' : '$daysToRenewal days left',
+                color: daysToRenewal < 30 ? AppColors.red500 : AppColors.emerald500,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatBox(
+                label: 'Fees Payment',
+                value: member.isPaid ? 'Paid' : 'Pending',
+                subtitle: member.isPaid ? 'FY 2024-25' : 'Action Required',
+                color: member.isPaid ? AppColors.emerald500 : AppColors.amber500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        const Text('Contact Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        AppCard(
+          child: Column(
+            children: [
+              _InfoTile(label: 'Phone', value: member.phone, icon: Icons.phone_android_rounded),
+              const Divider(height: 24),
+              _InfoTile(label: 'Address', value: member.address, icon: Icons.location_on_rounded),
+              const Divider(height: 24),
+              _InfoTile(label: 'Joined On', value: AppFormatters.displayDate(member.joinDate), icon: Icons.verified_user_rounded),
             ],
           ),
-          const SizedBox(height: 12),
-          tasksAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error loading tasks: $e'),
-            data: (tasks) {
-              final memberTasks = tasks.where((t) => t.assignedToId == member.id && t.assignedToType == AssigneeType.member).toList();
-              if (memberTasks.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24.0),
-                    child: Text('No tasks assigned', style: TextStyle(color: AppColors.slate400)),
-                  ),
-                );
-              }
-              return Column(
-                children: memberTasks.map((t) => _TaskTile(task: t)).toList(),
+        ),
+        const SizedBox(height: 32),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Assigned Tasks', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            TextButton.icon(
+              onPressed: () => _showAddTaskModal(context, ref),
+              icon: const Icon(Icons.add_task_rounded, size: 18),
+              label: const Text('Assign Task'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        tasksAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('Error loading tasks: $e'),
+          data: (tasks) {
+            final memberTasks = tasks.where((t) => t.assignedToId == member.id && t.assignedToType == AssigneeType.member).toList();
+            if (memberTasks.isEmpty) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: Text('No tasks assigned', style: TextStyle(color: AppColors.slate400)),
+                ),
               );
-            },
-          ),
-        ],
-      ),
+            }
+            return Column(
+              children: memberTasks.map((t) => _TaskTile(task: t)).toList(),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -558,24 +571,20 @@ class _InfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.slate800 : AppColors.slate100,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 16, color: isDark ? AppColors.slate400 : AppColors.slate600),
+          decoration: BoxDecoration(color: AppColors.slate100, borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, size: 16, color: AppColors.slate600),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(fontSize: 10, color: isDark ? AppColors.slate500 : AppColors.slate400, fontWeight: FontWeight.w600)),
-              Text(value.isEmpty ? 'Not provided' : value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isDark ? AppColors.white : AppColors.slate900)),
+              Text(label, style: const TextStyle(fontSize: 10, color: AppColors.slate400, fontWeight: FontWeight.w600)),
+              Text(value.isEmpty ? 'Not provided' : value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             ],
           ),
         ),
@@ -590,14 +599,13 @@ class _TaskTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.slate800 : AppColors.slate50,
+        color: AppColors.slate50,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
+        border: Border.all(color: AppColors.slate200),
       ),
       child: Row(
         children: [
@@ -605,21 +613,15 @@ class _TaskTile extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.title, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? AppColors.white : AppColors.slate900)),
+                Text(task.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 2),
-                Text('Deadline: ${AppFormatters.displayDate(task.deadline)}', style: TextStyle(fontSize: 11, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                Text('Deadline: ${AppFormatters.displayDate(task.deadline)}', style: const TextStyle(fontSize: 11, color: AppColors.slate500)),
               ],
             ),
           ),
           _TaskStatusChip(status: task.status),
           if (task.status == TaskStatus.submitted) ...[
-            if (task.uploadedImage != null)
-              IconButton(
-                icon: const Icon(Icons.image_rounded, color: AppColors.blue500, size: 20),
-                onPressed: () => _showImagePreview(context, task),
-                constraints: const BoxConstraints(),
-              ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 8),
             IconButton(
               icon: const Icon(Icons.check_rounded, color: AppColors.emerald500, size: 20),
               onPressed: () => ref.read(taskProvider.notifier).updateStatus(task.id, TaskStatus.approved),
@@ -628,54 +630,6 @@ class _TaskTile extends ConsumerWidget {
             ),
           ]
         ],
-      ),
-    );
-  }
-
-  void _showImagePreview(BuildContext context, TaskEntity task) {
-    if (task.uploadedImage == null) return;
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppBar(
-                title: const Text('Task Evidence'),
-                centerTitle: true,
-                automaticallyImplyLeading: false,
-                actions: [
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(task.uploadedImage!, fit: BoxFit.contain),
-                ),
-              ),
-              if (task.geotag != null && task.geotag!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.location_on_rounded, size: 16, color: AppColors.red500),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Captured at: ${task.geotag}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate700),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -714,8 +668,6 @@ class _AddTaskFormState extends State<_AddTaskForm> {
   final _formKey = GlobalKey<FormState>();
   String title = '';
   DateTime deadline = DateTime.now().add(const Duration(days: 7));
-  bool _requiresUpload = false;
-
 
   @override
   Widget build(BuildContext context) {
@@ -745,21 +697,13 @@ class _AddTaskFormState extends State<_AddTaskForm> {
               if (picked != null) setState(() => deadline = picked);
             },
           ),
-          SwitchListTile.adaptive(
-            secondary: const Icon(Icons.image_rounded),
-            title: const Text('Requires Image Upload'),
-            subtitle: const Text('Member must upload camera proof with geotag'),
-            value: _requiresUpload,
-            onChanged: (val) => setState(() => _requiresUpload = val),
-          ),
           const SizedBox(height: 24),
-
           ElevatedButton(
             onPressed: () {
               if (_formKey.currentState?.validate() ?? false) {
                 _formKey.currentState?.save();
                 widget.onSubmit(TaskEntity(
-                  id: '',
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
                   title: title,
                   description: '',
                   deadline: AppFormatters.toIso(deadline),
@@ -767,13 +711,13 @@ class _AddTaskFormState extends State<_AddTaskForm> {
                   assignedToName: widget.member.name,
                   assignedToType: AssigneeType.member,
                   status: TaskStatus.pending,
-                  requiresUpload: _requiresUpload,
+                  requiresUpload: false,
                   createdAt: AppFormatters.today(),
                 ));
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.blue600,
+              backgroundColor: AppColors.brand,
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 50),
             ),

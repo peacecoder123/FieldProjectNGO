@@ -194,7 +194,7 @@ class _UsersManagementTabState extends ConsumerState<UsersManagementTab> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('✅ ${user.name} has been added. An invite email will be sent to ${user.email}.'),
-                backgroundColor: AppColors.emerald600,
+                backgroundColor: AppColors.brand,
                 duration: const Duration(seconds: 4),
               ),
             );
@@ -374,7 +374,7 @@ class _UserRow extends ConsumerWidget {
                 );
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${user.name} is now ${selectedRole.displayName}'), backgroundColor: AppColors.emerald600),
+                  SnackBar(content: Text('${user.name} is now ${selectedRole.displayName}'), backgroundColor: AppColors.brand),
                 );
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.navy600, foregroundColor: Colors.white),
@@ -391,7 +391,7 @@ class _UserRow extends ConsumerWidget {
       // In a real app, you'd call a Cloud Function. 
       // For now we simulate it since the function is deployed.
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('📨 Re-sending invite to ${user.email}...'), backgroundColor: AppColors.blue600),
+        SnackBar(content: Text('📨 Re-sending invite to ${user.email}...'), backgroundColor: AppColors.brand),
       );
       
       // We don't have a direct provider for resendInvite yet, 

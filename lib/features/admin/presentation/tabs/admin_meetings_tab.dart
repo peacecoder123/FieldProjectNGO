@@ -29,7 +29,7 @@ class AdminMeetingsTab extends ConsumerWidget {
             icon: const Icon(Icons.add_rounded, size: 18),
             label: const Text('Schedule Meeting'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.blue600,
+              backgroundColor: AppColors.brand,
               foregroundColor: Colors.white,
             ),
           ),
@@ -194,10 +194,10 @@ class AdminMeetingsTab extends ConsumerWidget {
                 ref.read(meetingProvider.notifier).add(meeting);
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Meeting scheduled successfully'), backgroundColor: AppColors.emerald600),
+                  const SnackBar(content: Text('Meeting scheduled successfully'), backgroundColor: AppColors.brand),
                 );
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.blue600, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
               child: const Text('Schedule'),
             ),
           ],
