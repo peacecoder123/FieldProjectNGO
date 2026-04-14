@@ -151,7 +151,7 @@ class _RequestCard extends ConsumerWidget {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request Approved.')));
                       }
                     },
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.emerald600),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand),
                     child: const Text('Approve & Generate'),
                   ),
                 ],

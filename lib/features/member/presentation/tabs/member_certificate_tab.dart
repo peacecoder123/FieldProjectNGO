@@ -50,7 +50,7 @@ class MemberCertificateTab extends ConsumerWidget {
                     },
                     icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text('Request Certificate'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.blue600),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand),
                   ),
                 ],
               ),

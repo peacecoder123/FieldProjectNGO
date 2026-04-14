@@ -26,9 +26,7 @@ class AppCard extends StatelessWidget {
 
     final card = Container(
       decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF1E293B) // slate-800
-            : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
           color: isDark

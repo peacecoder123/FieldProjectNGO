@@ -205,7 +205,7 @@ class _VolunteerDetailsContent extends ConsumerWidget {
                 icon: const Icon(Icons.add_task_rounded, size: 16),
                 label: const Text('Assign Task'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.blue600,
+                  backgroundColor: AppColors.brand,
                   foregroundColor: Colors.white,
                   visualDensity: VisualDensity.compact,
                 ),
@@ -354,7 +354,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.blue600,
+              backgroundColor: AppColors.brand,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),

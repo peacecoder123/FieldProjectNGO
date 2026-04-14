@@ -36,14 +36,14 @@ class DocumentationTab extends ConsumerWidget {
             padding: const EdgeInsets.all(20),
             children: [
               SectionHeader(
-              title: 'Documentation',
+              
               subtitle: 'Upload and access NGO policies, templates and reports',
               actions: ElevatedButton.icon(
                 onPressed: () => _uploadNewDocument(context, ref, currentUser?.name ?? 'Admin'),
                 icon: const Icon(Icons.upload_file_rounded, size: 18),
                 label: const Text('Upload Document'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.blue600,
+                  backgroundColor: AppColors.brand,
                   foregroundColor: Colors.white,
                 ),
               ),
@@ -136,7 +136,7 @@ class DocumentationTab extends ConsumerWidget {
       scaffold.hideCurrentSnackBar();
       if (doc != null) {
         scaffold.showSnackBar(
-          SnackBar(content: Text('✅ "${doc.title}" uploaded successfully'), backgroundColor: AppColors.emerald600),
+          SnackBar(content: Text('✅ "${doc.title}" uploaded successfully'), backgroundColor: AppColors.brand),
         );
       }
     } catch (e) {
@@ -160,7 +160,7 @@ class DocumentationTab extends ConsumerWidget {
       await ref.read(documentStorageRepoProvider).replaceDocument(existing: doc, uploadedBy: uploadedBy);
       scaffold.hideCurrentSnackBar();
       scaffold.showSnackBar(
-        const SnackBar(content: Text('Document replaced successfully'), backgroundColor: AppColors.emerald600),
+        const SnackBar(content: Text('Document replaced successfully'), backgroundColor: AppColors.brand),
       );
     } catch (e) {
       scaffold.hideCurrentSnackBar();

@@ -8,12 +8,12 @@ import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
     super.key,
-    required this.title,
+    this.title,
     this.subtitle,
     this.actions,
   });
 
-  final String  title;
+  final String? title;
   final String? subtitle;
   final Widget? actions;
 
@@ -31,13 +31,14 @@ class SectionHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: isDark ? AppColors.white : AppColors.slate900,
-                    fontWeight: FontWeight.w700,
+                if (title != null)
+                  Text(
+                    title!,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: isDark ? AppColors.white : AppColors.slate900,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),
                   Text(

@@ -379,7 +379,7 @@ class _TenureSelectorState extends ConsumerState<_TenureSelector> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.emerald600,
+                  backgroundColor: AppColors.brand,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Approve & Generate'),

@@ -112,7 +112,7 @@ class _MemberTaskItem extends ConsumerWidget {
               icon: const Icon(Icons.cloud_upload_rounded, size: 18),
               label: const Text('Submit Completion'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.blue600,
+                backgroundColor: AppColors.brand,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 44),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

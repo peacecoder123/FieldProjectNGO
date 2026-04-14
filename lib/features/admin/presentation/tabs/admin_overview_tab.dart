@@ -252,11 +252,7 @@ class _HeroBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.blue600, AppColors.indigo600, AppColors.violet600],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
+        color: AppColors.brand,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

@@ -181,7 +181,7 @@ class ProfileScreen extends ConsumerWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Password reset link sent to ${user.email}'),
-                        backgroundColor: AppColors.blue600,
+                        backgroundColor: AppColors.brand,
                       ),
                     );
                   },
