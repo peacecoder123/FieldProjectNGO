@@ -37,7 +37,7 @@ class MockAuthRepository implements IAuthRepository {
   }
 
   @override
-  Future<void> updateFcmToken(int userId, String? token) async {
+  Future<void> updateFcmToken(String userId, String? token) async {
     // Mock implementation doesn't need to persist to a real DB
     await Future.delayed(const Duration(milliseconds: 200));
     print('Mock: FCM token updated for $userId to $token');
@@ -357,7 +357,7 @@ class MockMeetingRepository implements IMeetingRepository {
   }
 
   @override
-  Future<MeetingEntity> markCompleted(int meetingId, {required String summaryAssignedTo}) async {
+  Future<MeetingEntity> markCompleted(String meetingId, {required String summaryAssignedTo}) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((m) => m.id == meetingId);
     if (idx != -1) {

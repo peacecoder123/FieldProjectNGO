@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 /// Builds the Material 3 [ThemeData] for light and dark modes.
@@ -6,8 +7,7 @@ import 'app_colors.dart';
 /// Design decisions:
 /// • Uses [ColorScheme.fromSeed] seeded on [AppColors.blue600] so that M3
 ///   tonal surfaces stay close to the React Tailwind palette.
-/// • Typography uses Inter (falls back to system sans-serif if font assets are
-///   not bundled — safe for codex review).
+/// • Typography uses Poppins via Google Fonts for a clean, geometric look.
 /// • Every component theme is explicit so behaviour is predictable.
 abstract final class AppTheme {
   AppTheme._();
@@ -39,13 +39,13 @@ abstract final class AppTheme {
       outline:          isDark ? AppColors.slate700  : AppColors.slate200,
     );
 
-    final textTheme = _buildTextTheme(isDark);
+    final textTheme = GoogleFonts.poppinsTextTheme(_buildTextTheme(isDark));
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       brightness: brightness,
-      fontFamily: 'Inter',
+      fontFamily: GoogleFonts.poppins().fontFamily,
       textTheme: textTheme,
       scaffoldBackgroundColor: AppColors.white,
 

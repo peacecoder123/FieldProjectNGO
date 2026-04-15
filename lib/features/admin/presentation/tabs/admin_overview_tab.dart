@@ -262,9 +262,13 @@ class _HeroBanner extends StatelessWidget {
             children: [
               const Icon(Icons.bolt_rounded, color: Colors.white70, size: 14),
               const SizedBox(width: 4),
-              Text(
-                isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              Expanded(
+                child: Text(
+                  isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -341,15 +345,17 @@ class _DonationChart extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Donation Trend',
-                      style: Theme.of(context).textTheme.titleSmall),
-                  const Text('Last 6 months',
-                      style: TextStyle(
-                          fontSize: 11, color: AppColors.slate400)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Donation Trend',
+                        style: Theme.of(context).textTheme.titleSmall),
+                    const Text('Last 6 months',
+                        style: TextStyle(
+                            fontSize: 11, color: AppColors.slate400)),
+                  ],
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
