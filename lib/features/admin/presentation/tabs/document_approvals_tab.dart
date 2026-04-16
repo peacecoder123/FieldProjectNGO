@@ -161,12 +161,38 @@ class _RequestCard extends ConsumerWidget {
             if (req.status == DocumentRequestStatus.approved) ...[
               const SizedBox(height: 16),
               const Divider(),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Cert No: ${req.certificateNo}', style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
-                  TextButton.icon(
+                   Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('CERTIFICATE NUMBER', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1, color: AppColors.slate400)),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.slate700 : AppColors.slate50,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            req.certificateNo ?? 'PENDING',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontFamily: 'Courier', // Monospace for technical feel
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppColors.slate300 : AppColors.slate600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton(
                     onPressed: () async {
                       final pdfData = await PdfGeneratorService.generateCertificatePdf(
                         certificateNo: req.certificateNo ?? 'PENDING',
@@ -175,8 +201,12 @@ class _RequestCard extends ConsumerWidget {
                       );
                       await Printing.layoutPdf(onLayout: (format) => pdfData);
                     },
-                    icon: const Icon(Icons.print_rounded, size: 16),
-                    label: const Text('Print / Download'),
+                    icon: Icon(Icons.download_for_offline_rounded, color: isDark ? AppColors.blue400 : AppColors.blue600),
+                    tooltip: 'Download / Print',
+                    style: IconButton.styleFrom(
+                      backgroundColor: isDark ? AppColors.blue600.withValues(alpha: 0.1) : AppColors.blue50,
+                      padding: const EdgeInsets.all(10),
+                    ),
                   ),
                 ],
               )

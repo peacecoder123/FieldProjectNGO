@@ -64,7 +64,7 @@ class AdminOverviewTab extends ConsumerWidget {
                 child: ListView(
                   shrinkWrap: true,
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
                   children: [
                     // ── Hero banner ────────────────────────────────────────
                   _HeroBanner(
@@ -78,14 +78,15 @@ class AdminOverviewTab extends ConsumerWidget {
                   // ── Stat cards ─────────────────────────────────────────
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final crossCount = constraints.maxWidth > 900 ? 5 : (constraints.maxWidth > 600 ? 3 : 2);
+                      final crossCount = constraints.maxWidth > 900 ? 5 : (constraints.maxWidth > 650 ? 3 : 2);
+                      final aspectRatio = constraints.maxWidth < 600 ? 1.4 : 1.5;
                       return GridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisCount: crossCount,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: crossCount == 4 ? 1.4 : 1.5,
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        childAspectRatio: aspectRatio,
                         children: [
                           StatCard(
                             title:          'Active Volunteers',

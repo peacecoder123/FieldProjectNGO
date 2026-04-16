@@ -8,6 +8,7 @@ import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
+import 'package:ngo_volunteer_management/features/admin/presentation/widgets/task_details_modal.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
@@ -64,18 +65,24 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
         _buildFilters(),
         const SizedBox(height: 16),
         Expanded(
-          child: volunteersAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (volunteers) {
-              final filtered = _filterVolunteers(volunteers);
-
-              if (filtered.isEmpty) {
-                return _buildEmptyState();
-              }
-
-              return _buildVolunteerList(filtered);
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(volunteerProvider);
+              await Future.delayed(const Duration(milliseconds: 800));
             },
+            child: volunteersAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+              data: (volunteers) {
+                final filtered = _filterVolunteers(volunteers);
+  
+                if (filtered.isEmpty) {
+                  return _buildEmptyState();
+                }
+  
+                return _buildVolunteerList(filtered);
+              },
+            ),
           ),
         ),
       ],
@@ -237,35 +244,49 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
       size: ModalSize.medium,
       child: _AddVolunteerForm(
         onSubmit: (v) async {
-          final volunteers = ref.read(volunteerProvider).value ?? [];
-          final isDuplicateName = volunteers.any((existing) =>
-              existing.name.toLowerCase().trim() == v.name.toLowerCase().trim());
-          final isDuplicatePhone = v.phone.isNotEmpty &&
-              volunteers.any((existing) => existing.phone.trim() == v.phone.trim());
-
-          if (isDuplicateName) {
+          try {
+            await ref.read(volunteerProvider.notifier).add(v);
+            if (!context.mounted) return;
+            
+            Navigator.pop(context);
+            
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('A volunteer with this name already exists!'),
-                backgroundColor: Colors.red,
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text('${v.name} has been added as a volunteer.')),
+                  ],
+                ),
+                backgroundColor: AppColors.emerald500,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             );
-            return;
-          }
+          } catch (e) {
+            if (!context.mounted) return;
+            
+            String errorMsg = e.toString();
+            if (errorMsg.contains('Exception:')) {
+              errorMsg = errorMsg.split('Exception:').last.trim();
+            }
 
-          if (isDuplicatePhone) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('A volunteer with this phone number already exists!'),
-                backgroundColor: Colors.red,
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(errorMsg)),
+                  ],
+                ),
+                backgroundColor: AppColors.red500,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             );
-            return;
           }
-
-          await Future.delayed(const Duration(milliseconds: 1500));
-          await ref.read(volunteerProvider.notifier).add(v);
-          if (context.mounted) Navigator.pop(context);
         },
       ),
     );
@@ -323,32 +344,37 @@ class _VolunteerCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   volunteer.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
                   ),
                 ),
                 Text(
                   volunteer.email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.slate500,
-                    fontSize: 13,
+                    fontSize: 12,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     Icon(Icons.assignment_rounded,
-                        size: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                        size: 12, color: isDark ? AppColors.slate400 : AppColors.slate500),
                     const SizedBox(width: 4),
                     Text(
                       '$taskCount tasks',
                       style: TextStyle(
                         color: isDark ? AppColors.slate400 : AppColors.slate500,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -356,18 +382,22 @@ class _VolunteerCard extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
               AppBadge.personStatus(volunteer.status),
               const SizedBox(height: 4),
               Text(
                 volunteer.assignedAdmin.isNotEmpty
-                    ? 'Admin: ${volunteer.assignedAdmin}'
+                    ? volunteer.assignedAdmin
                     : 'No admin',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: AppColors.slate400,
-                  fontSize: 11,
+                  fontSize: 10,
                 ),
               ),
             ],
@@ -841,93 +871,114 @@ class _TaskItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.slate800 : AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? AppColors.slate700 : AppColors.slate200,
+    return InkWell(
+      onTap: () => _showDetails(context),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.slate800 : AppColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? AppColors.slate700 : AppColors.slate200,
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  task.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    task.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
-              ),
-              _TaskStatusBadge(status: task.status),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            task.description,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.slate500,
+                _TaskStatusBadge(status: task.status),
+              ],
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.event_rounded,
-                    size: 14,
-                    color: AppColors.slate400,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Due: ${AppFormatters.displayDate(task.deadline)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.slate500,
-                    ),
-                  ),
-                  if (task.requiresUpload) ...[
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.amber100,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'Requires Upload',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: AppColors.amber600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+            const SizedBox(height: 6),
+            Text(
+              task.description,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.slate500,
               ),
-              if (task.status == TaskStatus.submitted)
-                Row(
-                  children: [
-                    if (task.uploadedImage != null)
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.event_rounded,
+                            size: 14,
+                            color: AppColors.slate400,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Due: ${AppFormatters.displayDate(task.deadline)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.slate500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (task.requiresUpload)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.amber100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Requires Upload',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppColors.amber600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      if (task.geotag != null && task.geotag!.isNotEmpty)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.location_on_rounded, size: 14, color: AppColors.red500),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Geotagged',
+                              style: TextStyle(fontSize: 12, color: AppColors.slate500),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+                if (task.status == TaskStatus.submitted || task.status == TaskStatus.waitingAdmin)
+                  Row(
+                    children: [
                       TextButton.icon(
-                        onPressed: () => _showImagePreview(context, task.uploadedImage!),
-                        icon: const Icon(Icons.image_rounded, size: 16),
+                        onPressed: () => _showDetails(context),
+                        icon: const Icon(Icons.visibility_rounded, size: 16),
                         label: const Text('View'),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.blue600,
@@ -936,89 +987,43 @@ class _TaskItem extends ConsumerWidget {
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                       ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.check_circle_rounded,
-                        color: AppColors.emerald500,
-                        size: 24,
+                      IconButton(
+                        icon: const Icon(
+                          Icons.check_circle_rounded,
+                          color: AppColors.emerald500,
+                          size: 24,
+                        ),
+                        onPressed: () => ref
+                            .read(taskProvider.notifier)
+                            .updateStatus(task.id, TaskStatus.approved),
+                        tooltip: 'Approve',
                       ),
-                      onPressed: () => ref
-                          .read(taskProvider.notifier)
-                          .updateStatus(task.id, TaskStatus.approved),
-                      tooltip: 'Approve',
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.cancel_rounded,
-                        color: AppColors.red500,
-                        size: 24,
+                      IconButton(
+                        icon: const Icon(
+                          Icons.cancel_rounded,
+                          color: AppColors.red500,
+                          size: 24,
+                        ),
+                        onPressed: () => ref
+                            .read(taskProvider.notifier)
+                            .updateStatus(task.id, TaskStatus.rejected),
+                        tooltip: 'Reject',
                       ),
-                      onPressed: () => ref
-                          .read(taskProvider.notifier)
-                          .updateStatus(task.id, TaskStatus.rejected),
-                      tooltip: 'Reject',
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ],
+                    ],
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showImagePreview(BuildContext context, String imageUrl) {
-    showDialog(
+  void _showDetails(BuildContext context) {
+    AppModal.show(
       context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppBar(
-                title: const Text('Task Evidence'),
-                centerTitle: true,
-                automaticallyImplyLeading: false,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      padding: const EdgeInsets.all(40),
-                      color: AppColors.slate100,
-                      child: const Column(
-                        children: [
-                          Icon(Icons.broken_image_rounded,
-                              size: 48, color: AppColors.slate400),
-                          SizedBox(height: 12),
-                          Text(
-                            'Image not available',
-                            style: TextStyle(color: AppColors.slate500),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      title: 'Task Submission Detail',
+      child: TaskDetailsModal(task: task),
     );
   }
 }
@@ -1035,10 +1040,11 @@ class _TaskStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
-      TaskStatus.pending => AppColors.amber500,
-      TaskStatus.submitted => AppColors.blue500,
-      TaskStatus.approved => AppColors.emerald500,
-      TaskStatus.rejected => AppColors.red500,
+      TaskStatus.pending      => AppColors.amber500,
+      TaskStatus.submitted    => AppColors.blue500,
+      TaskStatus.waitingAdmin => AppColors.brand,
+      TaskStatus.approved     => AppColors.emerald500,
+      TaskStatus.rejected      => AppColors.red500,
     };
 
     return Container(
@@ -1168,6 +1174,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
           deadline: AppFormatters.toIso(_deadline),
           assignedToId: widget.volunteer.id,
           assignedToName: widget.volunteer.name,
+          assignedToEmail: widget.volunteer.email,
           assignedToType: AssigneeType.volunteer,
           status: TaskStatus.pending,
           requiresUpload: _requiresUpload,

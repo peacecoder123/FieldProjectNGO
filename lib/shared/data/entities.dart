@@ -158,6 +158,7 @@ class TaskEntity extends Equatable {
     required this.deadline,
     required this.assignedToId,
     required this.assignedToName,
+    required this.assignedToEmail,
     required this.assignedToType,
     required this.status,
     required this.requiresUpload,
@@ -175,6 +176,7 @@ class TaskEntity extends Equatable {
   final String       deadline;
   final String       assignedToId;
   final String       assignedToName;
+  final String       assignedToEmail;
   final AssigneeType assignedToType;
   final TaskStatus   status;
   final bool         requiresUpload;
@@ -185,13 +187,14 @@ class TaskEntity extends Equatable {
   final String?      approvedBy;
   final String?      approvedAt;
 
-  TaskEntity copyWith({
+    TaskEntity copyWith({
     String?       id,
     String?       title,
     String?       description,
     String?       deadline,
     String?       assignedToId,
     String?       assignedToName,
+    String?       assignedToEmail,
     AssigneeType? assignedToType,
     TaskStatus?   status,
     bool?         requiresUpload,
@@ -203,21 +206,22 @@ class TaskEntity extends Equatable {
     String?       approvedAt,
   }) =>
       TaskEntity(
-        id:             id             ?? this.id,
-        title:          title          ?? this.title,
-        description:    description    ?? this.description,
-        deadline:       deadline       ?? this.deadline,
-        assignedToId:   assignedToId   ?? this.assignedToId,
-        assignedToName: assignedToName ?? this.assignedToName,
-        assignedToType: assignedToType ?? this.assignedToType,
-        status:         status         ?? this.status,
-        requiresUpload: requiresUpload ?? this.requiresUpload,
-        createdAt:      createdAt      ?? this.createdAt,
-        uploadedImage:  uploadedImage  ?? this.uploadedImage,
-        submittedAt:    submittedAt    ?? this.submittedAt,
-        geotag:         geotag         ?? this.geotag,
-        approvedBy:     approvedBy     ?? this.approvedBy,
-        approvedAt:     approvedAt     ?? this.approvedAt,
+        id:              id              ?? this.id,
+        title:           title           ?? this.title,
+        description:     description     ?? this.description,
+        deadline:        deadline        ?? this.deadline,
+        assignedToId:    assignedToId    ?? this.assignedToId,
+        assignedToName:  assignedToName  ?? this.assignedToName,
+        assignedToEmail: assignedToEmail ?? this.assignedToEmail,
+        assignedToType:  assignedToType  ?? this.assignedToType,
+        status:          status          ?? this.status,
+        requiresUpload:  requiresUpload  ?? this.requiresUpload,
+        createdAt:       createdAt       ?? this.createdAt,
+        uploadedImage:   uploadedImage   ?? this.uploadedImage,
+        submittedAt:     submittedAt     ?? this.submittedAt,
+        geotag:          geotag          ?? this.geotag,
+        approvedBy:      approvedBy      ?? this.approvedBy,
+        approvedAt:      approvedAt      ?? this.approvedAt,
       );
 
   @override
@@ -282,6 +286,8 @@ class GeneralRequestEntity extends Equatable {
       [id, requestType, requesterName, requesterType,
        requestDate, status, details, approvedBy, approvedAt];
 }
+
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MOU REQUEST (hospital / medical)
@@ -353,6 +359,40 @@ class MouRequestEntity extends Equatable {
   List<Object?> get props =>
       [id, patientName, patientAge, disease, hospital, requestDate,
        status, requesterName, phone, address, bloodGroup, approvedBy, approvedAt];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOSPITAL (Partner NGO Hospitals)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class HospitalEntity extends Equatable {
+  const HospitalEntity({
+    required this.id,
+    required this.name,
+    this.address = '',
+    this.city = 'Mumbai',
+  });
+
+  final String id;
+  final String name;
+  final String address;
+  final String city;
+
+  HospitalEntity copyWith({
+    String? id,
+    String? name,
+    String? address,
+    String? city,
+  }) =>
+      HospitalEntity(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        address: address ?? this.address,
+        city: city ?? this.city,
+      );
+
+  @override
+  List<Object?> get props => [id, name, address, city];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

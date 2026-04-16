@@ -61,18 +61,18 @@ class AppBadge extends StatelessWidget {
         AppColors.slate600;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
           color: fg,
-          letterSpacing: 0.2,
+          letterSpacing: 0.4,
         ),
       ),
     );
@@ -95,28 +95,32 @@ class AppBadge extends StatelessWidget {
   // ── Colour maps ───────────────────────────────────────────────────────────
 
   static const _taskStatusBg = {
-    TaskStatus.pending   : Color(0xFFFEF3C7),
-    TaskStatus.submitted : Color(0xFFE8EDF5),
-    TaskStatus.approved  : Color(0xFFD1FAE5),
-    TaskStatus.rejected  : Color(0xFFFEE2E2),
+    TaskStatus.pending      : Color(0xFFFEF3C7),
+    TaskStatus.submitted    : Color(0xFFE8EDF5),
+    TaskStatus.waitingAdmin : Color(0xFFDBEAFE),
+    TaskStatus.approved     : Color(0xFFD1FAE5),
+    TaskStatus.rejected      : Color(0xFFFEE2E2),
   };
 
   static const _taskStatusFg = {
-    TaskStatus.pending   : AppColors.amber600,
-    TaskStatus.submitted : AppColors.brand,
-    TaskStatus.approved  : AppColors.emerald600,
-    TaskStatus.rejected  : AppColors.red600,
+    TaskStatus.pending      : AppColors.amber600,
+    TaskStatus.submitted    : AppColors.brand,
+    TaskStatus.waitingAdmin : AppColors.blue600,
+    TaskStatus.approved     : AppColors.emerald600,
+    TaskStatus.rejected      : AppColors.red600,
   };
 
   static const _requestStatusBg = {
-    RequestStatus.pending  : Color(0xFFFEF3C7),
-    RequestStatus.approved : Color(0xFFD1FAE5),
-    RequestStatus.rejected : Color(0xFFFEE2E2),
+    RequestStatus.pending      : Color(0xFFFEF3C7),
+    RequestStatus.waitingAdmin : Color(0xFFDBEAFE),
+    RequestStatus.approved     : Color(0xFFD1FAE5),
+    RequestStatus.rejected      : Color(0xFFFEE2E2),
   };
 
   static const _requestStatusFg = {
-    RequestStatus.pending  : AppColors.amber600,
-    RequestStatus.approved : AppColors.emerald600,
-    RequestStatus.rejected : AppColors.red600,
+    RequestStatus.pending      : AppColors.amber600,
+    RequestStatus.waitingAdmin : AppColors.blue600,
+    RequestStatus.approved     : AppColors.emerald600,
+    RequestStatus.rejected      : AppColors.red600,
   };
 }

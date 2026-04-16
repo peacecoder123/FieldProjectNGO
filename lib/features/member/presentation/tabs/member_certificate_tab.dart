@@ -7,6 +7,7 @@ import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
+import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
 import 'package:printing/printing.dart';
@@ -17,12 +18,28 @@ class MemberCertificateTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requestsAsync = ref.watch(documentRequestProvider);
+    final lettersAsync  = ref.watch(joiningLetterProvider);
+    final currentUser   = ref.watch(currentUserProvider);
 
     return requestsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (requests) {
-        final myReqs = requests.where((l) => true).toList(); // Show all for demo
+        return lettersAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (letters) {
+            final approvedCertificates = requests.where((r) => 
+               r.userId == currentUser?.id.toString() && 
+               r.status == DocumentRequestStatus.approved
+            ).toList();
+            
+            final approvedLetters = letters.where((l) => 
+               l.name == currentUser?.name && 
+               l.status == RequestStatus.approved
+            ).toList();
+
+            final isEmpty = approvedCertificates.isEmpty && approvedLetters.isEmpty;
         
         return ListView(
           shrinkWrap: true,
@@ -31,33 +48,34 @@ class MemberCertificateTab extends ConsumerWidget {
           children: [
             SectionHeader(
               title: 'Certificates & Requests',
-              subtitle: 'Request and download your official NGO documentation',
-              actions: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      final currentUser = ref.read(currentUserProvider);
-                      final req = DocumentRequestEntity(
-                        id: '',
-                        userId: currentUser?.id.toString() ?? 'user_1',
-                        userName: currentUser?.name ?? 'Member',
-                        documentType: DocumentType.certificate,
-                        requestedAt: DateTime.now(),
-                      );
-                      ref.read(documentRequestProvider.notifier).add(req);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Certificate Requested')));
-                    },
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Request Certificate'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand),
-                  ),
-                ],
+              subtitle: 'Request and download your official documentation',
+              actions: ElevatedButton.icon(
+                onPressed: () {
+                  final currentUser = ref.read(currentUserProvider);
+                  final req = DocumentRequestEntity(
+                    id: '',
+                    userId: currentUser?.id.toString() ?? 'user_1',
+                    userName: currentUser?.name ?? 'Member',
+                    documentType: DocumentType.certificate,
+                    requestedAt: DateTime.now(),
+                  );
+                  ref.read(documentRequestProvider.notifier).add(req);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Certificate Requested')));
+                },
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Request Certificate'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brand,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: const StadiumBorder(),
+                ),
               ),
             ),
             const SizedBox(height: 24),
             
-            if (myReqs.isEmpty)
+            if (isEmpty)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 48),
@@ -70,11 +88,71 @@ class MemberCertificateTab extends ConsumerWidget {
                   ),
                 ),
               )
-            else
-              ...myReqs.map((req) => _DocumentRequestCard(req: req)),
+            else ...[
+              ...approvedCertificates.map((req) => _DocumentRequestCard(req: req)),
+              ...approvedLetters.map((letter) => _JoiningLetterDocCard(letter: letter)),
+            ],
           ],
         );
       },
+    );
+  },
+);
+  }
+}
+
+class _JoiningLetterDocCard extends StatelessWidget {
+  const _JoiningLetterDocCard({required this.letter});
+  final JoiningLetterRequestEntity letter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.emerald100.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.description_rounded, color: AppColors.emerald600, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Joining Letter – ${letter.tenure}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Issued on ${AppFormatters.displayDate(letter.requestDate)}',
+                    style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.download_rounded, color: AppColors.emerald600),
+              onPressed: () async {
+                final pdfBytes = await PdfGeneratorService.generateJoiningLetterPdf(
+                  name: letter.name,
+                  tenure: letter.tenure,
+                  requestDate: AppFormatters.displayDate(letter.requestDate),
+                  approvedBy: letter.generatedBy,
+                );
+                await Printing.sharePdf(
+                  bytes: pdfBytes,
+                  filename: 'Joining_Letter_${letter.tenure.replaceAll(' ', '_')}.pdf',
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -93,8 +171,11 @@ class _DocumentRequestCard extends ConsumerWidget {
             Container(
               width: 48,
               height: 48,
-              decoration: BoxDecoration(color: AppColors.blue50, borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.verified_rounded, color: AppColors.blue600),
+              decoration: BoxDecoration(
+                color: AppColors.blue100.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.workspace_premium_rounded, color: AppColors.blue600, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(

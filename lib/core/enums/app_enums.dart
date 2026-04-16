@@ -32,14 +32,16 @@ enum UserRole {
 enum TaskStatus {
   pending,
   submitted,
+  waitingAdmin,
   approved,
   rejected;
 
   String get displayName => switch (this) {
-    TaskStatus.pending   => 'Pending',
-    TaskStatus.submitted => 'Submitted',
-    TaskStatus.approved  => 'Approved',
-    TaskStatus.rejected  => 'Rejected',
+    TaskStatus.pending      => 'Pending',
+    TaskStatus.submitted    => 'Submitted',
+    TaskStatus.waitingAdmin => 'Waiting Admin Approval',
+    TaskStatus.approved     => 'Approved',
+    TaskStatus.rejected      => 'Rejected',
   };
 
   static TaskStatus fromString(String value) =>
@@ -53,13 +55,15 @@ enum TaskStatus {
 
 enum RequestStatus {
   pending,
+  waitingAdmin,
   approved,
   rejected;
 
   String get displayName => switch (this) {
-    RequestStatus.pending  => 'Pending',
-    RequestStatus.approved => 'Approved',
-    RequestStatus.rejected => 'Rejected',
+    RequestStatus.pending      => 'Pending',
+    RequestStatus.waitingAdmin => 'Waiting Admin Approval',
+    RequestStatus.approved     => 'Approved',
+    RequestStatus.rejected      => 'Rejected',
   };
 
   static RequestStatus fromString(String value) =>

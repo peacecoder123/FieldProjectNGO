@@ -6,6 +6,7 @@ import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
+import 'package:ngo_volunteer_management/core/widgets/app_task_image.dart';
 import 'package:ngo_volunteer_management/core/widgets/submit_task_form.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
@@ -291,17 +292,19 @@ class _TaskCard extends StatelessWidget {
     final isUrgent = daysLeft >= 0 && daysLeft <= 3;
 
     final statusColor = switch (task.status) {
-      TaskStatus.approved => AppColors.emerald500,
-      TaskStatus.submitted => AppColors.blue500,
-      TaskStatus.rejected => AppColors.red500,
-      TaskStatus.pending => AppColors.amber500,
+      TaskStatus.approved     => AppColors.emerald500,
+      TaskStatus.submitted    => AppColors.blue500,
+      TaskStatus.waitingAdmin => AppColors.brand,
+      TaskStatus.rejected     => AppColors.red500,
+      TaskStatus.pending      => AppColors.amber500,
     };
 
     final statusIcon = switch (task.status) {
-      TaskStatus.approved => Icons.check_circle_rounded,
-      TaskStatus.submitted => Icons.check_circle_rounded,
-      TaskStatus.rejected => Icons.cancel_rounded,
-      TaskStatus.pending => Icons.schedule_rounded,
+      TaskStatus.approved     => Icons.check_circle_rounded,
+      TaskStatus.submitted    => Icons.check_circle_rounded,
+      TaskStatus.waitingAdmin => Icons.admin_panel_settings_rounded,
+      TaskStatus.rejected     => Icons.cancel_rounded,
+      TaskStatus.pending      => Icons.schedule_rounded,
     };
 
     return AppCard(
@@ -427,6 +430,61 @@ class _TaskCard extends StatelessWidget {
               ),
             ],
           ),
+          if (task.status == TaskStatus.submitted || task.status == TaskStatus.approved) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: task.status == TaskStatus.approved ? AppColors.emerald50 : AppColors.blue50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: task.status == TaskStatus.approved ? AppColors.emerald100 : AppColors.blue100),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Row(
+                    children: [
+                      Icon(
+                        task.status == TaskStatus.approved ? Icons.check_circle_rounded : Icons.info_outline_rounded, 
+                        size: 16, 
+                        color: task.status == TaskStatus.approved ? AppColors.emerald600 : AppColors.blue600
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        task.status == TaskStatus.approved ? 'Task Approved' : 'Under Review',
+                        style: TextStyle(
+                          fontSize: 12, 
+                          fontWeight: FontWeight.bold,
+                          color: task.status == TaskStatus.approved ? AppColors.emerald600 : AppColors.blue600
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (task.uploadedImage != null) ...[
+                    const SizedBox(height: 12),
+                    AppTaskImage(imageUrl: task.uploadedImage, height: 120, width: double.infinity),
+                  ],
+                  if (task.geotag != null && task.geotag!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_rounded, size: 12, color: AppColors.red500),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '📍 ${task.geotag}',
+                            style: const TextStyle(fontSize: 10, color: AppColors.slate500, fontFamily: 'monospace'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
           if (task.status == TaskStatus.pending) ...[
             const Divider(height: 24),
             SizedBox(

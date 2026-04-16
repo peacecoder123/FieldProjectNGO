@@ -31,6 +31,7 @@ class _HospitalMouTabState extends ConsumerState<HospitalMouTab> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final mouRequestsAsync = ref.watch(mouRequestProvider);
+    final hospitalsAsync = ref.watch(hospitalProvider);
 
     return ListView(
       shrinkWrap: true,
@@ -96,10 +97,21 @@ class _HospitalMouTabState extends ConsumerState<HospitalMouTab> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Hospital Name', prefixIcon: Icon(Icons.local_hospital_rounded)),
-                  onSaved: (val) => hospital = val ?? '',
-                  validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                hospitalsAsync.when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, _) => Text('Error loading hospitals: $e'),
+                  data: (list) => DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Hospital Name',
+                      prefixIcon: Icon(Icons.local_hospital_rounded),
+                    ),
+                    items: list.map((h) => DropdownMenuItem(
+                      value: h.name,
+                      child: Text(h.name),
+                    )).toList(),
+                    onChanged: (val) => setState(() => hospital = val ?? ''),
+                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -182,6 +194,7 @@ class _MouHistoryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = switch (request.status) {
       RequestStatus.pending => AppColors.amber500,
+      RequestStatus.waitingAdmin => AppColors.brand,
       RequestStatus.approved => AppColors.emerald500,
       RequestStatus.rejected => AppColors.red500,
     };

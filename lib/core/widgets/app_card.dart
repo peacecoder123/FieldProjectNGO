@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 
 /// Bordered card that mirrors the React `<Card className="p-4 ...">` component.
 ///
@@ -26,22 +27,31 @@ class AppCard extends StatelessWidget {
 
     final card = Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.slate800 : AppColors.white,
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
           color: isDark
-              ? const Color(0xFF334155) // slate-700
-              : const Color(0xFFE2E8F0), // slate-200
+              ? AppColors.slate700
+              : AppColors.slate200,
+          width: 0.8,
         ),
         boxShadow: elevation > 0
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: elevation * 4,
-                  offset: Offset(0, elevation),
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                  blurRadius: elevation * 6,
+                  offset: Offset(0, elevation * 1.5),
+                  spreadRadius: -elevation,
                 ),
               ]
-            : null,
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.1 : 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                  spreadRadius: -4,
+                ),
+              ],
       ),
       child: Padding(padding: padding, child: child),
     );

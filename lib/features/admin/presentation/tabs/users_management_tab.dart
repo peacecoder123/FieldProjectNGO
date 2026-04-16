@@ -189,19 +189,48 @@ class _UsersManagementTabState extends ConsumerState<UsersManagementTab> {
         onSubmit: (user) async {
           try {
             await ref.read(usersManagementProvider.notifier).addUser(user);
-            if (!mounted) return;
+            if (!context.mounted) return;
+            
+            // Success! Close modal and show success message
             Navigator.pop(context);
+            
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('✅ ${user.name} has been added. An invite email will be sent to ${user.email}.'),
-                backgroundColor: AppColors.brand,
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text('${user.name} has been added to the team.')),
+                  ],
+                ),
+                backgroundColor: AppColors.emerald500,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 duration: const Duration(seconds: 4),
               ),
             );
           } catch (e) {
-            if (!mounted) return;
+            if (!context.mounted) return;
+            
+            // Error! Keep modal open and show error message
+            String errorMsg = e.toString();
+            if (errorMsg.contains('Exception:')) {
+              errorMsg = errorMsg.split('Exception:').last.trim();
+            }
+
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.red500),
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(errorMsg)),
+                  ],
+                ),
+                backgroundColor: AppColors.red500,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
             );
           }
         },
@@ -270,15 +299,20 @@ class _UserRow extends ConsumerWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
-                      Text(
-                        user.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                          color: isDark ? Colors.white : AppColors.slate900,
+                      Flexible(
+                        child: Text(
+                          user.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: isDark ? Colors.white : AppColors.slate900,
+                          ),
                         ),
                       ),
                       if (isSelf) ...[
@@ -289,60 +323,86 @@ class _UserRow extends ConsumerWidget {
                             color: AppColors.blue100,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text('You', style: TextStyle(fontSize: 10, color: AppColors.blue600, fontWeight: FontWeight.bold)),
+                          child: const Text('You', style: TextStyle(fontSize: 9, color: AppColors.blue600, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 1),
                   Text(
                     user.email,
-                    style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontSize: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontSize: 12),
                   ),
                   if (user.inviteEmailSentAt != null) 
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(
                         'Invite sent: ${AppFormatters.displayDate(AppFormatters.toIso(user.inviteEmailSentAt!))}',
-                        style: const TextStyle(color: AppColors.blue600, fontSize: 10, fontWeight: FontWeight.w500),
+                        style: const TextStyle(color: AppColors.blue600, fontSize: 9, fontWeight: FontWeight.w500),
                       ),
                     ),
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: roleColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: roleColor.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                user.role.displayName,
-                style: TextStyle(color: roleColor, fontSize: 11, fontWeight: FontWeight.bold),
+            const SizedBox(width: 8),
+            IntrinsicWidth(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: roleColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: roleColor.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  user.role.displayName,
+                  style: TextStyle(color: roleColor, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            // Resend Invite
             if (!isSelf)
-              IconButton(
-                icon: Icon(Icons.send_rounded, color: AppColors.blue500, size: 18),
-                tooltip: 'Resend invite',
-                onPressed: () => _resendInvite(context, ref),
-              ),
-            // Edit role button
-            if (!isSelf)
-              IconButton(
-                icon: Icon(Icons.edit_rounded, color: isDark ? AppColors.slate400 : AppColors.slate500, size: 18),
-                tooltip: 'Change role',
-                onPressed: () => _showEditRoleModal(context, ref),
-              ),
-            // Delete button (can't delete yourself)
-            if (!isSelf)
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: AppColors.red500, size: 20),
-                tooltip: 'Revoke access',
-                onPressed: () => _confirmDelete(context, ref),
+              PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                icon: Icon(Icons.more_vert_rounded, color: isDark ? AppColors.slate400 : AppColors.slate500, size: 20),
+                onSelected: (val) {
+                  if (val == 'resend') _resendInvite(context, ref);
+                  if (val == 'edit') _showEditRoleModal(context, ref);
+                  if (val == 'delete') _confirmDelete(context, ref);
+                },
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: 'resend',
+                    child: Row(
+                      children: [
+                        Icon(Icons.send_rounded, color: AppColors.blue500, size: 18),
+                        const SizedBox(width: 12),
+                        const Text('Resend Invite', style: TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_rounded, color: AppColors.slate500, size: 18),
+                        const SizedBox(width: 12),
+                        const Text('Change Role', style: TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete_outline_rounded, color: AppColors.red500, size: 18),
+                        const SizedBox(width: 12),
+                        const Text('Revoke Access', style: TextStyle(color: AppColors.red500, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
@@ -443,6 +503,7 @@ class _AddUserFormState extends State<_AddUserForm> {
   final _emailCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
   UserRole _role = UserRole.volunteer;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -509,17 +570,22 @@ class _AddUserFormState extends State<_AddUserForm> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () {
+            onPressed: _isLoading ? null : () async {
               if (_formKey.currentState?.validate() ?? false) {
-                widget.onSubmit(UserEntity(
-                  id: '',
-                  email: _emailCtrl.text.trim(),
-                  name: _nameCtrl.text.trim(),
-                  role: _role,
-                  avatar: _nameCtrl.text.trim().isNotEmpty
-                      ? _nameCtrl.text.trim().substring(0, 1).toUpperCase()
-                      : 'U',
-                ));
+                setState(() => _isLoading = true);
+                try {
+                  await widget.onSubmit(UserEntity(
+                    id: '',
+                    email: _emailCtrl.text.trim(),
+                    name: _nameCtrl.text.trim(),
+                    role: _role,
+                    avatar: _nameCtrl.text.trim().isNotEmpty
+                        ? _nameCtrl.text.trim().substring(0, 1).toUpperCase()
+                        : 'U',
+                  ));
+                } finally {
+                  if (mounted) setState(() => _isLoading = false);
+                }
               }
             },
             style: ElevatedButton.styleFrom(
@@ -527,7 +593,9 @@ class _AddUserFormState extends State<_AddUserForm> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            child: const Text('Add & Send Invite'),
+            child: _isLoading 
+              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Add & Send Invite'),
           ),
         ],
       ),

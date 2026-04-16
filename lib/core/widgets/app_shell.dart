@@ -104,9 +104,15 @@ class _AppShellState extends ConsumerState<AppShell> {
                     notifications: widget.notifications,
                   ),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: widget.body,
+                    child: RefreshIndicator(
+                      onRefresh: _onRefresh,
+                      displacement: 10,
+                      edgeOffset: 0,
+                      color: AppColors.brand,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: widget.body,
+                      ),
                     ),
                   ),
                 ],
@@ -196,38 +202,42 @@ class _SidebarContent extends ConsumerWidget {
 
         // ── Role pill ──────────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: Row(
               children: [
                 AppAvatar(
                   initials: user?.displayAvatar ?? '?',
-                  size: AvatarSize.small,
+                  size: AvatarSize.medium,
                   role: role,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        roleLabel,
+                        roleLabel.toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         user?.name ?? '',
                         style: const TextStyle(
-                          color: AppColors.slate300,
-                          fontSize: 11,
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -371,15 +381,16 @@ class _NavTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: isActive
-                  ? AppColors.white.withValues(alpha: 0.2)
+                  ? Colors.white.withValues(alpha: 0.15)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: AppColors.white.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                        spreadRadius: -2,
                       )
                     ]
                   : null,
@@ -564,13 +575,14 @@ class _TopBarState extends ConsumerState<_TopBar> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 72,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        border: const Border(
+        color: isDark ? AppColors.slate900 : AppColors.white,
+        border: Border(
           bottom: BorderSide(
-            color: AppColors.slate200,
+            color: isDark ? AppColors.slate800 : AppColors.slate100,
+            width: 1.5,
           ),
         ),
       ),
