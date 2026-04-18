@@ -42,6 +42,7 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return donationsAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (donations) {
@@ -256,61 +257,77 @@ class _DonationItem extends ConsumerWidget {
   final DonationEntity donation;
 
   Future<void> _showPdfPreview(BuildContext context, {DonationEntity? latestDonation}) async {
-    final generator = DocumentGenerator();
-    final d = latestDonation ?? donation;
-    
-    // Choose the correct template based on 80G status
-    final docType = d.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
-    final template = generator.getTemplateForType(docType);
-    
-    // Resolve the dynamic template fields
-    final doc = generator.resolveTemplate(template, {
-      'receipt_number': d.receiptNumber ?? 'REC-PENDING',
-      'donor_name': d.donorName,
-      'amount': d.amount.toString(),
-      'date': AppFormatters.displayDate(d.date),
-      'payment_mode': d.type.name,
-      'purpose': d.purpose,
-    });
+    try {
+      final generator = DocumentGenerator();
+      final d = latestDonation ?? donation;
+      
+      // Choose the correct template based on 80G status
+      final docType = d.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
+      final template = generator.getTemplateForType(docType);
+      
+      // Resolve the dynamic template fields
+      // NOTE: 'date' must be ISO 8601 to pass the TemplateFieldType.date validator.
+      // We store the display date in the body via a post-processing step.
+      final doc = generator.resolveTemplate(template, {
+        'receipt_number': d.receiptNumber ?? 'REC-PENDING',
+        'donor_name': d.donorName,
+        'amount': d.amount.toString(),
+        'date': d.date,
+        'payment_mode': d.type.name,
+        'purpose': d.purpose,
+      });
 
-    // Create the actual PDF layout
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(32),
-            child: pw.Text(
-              doc.generatedContent,
-              style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
-            ),
-          );
-        },
-      ),
-    );
+      // Post-process: replace the raw ISO date with a human-readable format in the PDF body
+      final displayContent = doc.generatedContent.replaceAll(
+        d.date, 
+        AppFormatters.displayDate(d.date),
+      );
 
-    final pdfBytes = await pdf.save();
-
-    // Show the interactive UI Dialog
-    if (context.mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          insetPadding: const EdgeInsets.all(20),
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.9,
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: PdfPreview(
-              build: (format) => pdfBytes,
-              allowPrinting: true,
-              allowSharing: true,
-              canChangeOrientation: false,
-              canChangePageFormat: false,
-            ),
-          ),
+      // Create the actual PDF layout
+      final pdf = pw.Document();
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return pw.Padding(
+              padding: const pw.EdgeInsets.all(32),
+              child: pw.Text(
+                displayContent,
+                style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
+              ),
+            );
+          },
         ),
       );
+
+      final pdfBytes = await pdf.save();
+
+      // Show the interactive UI Dialog
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            insetPadding: const EdgeInsets.all(20),
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.9,
+              height: MediaQuery.of(context).size.height * 0.8,
+              child: PdfPreview(
+                build: (format) => pdfBytes,
+                allowPrinting: true,
+                allowSharing: true,
+                canChangeOrientation: false,
+                canChangePageFormat: false,
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not generate receipt: $e')),
+        );
+      }
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +9,7 @@ import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/features/auth/domain/entities/user_entity.dart';
+import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
@@ -30,6 +32,7 @@ class _UsersManagementTabState extends ConsumerState<UsersManagementTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return usersAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (users) {
@@ -190,6 +193,51 @@ class _UsersManagementTabState extends ConsumerState<UsersManagementTab> {
           try {
             await ref.read(usersManagementProvider.notifier).addUser(user);
             if (!context.mounted) return;
+
+            // Auto-create a skeleton profile in volunteers/members collection
+            String? targetTab;
+            try {
+              if (user.role == UserRole.volunteer) {
+                await ref.read(volunteerProvider.notifier).add(VolunteerEntity(
+                  id: '',
+                  name: user.name,
+                  email: user.email,
+                  phone: '',
+                  address: '',
+                  joinDate: AppFormatters.today(),
+                  status: PersonStatus.active,
+                  assignedAdmin: '',
+                  taskIds: const [],
+                  tenure: '',
+                  skills: const [],
+                  avatar: user.avatar ?? user.name.substring(0, 1).toUpperCase(),
+                ));
+                targetTab = 'Volunteers';
+              } else if (user.role == UserRole.member) {
+                final oneYearLater = DateTime.now().add(const Duration(days: 365));
+                await ref.read(memberProvider.notifier).add(MemberEntity(
+                  id: '',
+                  name: user.name,
+                  email: user.email,
+                  phone: '',
+                  address: '',
+                  joinDate: AppFormatters.today(),
+                  renewalDate: AppFormatters.toIso(oneYearLater),
+                  status: PersonStatus.active,
+                  membershipType: MembershipType.nonEightyG,
+                  taskIds: const [],
+                  isPaid: false,
+                  avatar: user.avatar ?? user.name.substring(0, 1).toUpperCase(),
+                ));
+                targetTab = 'Members';
+              }
+            } catch (profileErr) {
+              // Profile creation failed (maybe duplicate in volunteers/members),
+              // but the user was still added to the auth/users collection.
+              debugPrint('Auto-profile creation note: $profileErr');
+            }
+
+            if (!context.mounted) return;
             
             // Success! Close modal and show success message
             Navigator.pop(context);
@@ -200,13 +248,31 @@ class _UsersManagementTabState extends ConsumerState<UsersManagementTab> {
                   children: [
                     const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                     const SizedBox(width: 12),
-                    Expanded(child: Text('${user.name} has been added to the team.')),
+                    Expanded(
+                      child: Text(
+                        targetTab != null
+                          ? '${user.name} added! Go to the $targetTab tab to fill in their details.'
+                          : '${user.name} has been added to the team.',
+                      ),
+                    ),
                   ],
                 ),
                 backgroundColor: AppColors.emerald500,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                duration: const Duration(seconds: 4),
+                duration: const Duration(seconds: 6),
+                action: targetTab != null
+                  ? SnackBarAction(
+                      label: 'Go to $targetTab',
+                      textColor: Colors.white,
+                      onPressed: () {
+                        // Navigate to the correct dashboard tab
+                        final targetId = targetTab == 'Volunteers' ? 'volunteers' : 'members';
+                        ref.read(dashboardTabProvider.notifier).state = targetId;
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      },
+                    )
+                  : null,
               ),
             );
           } catch (e) {

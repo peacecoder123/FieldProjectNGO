@@ -25,15 +25,19 @@ class AdminOverviewTab extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return volunteersAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error:   (e, _) => Center(child: Text('Error: $e')),
       data: (volunteers) => membersAsync.when(
+        skipLoadingOnRefresh: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error:   (e, _) => Center(child: Text('Error: $e')),
         data: (members) => tasksAsync.when(
+          skipLoadingOnRefresh: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error:   (e, _) => Center(child: Text('Error: $e')),
           data: (tasks) => donationsAsync.when(
+            skipLoadingOnRefresh: true,
             loading: () => const Center(child: CircularProgressIndicator()),
             error:   (e, _) => Center(child: Text('Error: $e')),
             data: (donations) {

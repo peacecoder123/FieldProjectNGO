@@ -24,6 +24,7 @@ class MemberVolunteersTab extends ConsumerWidget {
     if (currentUser == null) return const Center(child: Text('Please login'));
 
     return volunteersAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (volunteers) {

@@ -121,6 +121,7 @@ class _GeneralRequestsList extends ConsumerWidget {
     final requestsAsync = ref.watch(generalRequestProvider);
 
     return requestsAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e', style: TextStyle(color: isDark ? AppColors.red500 : AppColors.red600)),
@@ -214,6 +215,7 @@ class _MouRequestsList extends ConsumerWidget {
     final requestsAsync = ref.watch(mouRequestProvider);
 
     return requestsAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e', style: TextStyle(color: isDark ? AppColors.red500 : AppColors.red600)),
@@ -381,6 +383,7 @@ class _HospitalManagementList extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         hospitalsAsync.when(
+          skipLoadingOnRefresh: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('Error: $e')),
           data: (list) {

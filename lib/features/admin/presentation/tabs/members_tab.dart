@@ -55,6 +55,7 @@ class _MembersTabState extends ConsumerState<MembersTab> {
               await Future.delayed(const Duration(milliseconds: 800));
             },
             child: membersAsync.when(
+              skipLoadingOnRefresh: true,
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (members) {
