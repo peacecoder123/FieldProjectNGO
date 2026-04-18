@@ -32,18 +32,6 @@ class _MembersTabState extends ConsumerState<MembersTab> {
         SectionHeader(
           title: 'Members',
           subtitle: 'Manage NGO members, memberships and renewals',
-          actions: ElevatedButton.icon(
-            onPressed: () => _showAddMemberModal(context),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Add Member'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.brand,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: const StadiumBorder(),
-            ),
-          ),
         ),
         const SizedBox(height: 16),
         _buildFilters(),
