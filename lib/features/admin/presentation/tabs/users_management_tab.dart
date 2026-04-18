@@ -192,6 +192,7 @@ class _UsersManagementTabState extends ConsumerState<UsersManagementTab> {
         onSubmit: (user) async {
           try {
             await ref.read(usersManagementProvider.notifier).addUser(user);
+            ref.invalidate(usersManagementProvider);
             if (!context.mounted) return;
 
             // Auto-create a skeleton profile in volunteers/members collection
@@ -212,6 +213,7 @@ class _UsersManagementTabState extends ConsumerState<UsersManagementTab> {
                   skills: const [],
                   avatar: user.avatar ?? user.name.substring(0, 1).toUpperCase(),
                 ));
+                ref.invalidate(volunteerProvider);
                 targetTab = 'Volunteers';
               } else if (user.role == UserRole.member) {
                 final oneYearLater = DateTime.now().add(const Duration(days: 365));
@@ -229,6 +231,7 @@ class _UsersManagementTabState extends ConsumerState<UsersManagementTab> {
                   isPaid: false,
                   avatar: user.avatar ?? user.name.substring(0, 1).toUpperCase(),
                 ));
+                ref.invalidate(memberProvider);
                 targetTab = 'Members';
               }
             } catch (profileErr) {
@@ -533,24 +536,46 @@ class _UserRow extends ConsumerWidget {
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
+    bool isDeleting = false;
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Revoke Access?'),
-        content: Text('This will stop ${user.name} from logging in. Their profile data will remain intact.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              ref.read(usersManagementProvider.notifier).removeUser(user.email);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Access revoked for ${user.name}'), backgroundColor: AppColors.red600),
-              );
-            },
-            child: const Text('Revoke', style: TextStyle(color: AppColors.red500)),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          title: const Text('Revoke Access?'),
+          content: Text('This will stop ${user.name} from logging in. Their profile data will remain intact.'),
+          actions: [
+            TextButton(
+              onPressed: isDeleting ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel')
+            ),
+            TextButton(
+              onPressed: isDeleting ? null : () async {
+                setModalState(() => isDeleting = true);
+                try {
+                  await ref.read(usersManagementProvider.notifier).removeUser(user.email);
+                  ref.invalidate(usersManagementProvider);
+                  if (context.mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Access revoked for ${user.name}'), backgroundColor: AppColors.red600),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    setModalState(() => isDeleting = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error revoking access: $e'), backgroundColor: AppColors.red600),
+                    );
+                  }
+                }
+              },
+              child: isDeleting
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Revoke', style: TextStyle(color: AppColors.red500)),
+            ),
+          ],
+        ),
       ),
     );
   }
