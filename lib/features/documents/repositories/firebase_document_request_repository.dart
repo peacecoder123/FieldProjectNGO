@@ -57,13 +57,17 @@ class FirebaseDocumentRequestRepository implements IDocumentRequestRepository {
   @override
   Future<void> updateStatus(
       String id, DocumentRequestStatus status,
-      {String? approvedBy, String? certificateNo}) async {
+      {String? approvedBy, String? certificateNo,
+       String? organisation, String? internshipArea, String? internshipDuration}) async {
     final data = <String, dynamic>{
       'status': status.name,
       if (status == DocumentRequestStatus.approved) 'approvedAt': DateTime.now().toIso8601String(),
     };
     if (approvedBy != null) data['approvedBy'] = approvedBy;
     if (certificateNo != null) data['certificateNo'] = certificateNo;
+    if (organisation != null) data['organisation'] = organisation;
+    if (internshipArea != null) data['internshipArea'] = internshipArea;
+    if (internshipDuration != null) data['internshipDuration'] = internshipDuration;
 
     await _collection.doc(id).update(data);
   }

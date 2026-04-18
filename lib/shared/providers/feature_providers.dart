@@ -583,10 +583,20 @@ class DocumentRequestNotifier
     await _repository.add(r);
   }
 
-  Future<void> approve(String id, {required String approvedBy}) async {
-    final certNo = 'JF/CERT/${DateTime.now().year}/$id';
+  Future<void> approve(String id, {
+    required String approvedBy,
+    String? certificateNo,
+    String? organisation,
+    String? internshipArea,
+    String? internshipDuration,
+  }) async {
+    final certNo = certificateNo ?? 'JF/CERT/${DateTime.now().year}/$id';
     await _repository.updateStatus(id, DocumentRequestStatus.approved,
-        approvedBy: approvedBy, certificateNo: certNo);
+        approvedBy: approvedBy,
+        certificateNo: certNo,
+        organisation: organisation,
+        internshipArea: internshipArea,
+        internshipDuration: internshipDuration);
   }
 
   Future<void> reject(String id) async {

@@ -13,8 +13,11 @@ class DocumentRequestEntity {
   final DateTime requestedAt;
   final DateTime? approvedAt;
   final String? approvedBy;
-  // If it's a certificate, it could have details
+  // Certificate details set at approval time
   final String? certificateNo;
+  final String? organisation;
+  final String? internshipArea;
+  final String? internshipDuration;
 
   const DocumentRequestEntity({
     required this.id,
@@ -26,6 +29,9 @@ class DocumentRequestEntity {
     this.approvedAt,
     this.approvedBy,
     this.certificateNo,
+    this.organisation,
+    this.internshipArea,
+    this.internshipDuration,
   });
 
   Map<String, dynamic> toMap() {
@@ -39,6 +45,9 @@ class DocumentRequestEntity {
       'approvedAt': approvedAt?.toIso8601String(),
       'approvedBy': approvedBy,
       'certificateNo': certificateNo,
+      'organisation': organisation,
+      'internshipArea': internshipArea,
+      'internshipDuration': internshipDuration,
     };
   }
 
@@ -56,6 +65,9 @@ class DocumentRequestEntity {
       approvedAt: map['approvedAt'] != null ? DateTime.parse(map['approvedAt']) : null,
       approvedBy: map['approvedBy'],
       certificateNo: map['certificateNo'],
+      organisation: map['organisation'],
+      internshipArea: map['internshipArea'],
+      internshipDuration: map['internshipDuration'],
     );
   }
 
@@ -69,6 +81,9 @@ class DocumentRequestEntity {
     DateTime? approvedAt,
     String? approvedBy,
     String? certificateNo,
+    String? organisation,
+    String? internshipArea,
+    String? internshipDuration,
   }) {
     return DocumentRequestEntity(
       id: id ?? this.id,
@@ -80,6 +95,9 @@ class DocumentRequestEntity {
       approvedAt: approvedAt ?? this.approvedAt,
       approvedBy: approvedBy ?? this.approvedBy,
       certificateNo: certificateNo ?? this.certificateNo,
+      organisation: organisation ?? this.organisation,
+      internshipArea: internshipArea ?? this.internshipArea,
+      internshipDuration: internshipDuration ?? this.internshipDuration,
     );
   }
 }
