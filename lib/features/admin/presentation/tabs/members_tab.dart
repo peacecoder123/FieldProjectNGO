@@ -147,6 +147,7 @@ class _MembersTabState extends ConsumerState<MembersTab> {
         onSubmit: (m) async {
           try {
             await ref.read(memberProvider.notifier).add(m);
+            ref.invalidate(memberProvider);
             if (!context.mounted) return;
             
             Navigator.pop(context);
@@ -593,6 +594,7 @@ class _MemberDetailsContent extends ConsumerWidget {
             mentorName: member.name,
           );
           await ref.read(volunteerProvider.notifier).update(updated);
+          ref.invalidate(volunteerProvider);
         },
       ),
     );
@@ -634,12 +636,19 @@ class _GuidedVolunteersList extends ConsumerWidget {
   }
 }
 
-class _MentoredVolunteerItem extends ConsumerWidget {
+class _MentoredVolunteerItem extends ConsumerStatefulWidget {
   const _MentoredVolunteerItem({required this.volunteer});
   final VolunteerEntity volunteer;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MentoredVolunteerItem> createState() => _MentoredVolunteerItemState();
+}
+
+class _MentoredVolunteerItemState extends ConsumerState<_MentoredVolunteerItem> {
+  bool _isRemoving = false;
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -651,37 +660,57 @@ class _MentoredVolunteerItem extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          AppAvatar(initials: AppFormatters.initials(volunteer.name), size: AvatarSize.medium, role: UserRole.volunteer),
+          AppAvatar(initials: AppFormatters.initials(widget.volunteer.name), size: AvatarSize.medium, role: UserRole.volunteer),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(volunteer.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                Text(volunteer.email, style: const TextStyle(color: AppColors.slate500, fontSize: 11)),
+                Text(widget.volunteer.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                Text(widget.volunteer.email, style: const TextStyle(color: AppColors.slate500, fontSize: 11)),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.person_remove_rounded, size: 18, color: AppColors.red500),
-            onPressed: () => _unassign(ref),
-            tooltip: 'Remove from guidance',
-          ),
+          _isRemoving
+              ? const Padding(
+                  padding: EdgeInsets.all(14.0),
+                  child: SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.red500),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.person_remove_rounded, size: 18, color: AppColors.red500),
+                  onPressed: _unassign,
+                  tooltip: 'Remove from guidance',
+                ),
         ],
       ),
     );
   }
 
-  Future<void> _unassign(WidgetRef ref) async {
-    final updated = volunteer.copyWith(mentorId: '', mentorName: '');
-    await ref.read(volunteerProvider.notifier).update(updated);
+  Future<void> _unassign() async {
+    setState(() => _isRemoving = true);
+    try {
+      final updated = widget.volunteer.copyWith(mentorId: '', mentorName: '');
+      await ref.read(volunteerProvider.notifier).update(updated);
+      ref.invalidate(volunteerProvider);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isRemoving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error removing volunteer: $e'), backgroundColor: AppColors.red600),
+        );
+      }
+    }
   }
 }
 
 class _AssignVolunteerForm extends StatefulWidget {
   const _AssignVolunteerForm({required this.member, required this.onAssign});
   final MemberEntity member;
-  final Function(VolunteerEntity) onAssign;
+  final Future<void> Function(VolunteerEntity) onAssign;
 
   @override
   State<_AssignVolunteerForm> createState() => _AssignVolunteerFormState();
@@ -689,6 +718,7 @@ class _AssignVolunteerForm extends StatefulWidget {
 
 class _AssignVolunteerFormState extends State<_AssignVolunteerForm> {
   String _search = '';
+  String? _loadingVolunteerId;
 
   @override
   Widget build(BuildContext context) {
@@ -729,6 +759,7 @@ class _AssignVolunteerFormState extends State<_AssignVolunteerForm> {
                     separatorBuilder: (_, __) => const Divider(),
                     itemBuilder: (context, index) {
                       final v = filtered[index];
+                      final isAssigning = _loadingVolunteerId == v.id;
                       return ListTile(
                         leading: AppAvatar(initials: AppFormatters.initials(v.name), size: AvatarSize.small, role: UserRole.volunteer),
                         title: Text(v.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
@@ -736,10 +767,23 @@ class _AssignVolunteerFormState extends State<_AssignVolunteerForm> {
                           ? 'Guided by: ${v.mentorName}' 
                           : 'No guide assigned',
                           style: const TextStyle(fontSize: 11)),
-                        trailing: const Icon(Icons.add_circle_outline_rounded, color: AppColors.brand),
-                        onTap: () {
-                          widget.onAssign(v);
-                          Navigator.pop(context);
+                        trailing: isAssigning
+                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brand))
+                            : const Icon(Icons.add_circle_outline_rounded, color: AppColors.brand),
+                        onTap: () async {
+                          if (_loadingVolunteerId != null) return;
+                          setState(() => _loadingVolunteerId = v.id);
+                          try {
+                            await widget.onAssign(v);
+                            if (mounted) Navigator.pop(context);
+                          } catch (e) {
+                            if (mounted) {
+                              setState(() => _loadingVolunteerId = null);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.red600),
+                              );
+                            }
+                          }
                         },
                       );
                     },

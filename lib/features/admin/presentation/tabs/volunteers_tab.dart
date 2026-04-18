@@ -39,40 +39,51 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
   Widget build(BuildContext context) {
     final volunteersAsync = ref.watch(volunteerProvider);
 
-    return volunteersAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      data: (volunteers) {
-        final filtered = _filterVolunteers(volunteers);
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(volunteerProvider);
-            await Future.delayed(const Duration(milliseconds: 800));
-          },
-          child: ListView(
-            shrinkWrap: true,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20),
-            children: [
-            SectionHeader(
-              title: 'Volunteers',
-              subtitle: 'Manage NGO volunteers and their tasks',
+    return Column(
+      children: [
+        SectionHeader(
+          subtitle: 'Manage NGO volunteers and their tasks',
+          actions: OutlinedButton.icon(
+            onPressed: () => _showDeleteVolunteerGlobalModal(context),
+            icon: const Icon(Icons.person_remove_rounded, size: 18),
+            label: const Text('Delete Volunteer'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.red500,
+              side: const BorderSide(color: AppColors.red500),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-            const SizedBox(height: 16),
-            _buildFilters(),
-            const SizedBox(height: 24),
-
-            if (filtered.isEmpty)
-              _buildEmptyState()
-            else
-              _buildVolunteerList(filtered),
-          ],
+          ),
         ),
-      );
-    },
-  );
-}
+        const SizedBox(height: 16),
+        _buildFilters(),
+        const SizedBox(height: 16),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(volunteerProvider);
+              await Future.delayed(const Duration(milliseconds: 800));
+            },
+            child: volunteersAsync.when(
+              skipLoadingOnRefresh: true,
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+              data: (volunteers) {
+                final filtered = _filterVolunteers(volunteers);
+  
+                if (filtered.isEmpty) {
+                  return _buildEmptyState();
+                }
+  
+                return _buildVolunteerList(filtered);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   List<VolunteerEntity> _filterVolunteers(List<VolunteerEntity> volunteers) {
     return volunteers.where((v) {
@@ -233,8 +244,62 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
       title: 'Add New Volunteer',
       size: ModalSize.medium,
       child: _AddVolunteerForm(
-        onSubmit: (v) => ref.read(volunteerProvider.notifier).add(v.copyWith(id: '')),
+        onSubmit: (v) async {
+          try {
+            await ref.read(volunteerProvider.notifier).add(v);
+            ref.invalidate(volunteerProvider);
+            if (!context.mounted) return;
+            
+            Navigator.pop(context);
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text('\${v.name} has been added as a volunteer.')),
+                  ],
+                ),
+                backgroundColor: AppColors.emerald500,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          } catch (e) {
+            if (!context.mounted) return;
+            
+            String errorMsg = e.toString();
+            if (errorMsg.contains('Exception:')) {
+              errorMsg = errorMsg.split('Exception:').last.trim();
+            }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(errorMsg)),
+                  ],
+                ),
+                backgroundColor: AppColors.red500,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          }
+        },
       ),
+    );
+  }
+
+  void _showDeleteVolunteerGlobalModal(BuildContext context) {
+    AppModal.show(
+      context: context,
+      title: 'Delete Volunteer',
+      size: ModalSize.medium,
+      child: const _DeleteVolunteerGlobalForm(),
     );
   }
 
@@ -616,7 +681,95 @@ class _VolunteerDetailsContent extends ConsumerWidget {
             error: (e, _) => Text('Error loading tasks: $e'),
             data: (tasks) => _buildTasksList(context, ref, tasks),
           ),
+
+          const SizedBox(height: 32),
+          const Divider(height: 1),
+          const SizedBox(height: 24),
+          const Text('Danger Zone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.red500)),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.red500.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.red500.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Delete Volunteer', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.red600)),
+                      const SizedBox(height: 4),
+                      Text('Permanently remove this volunteer from the platform. This action cannot be undone.', 
+                        style: TextStyle(fontSize: 12, color: isDark ? AppColors.red100 : AppColors.red500)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _confirmDelete(context, ref),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                  label: const Text('Delete'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.red500,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref) {
+    bool isDeleting = false;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          title: const Text('Delete Volunteer Profile?'),
+          content: Text('Are you sure you want to permanently delete ${volunteer.name}?'),
+          actions: [
+            TextButton(
+              onPressed: isDeleting ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: isDeleting ? null : () async {
+                setModalState(() => isDeleting = true);
+                try {
+                  await ref.read(volunteerProvider.notifier).delete(volunteer.id);
+                  ref.invalidate(volunteerProvider);
+                  if (context.mounted) {
+                    Navigator.pop(ctx); // pop dialog
+                    Navigator.pop(context); // pop modal sheet
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('${volunteer.name} has been deleted'), backgroundColor: AppColors.red600),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    setModalState(() => isDeleting = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.red600),
+                    );
+                  }
+                }
+              },
+              child: isDeleting
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Delete', style: TextStyle(color: AppColors.red500)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1225,5 +1378,118 @@ class _AddTaskFormState extends State<_AddTaskForm> {
         ),
       );
     }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL DELETE VOLUNTEER LIST MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DeleteVolunteerGlobalForm extends ConsumerStatefulWidget {
+  const _DeleteVolunteerGlobalForm();
+  @override
+  ConsumerState<_DeleteVolunteerGlobalForm> createState() => _DeleteVolunteerGlobalFormState();
+}
+
+class _DeleteVolunteerGlobalFormState extends ConsumerState<_DeleteVolunteerGlobalForm> {
+  String _search = '';
+  String? _deletingId;
+
+  @override
+  Widget build(BuildContext context) {
+    final volunteersAsync = ref.watch(volunteerProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          decoration: const InputDecoration(
+            hintText: 'Search volunteer by name or email...',
+            prefixIcon: Icon(Icons.search),
+          ),
+          onChanged: (val) => setState(() => _search = val),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 350,
+          child: volunteersAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error loading volunteers: $e')),
+            data: (volunteers) {
+              final filtered = volunteers.where((v) {
+                return v.name.toLowerCase().contains(_search.toLowerCase()) ||
+                       v.email.toLowerCase().contains(_search.toLowerCase());
+              }).toList();
+
+              if (filtered.isEmpty) {
+                return const Center(child: Text('No matching volunteers found'));
+              }
+
+              return ListView.separated(
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final v = filtered[index];
+                  final isDeleting = _deletingId == v.id;
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    leading: AppAvatar(initials: AppFormatters.initials(v.name), size: AvatarSize.medium, role: UserRole.volunteer),
+                    title: Text(v.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? AppColors.white : AppColors.slate900)),
+                    subtitle: Text(v.email, style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
+                    trailing: isDeleting
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.red500))
+                        : IconButton(
+                            icon: const Icon(Icons.person_remove_rounded, color: AppColors.red500),
+                            onPressed: () => _confirmDelete(v),
+                            tooltip: 'Delete ${v.name}',
+                          ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _confirmDelete(VolunteerEntity v) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm Deletion'),
+        content: Text('Are you sure you want to permanently delete ${v.name}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _deletingId = v.id);
+              try {
+                await ref.read(volunteerProvider.notifier).delete(v.id);
+                ref.invalidate(volunteerProvider);
+                if (mounted) {
+                  Navigator.pop(context); // Close the search modal
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${v.name} has been deleted'), backgroundColor: AppColors.red600),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.red600),
+                  );
+                }
+              } finally {
+                if (mounted) setState(() => _deletingId = null);
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.red500)),
+          ),
+        ],
+      ),
+    );
   }
 }
