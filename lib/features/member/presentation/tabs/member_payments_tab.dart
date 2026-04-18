@@ -10,6 +10,7 @@ import 'package:ngo_volunteer_management/services/document_generation/document_g
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
@@ -264,43 +265,23 @@ class MemberPaymentsTab extends ConsumerWidget {
                             TextButton.icon(
                               onPressed: () async {
                                 try {
-                                  final generator = DocumentGenerator();
-                                  final docType = p.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
-                                  final template = generator.getTemplateForType(docType);
-                                
-                                  final doc = generator.resolveTemplate(template, {
-                                    'receipt_number': p.receiptNumber ?? 'REC-PENDING',
-                                    'donor_name': p.donorName,
-                                    'amount': p.amount.toString(),
-                                    'date': p.date,
-                                    'payment_mode': p.type.name,
-                                    'purpose': p.purpose,
-                                  });
-
-                                  // Post-process: replace ISO date with human-readable format
-                                  final displayContent = doc.generatedContent.replaceAll(
-                                    p.date,
-                                    AppFormatters.displayDate(p.date),
+                                  // Generate the professional PDF bytes using our refined service
+                                  final bytes = await PdfGeneratorService.generateReceiptPdf(
+                                    receiptNo: p.receiptNumber ?? 'REC-PENDING',
+                                    date: DateTime.parse(p.date),
+                                    donorName: p.donorName,
+                                    amount: p.amount.toDouble(),
+                                    paymentMode: p.type.name,
+                                    purpose: p.purpose,
+                                    is80G: p.is80G,
+                                    contactNo: p.donorPhone,
+                                    email: p.donorEmail,
                                   );
-
-                                  final pdf = pw.Document();
-                                  pdf.addPage(
-                                    pw.Page(
-                                      pageFormat: PdfPageFormat.a4,
-                                      build: (context) {
-                                        return pw.Padding(
-                                          padding: const pw.EdgeInsets.all(32),
-                                          child: pw.Text(
-                                            displayContent,
-                                            style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                  
+                                  await Printing.layoutPdf(
+                                    onLayout: (_) async => bytes,
+                                    name: 'Receipt_${p.receiptNumber}.pdf',
                                   );
-
-                                  final bytes = await pdf.save();
-                                  await Printing.layoutPdf(onLayout: (_) async => bytes);
                                 } catch (e) {
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(

@@ -52,8 +52,12 @@ Future<void> main() async {
     debugPrint('🔄 Seed version changed — cleared cached user session.');
   }
 
-  // Seed Firestore with consistent demo data (runs only when version changes)
-  await seedFirestoreIfEmpty();
+  // Seed Firestore with demo data (runs only when version changes)
+  try {
+    await seedFirestoreIfEmpty();
+  } catch (e) {
+    debugPrint('Warning: Optional Firestore seeding failed (likely offline): $e');
+  }
 
   runApp(
     ProviderScope(

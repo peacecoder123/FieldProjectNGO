@@ -12,6 +12,7 @@ import 'package:ngo_volunteer_management/services/document_generation/document_g
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
 
 /// A full-featured donation dialog that collects donor info and triggers
 /// Razorpay checkout. Can be shown via [DonationDialog.show].
@@ -190,37 +191,31 @@ class _DonationDialogState extends ConsumerState<DonationDialog> {
   }
 
   Future<void> _downloadReceipt(DonationEntity donation) async {
-    final generator = DocumentGenerator();
-    final docType = donation.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
-    final template = generator.getTemplateForType(docType);
-    
-    final doc = generator.resolveTemplate(template, {
-      'receipt_number': donation.receiptNumber ?? 'REC-PENDING',
-      'donor_name': donation.donorName,
-      'amount': donation.amount.toString(),
-      'date': AppFormatters.displayDate(donation.date),
-      'payment_mode': donation.type.name,
-      'purpose': donation.purpose,
-    });
+    try {
+      // Generate the professional PDF bytes using our refined service
+      final bytes = await PdfGeneratorService.generateReceiptPdf(
+        receiptNo: donation.receiptNumber ?? 'REC-PENDING',
+        date: DateTime.parse(donation.date),
+        donorName: donation.donorName,
+        amount: donation.amount.toDouble(),
+        paymentMode: donation.type.name,
+        purpose: donation.purpose,
+        is80G: donation.is80G,
+        contactNo: donation.donorPhone,
+        email: donation.donorEmail,
+      );
 
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(32),
-            child: pw.Text(
-              doc.generatedContent,
-              style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
-            ),
-          );
-        },
-      ),
-    );
-
-    final bytes = await pdf.save();
-    await Printing.layoutPdf(onLayout: (_) async => bytes);
+      await Printing.layoutPdf(
+        onLayout: (_) async => bytes,
+        name: 'Receipt_${donation.receiptNumber}.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not generate receipt: $e')),
+        );
+      }
+    }
   }
 
   @override

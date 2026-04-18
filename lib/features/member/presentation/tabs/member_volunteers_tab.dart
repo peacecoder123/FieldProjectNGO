@@ -23,13 +23,23 @@ class MemberVolunteersTab extends ConsumerWidget {
 
     if (currentUser == null) return const Center(child: Text('Please login'));
 
+    // Get current member to match against mentorId (which Admins assign as MemberEntity ID)
+    MemberEntity? currentMember;
+    final members = ref.watch(memberProvider).value ?? [];
+    for (final m in members) {
+      if (m.id == currentUser.id || m.email == currentUser.email) {
+        currentMember = m;
+        break;
+      }
+    }
+
     return volunteersAsync.when(
       skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (volunteers) {
         final mentoredVolunteers = volunteers
-            .where((v) => v.mentorId == currentUser.id)
+            .where((v) => v.mentorId == currentMember?.id || v.mentorId == currentUser.id)
             .toList();
 
         return ListView(
@@ -380,6 +390,16 @@ class _ApprovalQueue extends ConsumerWidget {
     
     if (currentUser == null) return const SizedBox.shrink();
 
+    // Get current member to match against mentorId
+    MemberEntity? currentMember;
+    final members = ref.watch(memberProvider).value ?? [];
+    for (final m in members) {
+      if (m.id == currentUser.id || m.email == currentUser.email) {
+        currentMember = m;
+        break;
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -398,7 +418,7 @@ class _ApprovalQueue extends ConsumerWidget {
               data: (volunteers) {
                 // Get IDs of volunteers mentored by this member
                 final mentoredIds = volunteers
-                    .where((v) => v.mentorId == currentUser.id)
+                    .where((v) => v.mentorId == currentMember?.id || v.mentorId == currentUser.id)
                     .map((v) => v.id)
                     .toSet();
 

@@ -210,7 +210,42 @@ class _MembersTabState extends ConsumerState<MembersTab> {
       context: context,
       title: 'Member Profile',
       size: ModalSize.large,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.edit_note_rounded, color: AppColors.brand),
+          onPressed: () {
+            Navigator.pop(context);
+            _showEditMemberModal(context, m);
+          },
+          tooltip: 'Edit Profile',
+        ),
+      ],
       child: _MemberDetailsContent(member: m),
+    );
+  }
+
+  void _showEditMemberModal(BuildContext context, MemberEntity m) {
+    AppModal.show(
+      context: context,
+      title: 'Edit Member Details',
+      size: ModalSize.medium,
+      child: _EditMemberForm(
+        member: m,
+        onSubmit: (updated) async {
+          try {
+            await ref.read(memberProvider.notifier).update(updated);
+            if (!context.mounted) return;
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Profile updated successfully')),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Update failed: $e')),
+            );
+          }
+        },
+      ),
     );
   }
 }
@@ -1027,5 +1062,226 @@ class _AddTaskFormState extends State<_AddTaskForm> {
         ],
       ),
     );
+  }
+}
+// -----------------------------------------------------------------------------
+// EDIT MEMBER FORM
+// -----------------------------------------------------------------------------
+
+class _EditMemberForm extends StatefulWidget {
+  const _EditMemberForm({required this.member, required this.onSubmit});
+
+  final MemberEntity member;
+  final void Function(MemberEntity) onSubmit;
+
+  @override
+  State<_EditMemberForm> createState() => _EditMemberFormState();
+}
+
+class _EditMemberFormState extends State<_EditMemberForm> {
+  final _formKey = GlobalKey<FormState>();
+
+  late String _name;
+  late String _phone;
+  late String _address;
+  late DateTime _renewalDate;
+  late PersonStatus _status;
+  late MembershipType _membershipType;
+  late bool _isPaid;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = widget.member.name;
+    _phone = widget.member.phone;
+    _address = widget.member.address;
+    _renewalDate =
+        DateTime.tryParse(widget.member.renewalDate) ?? DateTime.now();
+    _status = widget.member.status;
+    _membershipType = widget.member.membershipType;
+    _isPaid = widget.member.isPaid;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              initialValue: _name,
+              style: const TextStyle(fontSize: 14),
+              decoration: const InputDecoration(
+                labelText: 'Full Name',
+                prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+              ),
+              onSaved: (val) => _name = val ?? '',
+              validator: (v) => (v?.isEmpty ?? true) ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: _phone,
+              style: const TextStyle(fontSize: 14),
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                prefixIcon: Icon(Icons.phone_rounded, size: 20),
+                hintText: 'Enter phone number',
+              ),
+              keyboardType: TextInputType.phone,
+              onSaved: (val) => _phone = val ?? '',
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: _address,
+              style: const TextStyle(fontSize: 14),
+              decoration: const InputDecoration(
+                labelText: 'Address',
+                prefixIcon: Icon(Icons.location_on_rounded, size: 20),
+                hintText: 'Enter full address',
+                alignLabelWithHint: true,
+              ),
+              maxLines: 2,
+              onSaved: (val) => _address = val ?? '',
+            ),
+            const SizedBox(height: 16),
+            _buildDatePicker(
+              label: 'Renewal Date',
+              date: _renewalDate,
+              onTap: _selectRenewalDate,
+            ),
+            const SizedBox(height: 16),
+            _buildDropdown<MembershipType>(
+              label: 'Membership Type',
+              icon: Icons.workspace_premium_rounded,
+              value: _membershipType,
+              items: MembershipType.values,
+              onChanged: (val) => setState(() => _membershipType = val!),
+              display: (v) => v.name[0].toUpperCase() + v.name.substring(1),
+            ),
+            const SizedBox(height: 16),
+            _buildDropdown<PersonStatus>(
+              label: 'Status',
+              icon: Icons.shield_rounded,
+              value: _status,
+              items: PersonStatus.values,
+              onChanged: (val) => setState(() => _status = val!),
+              display: (v) => v.displayName,
+            ),
+            const SizedBox(height: 12),
+            CheckboxListTile(
+              title: const Text('Is Monthly Fees Paid?',
+                  style: TextStyle(fontSize: 14)),
+              value: _isPaid,
+              onChanged: (val) => setState(() => _isPaid = val ?? false),
+              secondary: const Icon(Icons.payment_rounded,
+                  size: 20, color: AppColors.brand),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _handleSubmit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brand,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDatePicker({
+    required String label,
+    required DateTime date,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
+        const SizedBox(height: 4),
+        InkWell(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.slate200),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.calendar_today_rounded,
+                    size: 16, color: AppColors.brand),
+                const SizedBox(width: 8),
+                Text(AppFormatters.displayDate(AppFormatters.toIso(date)),
+                    style: const TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdown<T>({
+    required String label,
+    required IconData icon,
+    required T value,
+    required List<T> items,
+    required ValueChanged<T?> onChanged,
+    required String Function(T) display,
+  }) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      items: items
+          .map((i) => DropdownMenuItem(value: i, child: Text(display(i))))
+          .toList(),
+      onChanged: onChanged,
+      style: const TextStyle(fontSize: 14, color: AppColors.slate900),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 20),
+      ),
+    );
+  }
+
+  Future<void> _selectRenewalDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _renewalDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 2)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+    );
+    if (picked != null) {
+      setState(() => _renewalDate = picked);
+    }
+  }
+
+  void _handleSubmit() {
+    if (_formKey.currentState?.validate() ?? false) {
+      _formKey.currentState?.save();
+
+      widget.onSubmit(
+        widget.member.copyWith(
+          name: _name,
+          phone: _phone,
+          address: _address,
+          renewalDate: AppFormatters.toIso(_renewalDate),
+          status: _status,
+          membershipType: _membershipType,
+          isPaid: _isPaid,
+        ),
+      );
+    }
   }
 }

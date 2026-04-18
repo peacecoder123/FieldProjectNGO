@@ -164,3 +164,75 @@ exports.notifyVolunteerOnTask = functions.firestore
     }
     return null;
   });
+
+/**
+ * Invite Notification & Account Setup Logic
+ */
+const sgMail = require("@sendgrid/mail");
+const SENDGRID_KEY = process.env.SENDGRID_KEY || "";
+const NGO_NAME = "Jayashree Foundation";
+const FROM_EMAIL = "noreply@jayashreefoundation.org";
+
+if (SENDGRID_KEY) {
+  sgMail.setApiKey(SENDGRID_KEY);
+}
+
+exports.onUserCreated = functions.firestore
+  .document("users/{userId}")
+  .onCreate(async (snap, context) => {
+    const data = snap.data();
+    if (!data) return;
+
+    const email = data.email;
+    const name = data.name;
+    const role = data.role || "volunteer";
+
+    if (!email) return;
+
+    try {
+      let actionLink;
+      try {
+        actionLink = await admin.auth().generatePasswordResetLink(email, {
+          url: "https://jayashree-foundation07.web.app/login",
+        });
+      } catch (err) {
+        actionLink = "https://jayashree-foundation07.web.app/login";
+      }
+
+      const msg = {
+        to: email,
+        from: { name: NGO_NAME, email: FROM_EMAIL },
+        subject: `Welcome to ${NGO_NAME} — Set up your account`,
+        html: `<h2>Welcome, ${name}!</h2><p>You have been added as <strong>${role}</strong>. <a href="${actionLink}">Click here to set your password.</a></p>`,
+      };
+
+      await sgMail.send(msg);
+      await snap.ref.update({ inviteEmailSentAt: admin.firestore.FieldValue.serverTimestamp() });
+    } catch (error) {
+      console.error(`Invite fail: ${email}`, error);
+    }
+  });
+
+exports.resendInvite = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError("unauthenticated", "Auth required");
+
+  const email = data.email;
+  if (!email) throw new functions.https.HttpsError("invalid-argument", "email required");
+
+  const snap = await admin.firestore().collection("users").where("email", "==", email.toLowerCase()).limit(1).get();
+  if (snap.empty) throw new functions.https.HttpsError("not-found", "User not found");
+  
+  const userDoc = snap.docs[0].data();
+  let actionLink = await admin.auth().generatePasswordResetLink(email, {
+    url: "https://jayashree-foundation07.web.app/login",
+  });
+
+  await sgMail.send({
+    to: email,
+    from: { name: NGO_NAME, email: FROM_EMAIL },
+    subject: `Reminder: Set up your ${NGO_NAME} account`,
+    html: `<p>Hello ${userDoc.name}, <a href="${actionLink}">Set up your account here</a>.</p>`,
+  });
+
+  return { success: true };
+});

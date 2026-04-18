@@ -16,11 +16,13 @@ class AppModal extends StatelessWidget {
     required this.title,
     required this.child,
     this.size = ModalSize.medium,
+    this.actions,
   });
 
-  final String    title;
-  final Widget    child;
-  final ModalSize size;
+  final String       title;
+  final Widget       child;
+  final ModalSize    size;
+  final List<Widget>? actions;
 
   /// Helper to show this modal from anywhere.
   static Future<T?> show<T>({
@@ -28,6 +30,7 @@ class AppModal extends StatelessWidget {
     required String title,
     required Widget child,
     ModalSize size = ModalSize.medium,
+    List<Widget>? actions,
   }) {
     final isWide =
         MediaQuery.of(context).size.width >= 600;
@@ -35,7 +38,12 @@ class AppModal extends StatelessWidget {
     if (isWide) {
       return showDialog<T>(
         context: context,
-        builder: (_) => AppModal(title: title, size: size, child: child),
+        builder: (_) => AppModal(
+          title:   title,
+          size:    size,
+          child:   child,
+          actions: actions,
+        ),
       );
     } else {
       return showModalBottomSheet<T>(
@@ -43,8 +51,9 @@ class AppModal extends StatelessWidget {
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (_) => _BottomSheetWrapper(
-          title: title,
-          child: child,
+          title:   title,
+          child:   child,
+          actions: actions,
         ),
       );
     }
@@ -71,7 +80,7 @@ class AppModal extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _ModalHeader(title: title, isDark: isDark),
+            _ModalHeader(title: title, isDark: isDark, actions: actions),
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -88,9 +97,14 @@ class AppModal extends StatelessWidget {
 // ── Header ─────────────────────────────────────────────────────────────────
 
 class _ModalHeader extends StatelessWidget {
-  const _ModalHeader({required this.title, required this.isDark});
-  final String title;
-  final bool   isDark;
+  const _ModalHeader({
+    required this.title,
+    required this.isDark,
+    this.actions,
+  });
+  final String        title;
+  final bool          isDark;
+  final List<Widget>? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +121,7 @@ class _ModalHeader extends StatelessWidget {
               ),
             ),
           ),
+          if (actions != null) ...actions!,
           IconButton(
             icon: Icon(
               Icons.close_rounded,
@@ -124,9 +139,14 @@ class _ModalHeader extends StatelessWidget {
 // ── Mobile bottom-sheet wrapper ────────────────────────────────────────────
 
 class _BottomSheetWrapper extends StatelessWidget {
-  const _BottomSheetWrapper({required this.title, required this.child});
-  final String title;
-  final Widget child;
+  const _BottomSheetWrapper({
+    required this.title,
+    required this.child,
+    this.actions,
+  });
+  final String        title;
+  final Widget        child;
+  final List<Widget>? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +175,7 @@ class _BottomSheetWrapper extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            _ModalHeader(title: title, isDark: isDark),
+            _ModalHeader(title: title, isDark: isDark, actions: actions),
             Expanded(
               child: SingleChildScrollView(
                 controller: controller,

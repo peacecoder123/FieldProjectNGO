@@ -298,9 +298,45 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
       context: context,
       title: 'Volunteer Profile',
       size: ModalSize.large,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.edit_note_rounded, color: AppColors.brand),
+          onPressed: () {
+            // Close details and show edit
+            Navigator.pop(context);
+            _showEditVolunteerModal(context, v);
+          },
+          tooltip: 'Edit Profile',
+        ),
+      ],
       child: _VolunteerDetailsContent(
         volunteer: v,
         isSuperAdmin: widget.isSuperAdmin,
+      ),
+    );
+  }
+
+  void _showEditVolunteerModal(BuildContext context, VolunteerEntity v) {
+    AppModal.show(
+      context: context,
+      title: 'Edit Volunteer Details',
+      size: ModalSize.medium,
+      child: _EditVolunteerForm(
+        volunteer: v,
+        onSubmit: (updated) async {
+          try {
+            await ref.read(volunteerProvider.notifier).update(updated);
+            if (!context.mounted) return;
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Profile updated successfully')),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Update failed: $e')),
+            );
+          }
+        },
       ),
     );
   }
@@ -1180,6 +1216,186 @@ class _AddTaskFormState extends State<_AddTaskForm> {
           status: TaskStatus.pending,
           requiresUpload: _requiresUpload,
           createdAt: AppFormatters.today(),
+        ),
+      );
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EDIT VOLUNTEER FORM
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EditVolunteerForm extends StatefulWidget {
+  const _EditVolunteerForm({required this.volunteer, required this.onSubmit});
+
+  final VolunteerEntity volunteer;
+  final void Function(VolunteerEntity) onSubmit;
+
+  @override
+  State<_EditVolunteerForm> createState() => _EditVolunteerFormState();
+}
+
+class _EditVolunteerFormState extends State<_EditVolunteerForm> {
+  final _formKey = GlobalKey<FormState>();
+
+  late String _name;
+  late String _phone;
+  late String _address;
+  late DateTime _joinDate;
+  late String _tenure;
+  late PersonStatus _status;
+  late TextEditingController _skillsController;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = widget.volunteer.name;
+    _phone = widget.volunteer.phone;
+    _address = widget.volunteer.address;
+    _joinDate = DateTime.tryParse(widget.volunteer.joinDate) ?? DateTime.now();
+    _tenure = widget.volunteer.tenure;
+    _status = widget.volunteer.status;
+    _skillsController =
+        TextEditingController(text: widget.volunteer.skills.join(', '));
+  }
+
+  @override
+  void dispose() {
+    _skillsController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              initialValue: _name,
+              style: const TextStyle(fontSize: 14),
+              decoration: const InputDecoration(
+                labelText: 'Full Name',
+                prefixIcon: Icon(Icons.person_rounded, size: 20),
+              ),
+              onSaved: (val) => _name = val ?? '',
+              validator: (v) => (v?.isEmpty ?? true) ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: _phone,
+              style: const TextStyle(fontSize: 14),
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                prefixIcon: Icon(Icons.phone_rounded, size: 20),
+                hintText: 'Enter phone number',
+              ),
+              keyboardType: TextInputType.phone,
+              onSaved: (val) => _phone = val ?? '',
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: _address,
+              style: const TextStyle(fontSize: 14),
+              decoration: const InputDecoration(
+                labelText: 'Address',
+                prefixIcon: Icon(Icons.location_on_rounded, size: 20),
+                hintText: 'Enter full address',
+                alignLabelWithHint: true,
+              ),
+              maxLines: 2,
+              onSaved: (val) => _address = val ?? '',
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _skillsController,
+              style: const TextStyle(fontSize: 14),
+              decoration: const InputDecoration(
+                labelText: 'Skills (comma separated)',
+                prefixIcon: Icon(Icons.psychology_rounded, size: 20),
+                hintText: 'e.g. Teaching, Design, Coordination',
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildDropdown<String>(
+              label: 'Tenure',
+              icon: Icons.schedule_rounded,
+              value: _tenure,
+              items: ['monthly', 'annual'],
+              onChanged: (val) => setState(() => _tenure = val!),
+              display: (v) => v[0].toUpperCase() + v.substring(1),
+            ),
+            const SizedBox(height: 16),
+            _buildDropdown<PersonStatus>(
+              label: 'Status',
+              icon: Icons.badge_rounded,
+              value: _status,
+              items: PersonStatus.values,
+              onChanged: (val) => setState(() => _status = val!),
+              display: (v) => v.displayName,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _handleSubmit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brand,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown<T>({
+    required String label,
+    required IconData icon,
+    required T value,
+    required List<T> items,
+    required ValueChanged<T?> onChanged,
+    required String Function(T) display,
+  }) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      items: items
+          .map((i) => DropdownMenuItem(value: i, child: Text(display(i))))
+          .toList(),
+      onChanged: onChanged,
+      style: const TextStyle(fontSize: 14, color: AppColors.slate900),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 20),
+      ),
+    );
+  }
+
+  void _handleSubmit() {
+    if (_formKey.currentState?.validate() ?? false) {
+      _formKey.currentState?.save();
+
+      final skills = _skillsController.text
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+
+      widget.onSubmit(
+        widget.volunteer.copyWith(
+          name: _name,
+          phone: _phone,
+          address: _address,
+          tenure: _tenure,
+          status: _status,
+          skills: skills,
         ),
       );
     }

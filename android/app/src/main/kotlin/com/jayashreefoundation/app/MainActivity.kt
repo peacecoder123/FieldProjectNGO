@@ -1,4 +1,4 @@
-package com.jayashreefoundation.ngo_volunteer_management
+package com.jayashreefoundation.app
 
 import io.flutter.embedding.android.FlutterActivity
 

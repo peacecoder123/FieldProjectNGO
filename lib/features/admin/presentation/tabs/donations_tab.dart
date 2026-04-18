@@ -23,6 +23,7 @@ import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
 // Services
 import 'package:ngo_volunteer_management/services/logging/audit_logger.dart';
 import 'package:ngo_volunteer_management/services/document_generation/document_generator.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
 
 class DonationsTab extends ConsumerStatefulWidget {
   const DonationsTab({super.key});
@@ -258,65 +259,47 @@ class _DonationItem extends ConsumerWidget {
 
   Future<void> _showPdfPreview(BuildContext context, {DonationEntity? latestDonation}) async {
     try {
-      final generator = DocumentGenerator();
       final d = latestDonation ?? donation;
       
-      // Choose the correct template based on 80G status
-      final docType = d.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
-      final template = generator.getTemplateForType(docType);
-      
-      // Resolve the dynamic template fields
-      // NOTE: 'date' must be ISO 8601 to pass the TemplateFieldType.date validator.
-      // We store the display date in the body via a post-processing step.
-      final doc = generator.resolveTemplate(template, {
-        'receipt_number': d.receiptNumber ?? 'REC-PENDING',
-        'donor_name': d.donorName,
-        'amount': d.amount.toString(),
-        'date': d.date,
-        'payment_mode': d.type.name,
-        'purpose': d.purpose,
-      });
-
-      // Post-process: replace the raw ISO date with a human-readable format in the PDF body
-      final displayContent = doc.generatedContent.replaceAll(
-        d.date, 
-        AppFormatters.displayDate(d.date),
+      // Generate the professional PDF bytes using our refined service
+      final pdfBytes = await PdfGeneratorService.generateReceiptPdf(
+        receiptNo: d.receiptNumber ?? 'REC-PENDING',
+        date: DateTime.parse(d.date),
+        donorName: d.donorName,
+        amount: d.amount.toDouble(),
+        paymentMode: d.type.name,
+        purpose: d.purpose,
+        is80G: d.is80G,
+        // Optional fields if you have them in the entity
+        // contactNo: d.contactNo,
+        // panNo: d.panNo,
       );
 
-      // Create the actual PDF layout
-      final pdf = pw.Document();
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          build: (pw.Context context) {
-            return pw.Padding(
-              padding: const pw.EdgeInsets.all(32),
-              child: pw.Text(
-                displayContent,
-                style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
-              ),
-            );
-          },
-        ),
-      );
-
-      final pdfBytes = await pdf.save();
-
-      // Show the interactive UI Dialog
+      // Show the interactive UI Dialog with Print/Share support
       if (context.mounted) {
         showDialog(
           context: context,
           builder: (context) => Dialog(
             insetPadding: const EdgeInsets.all(20),
-            child: SizedBox(
+            backgroundColor: Colors.transparent, // Background of dialog
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
               width: MediaQuery.of(context).size.width * 0.9,
-              height: MediaQuery.of(context).size.height * 0.8,
-              child: PdfPreview(
-                build: (format) => pdfBytes,
-                allowPrinting: true,
-                allowSharing: true,
-                canChangeOrientation: false,
-                canChangePageFormat: false,
+              height: MediaQuery.of(context).size.height * 0.85,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: PdfPreview(
+                  build: (format) => pdfBytes,
+                  allowPrinting: true,
+                  allowSharing: true,
+                  canChangeOrientation: false,
+                  canChangePageFormat: false,
+                  previewPageMargin: const EdgeInsets.all(10),
+                  pdfFileName: 'Receipt_${d.receiptNumber}.pdf',
+                ),
               ),
             ),
           ),

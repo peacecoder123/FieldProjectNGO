@@ -3,7 +3,7 @@
     "platforms": {
       "dart": {
         "lib/firebase_options.dart": {
-          "projectId": "project-08d246f1-d6d3-42e6-a40",
+          "projectId": "jayashree-foundation07",
           "configurations": {
             "android": "1:1093449762008:android:b7cf389701dea3a92883ad",
             "ios": "1:1093449762008:ios:7e4f8decf0db9e402883ad",
