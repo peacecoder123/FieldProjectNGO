@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
@@ -10,9 +9,8 @@ import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:ngo_volunteer_management/services/download_service.dart';
 
 class JoiningLettersTab extends ConsumerStatefulWidget {
   const JoiningLettersTab({super.key});
@@ -230,10 +228,26 @@ class _JoiningRequestCard extends ConsumerWidget {
                     ),
                   ),
                   TextButton.icon(
-                    onPressed: () => _downloadLetter(context, request),
-                    icon: const Icon(Icons.download_rounded, size: 16),
-                    label: const Text('Download', style: TextStyle(fontSize: 12)),
-                    style: TextButton.styleFrom(foregroundColor: AppColors.emerald600),
+                    onPressed: () async {
+                      final pdfData = await PdfGeneratorService.generateJoiningLetterPdf(
+                        name: request.name,
+                        tenure: request.tenure ?? '6 Months',
+                        requestDate: AppFormatters.displayDate(request.requestDate),
+                        approvedBy: request.generatedBy,
+                      );
+                      DownloadService.downloadBytes(
+                        pdfData, 
+                        'Joining_Letter_${request.name.replaceAll(' ', '_')}.pdf',
+                      );
+                    },
+                    icon: const Icon(Icons.download_rounded, size: 14),
+                    label: const Text('Download Letter', style: TextStyle(fontSize: 11)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark ? AppColors.emerald400 : AppColors.emerald700,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                   ),
                 ],
               ),
@@ -267,67 +281,6 @@ class _JoiningRequestCard extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _downloadLetter(BuildContext context, JoiningLetterRequestEntity req) async {
-    final pdf = pw.Document();
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Center(
-              child: pw.Text(
-                'Jayashree Foundation',
-                style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
-              ),
-            ),
-            pw.Center(child: pw.Text('NGO Management', style: const pw.TextStyle(fontSize: 13))),
-            pw.SizedBox(height: 6),
-            pw.Divider(),
-            pw.SizedBox(height: 20),
-            pw.Center(
-              child: pw.Text(
-                'JOINING LETTER',
-                style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, decoration: pw.TextDecoration.underline),
-              ),
-            ),
-            pw.SizedBox(height: 28),
-            pw.Text('Date: ${AppFormatters.displayDate(req.requestDate)}'),
-            pw.SizedBox(height: 16),
-            pw.Text('To,'),
-            pw.Text(req.name, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 16),
-            pw.Text(
-              'Dear ${req.name},',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 12),
-            pw.Text(
-              'We are pleased to confirm your joining with Jayashree Foundation as a ${req.type.displayLabel}. '
-              'Your tenure has been set as: ${req.tenure}.',
-              style: const pw.TextStyle(lineSpacing: 4, fontSize: 13),
-            ),
-            pw.SizedBox(height: 12),
-            pw.Text(
-              'This letter serves as an official confirmation of your association with our organization. '
-              'We look forward to your valuable contribution towards our mission of empowering communities.',
-              style: const pw.TextStyle(lineSpacing: 4, fontSize: 13),
-            ),
-            pw.SizedBox(height: 40),
-            pw.Text('Approved by: ${req.generatedBy}'),
-            pw.SizedBox(height: 60),
-            pw.Divider(),
-            pw.Text('Jayashree Foundation | Official Joining Letter', style: const pw.TextStyle(fontSize: 10)),
-          ],
-        ),
-      ),
-    );
-
-    final Uint8List bytes = await pdf.save();
-    await Printing.layoutPdf(onLayout: (_) async => bytes);
   }
 }
 

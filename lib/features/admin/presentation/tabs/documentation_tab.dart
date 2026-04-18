@@ -9,6 +9,8 @@ import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:url_launcher/url_launcher.dart' hide launch;
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:ngo_volunteer_management/services/download_service.dart';
 
 class DocumentationTab extends ConsumerWidget {
   const DocumentationTab({super.key});
@@ -218,9 +220,22 @@ class _DocumentCard extends StatelessWidget {
       _                     => AppColors.slate500,
     };
 
+    Future<void> _handleDownload() async {
+      final pdfData = await PdfGeneratorService.generateGenericDocumentPdf(
+        title: doc.title,
+        category: doc.category,
+        date: AppFormatters.displayDate(doc.uploadDate),
+      );
+      DownloadService.downloadBytes(
+        pdfData, 
+        '${doc.title.replaceAll(' ', '_')}.pdf',
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: AppCard(
+        onTap: _handleDownload,
         child: Row(
           children: [
             Container(

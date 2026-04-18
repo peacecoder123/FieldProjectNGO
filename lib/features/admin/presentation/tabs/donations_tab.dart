@@ -1,12 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-
-// PDF & Printing Imports
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
@@ -19,10 +13,11 @@ import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:ngo_volunteer_management/services/download_service.dart';
 
 // Services
 import 'package:ngo_volunteer_management/services/logging/audit_logger.dart';
-import 'package:ngo_volunteer_management/services/document_generation/document_generator.dart';
 
 class DonationsTab extends ConsumerStatefulWidget {
   const DonationsTab({super.key});
@@ -256,81 +251,6 @@ class _DonationItem extends ConsumerWidget {
   const _DonationItem({required this.donation});
   final DonationEntity donation;
 
-  Future<void> _showPdfPreview(BuildContext context, {DonationEntity? latestDonation}) async {
-    try {
-      final generator = DocumentGenerator();
-      final d = latestDonation ?? donation;
-      
-      // Choose the correct template based on 80G status
-      final docType = d.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
-      final template = generator.getTemplateForType(docType);
-      
-      // Resolve the dynamic template fields
-      // NOTE: 'date' must be ISO 8601 to pass the TemplateFieldType.date validator.
-      // We store the display date in the body via a post-processing step.
-      final doc = generator.resolveTemplate(template, {
-        'receipt_number': d.receiptNumber ?? 'REC-PENDING',
-        'donor_name': d.donorName,
-        'amount': d.amount.toString(),
-        'date': d.date,
-        'payment_mode': d.type.name,
-        'purpose': d.purpose,
-      });
-
-      // Post-process: replace the raw ISO date with a human-readable format in the PDF body
-      final displayContent = doc.generatedContent.replaceAll(
-        d.date, 
-        AppFormatters.displayDate(d.date),
-      );
-
-      // Create the actual PDF layout
-      final pdf = pw.Document();
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          build: (pw.Context context) {
-            return pw.Padding(
-              padding: const pw.EdgeInsets.all(32),
-              child: pw.Text(
-                displayContent,
-                style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
-              ),
-            );
-          },
-        ),
-      );
-
-      final pdfBytes = await pdf.save();
-
-      // Show the interactive UI Dialog
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => Dialog(
-            insetPadding: const EdgeInsets.all(20),
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.9,
-              height: MediaQuery.of(context).size.height * 0.8,
-              child: PdfPreview(
-                build: (format) => pdfBytes,
-                allowPrinting: true,
-                allowSharing: true,
-                canChangeOrientation: false,
-                canChangePageFormat: false,
-              ),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not generate receipt: $e')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -427,7 +347,7 @@ class _DonationItem extends ConsumerWidget {
                     // 1. Generate Receipt in DB
                     await ref.read(donationProvider.notifier).generateReceipt(donation.id);
                     
-                    // 2. Fire Audit Log to Firebase
+                    // 2. Fire Audit Log
                     await AuditLogger.logDocumentGeneration(
                       documentType: donation.is80G ? '80G Certificate' : 'Donation Receipt',
                       targetId: donation.id.toString(),
@@ -445,9 +365,14 @@ class _DonationItem extends ConsumerWidget {
                       orElse: () => donation,
                     );
 
-                    // 3. Open Preview
                     if (context.mounted) {
-                      await _showPdfPreview(context, latestDonation: latest);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Receipt generated successfully!'),
+                          backgroundColor: AppColors.emerald600,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     }
                   },
                   icon: const Icon(Icons.receipt_long_rounded, size: 16),
@@ -466,7 +391,22 @@ class _DonationItem extends ConsumerWidget {
                child: Material(
                  color: Colors.transparent,
                  child: InkWell(
-                   onTap: () => _showPdfPreview(context),
+                   onTap: () async {
+                      final parsedDate = DateTime.parse(donation.date);
+                      final pdfData = await PdfGeneratorService.generateReceiptPdf(
+                        receiptNo: donation.receiptNumber ?? 'REC-${parsedDate.year}-${donation.id}',
+                        date: parsedDate,
+                        donorName: donation.donorName,
+                        amount: donation.amount.toDouble(),
+                        amountWords: 'Rupees ${donation.amount} only',
+                        paymentMode: donation.type.name.toUpperCase(),
+                        purpose: donation.purpose,
+                      );
+                      DownloadService.downloadBytes(
+                        pdfData,
+                        'Receipt_${donation.receiptNumber?.replaceAll(' ', '_') ?? donation.id}.pdf',
+                      );
+                   },
                    borderRadius: BorderRadius.circular(6),
                    child: Container(
                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
