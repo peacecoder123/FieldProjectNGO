@@ -107,6 +107,13 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
           ),
           const SizedBox(width: 8),
           _FilterChip(
+            label: 'Waiting Admin',
+            isSelected: _statusFilter == RequestStatus.waitingAdmin,
+            isDark: isDark,
+            onSelected: () => setState(() => _statusFilter = RequestStatus.waitingAdmin),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
             label: 'Approved',
             isSelected: _statusFilter == RequestStatus.approved,
             isDark: isDark,
@@ -191,7 +198,7 @@ class _JoiningRequestCard extends ConsumerWidget {
             ],
           ),
 
-          if (request.status == RequestStatus.pending) ...[
+          if (request.status == RequestStatus.pending || request.status == RequestStatus.waitingAdmin) ...[
             const SizedBox(height: 16),
             _TenureSelector(
               request: request,
@@ -379,10 +386,10 @@ class _TenureSelectorState extends ConsumerState<_TenureSelector> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.emerald600,
+                  backgroundColor: AppColors.brand,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Approve & Generate'),
+                child: const Text('Approve'),
               ),
             ),
           ],
@@ -399,9 +406,10 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
-      RequestStatus.pending  => AppColors.amber500,
-      RequestStatus.approved => AppColors.emerald500,
-      RequestStatus.rejected => AppColors.red500,
+      RequestStatus.pending      => AppColors.amber500,
+      RequestStatus.waitingAdmin => AppColors.brand,
+      RequestStatus.approved     => AppColors.emerald500,
+      RequestStatus.rejected      => AppColors.red500,
     };
     return AppBadge(label: status.displayName.toUpperCase(), color: color);
   }

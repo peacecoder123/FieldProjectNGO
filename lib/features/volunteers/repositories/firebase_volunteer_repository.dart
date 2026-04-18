@@ -56,6 +56,26 @@ class FirebaseVolunteerRepository implements IVolunteerRepository {
 
   @override
   Future<VolunteerEntity> add(VolunteerEntity volunteer) async {
+    // Check for duplicate email
+    final emailDup = await _db
+        .collection(_collectionPath)
+        .where('email', isEqualTo: volunteer.email.toLowerCase().trim())
+        .get();
+    if (emailDup.docs.isNotEmpty) {
+      throw Exception('A volunteer with the email ${volunteer.email} already exists.');
+    }
+
+    // Check for duplicate phone (if provided)
+    if (volunteer.phone.isNotEmpty) {
+      final phoneDup = await _db
+          .collection(_collectionPath)
+          .where('phone', isEqualTo: volunteer.phone.trim())
+          .get();
+      if (phoneDup.docs.isNotEmpty) {
+        throw Exception('A volunteer with the phone number ${volunteer.phone} already exists.');
+      }
+    }
+
     final docRef = await _db.collection(_collectionPath).add(_toMap(volunteer));
     return volunteer.copyWith(id: docRef.id);
   }

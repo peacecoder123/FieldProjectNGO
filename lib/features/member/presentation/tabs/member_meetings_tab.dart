@@ -287,7 +287,7 @@ class _AddSummaryFormState extends State<_AddSummaryForm> {
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => widget.onSubmit(_controller.text),
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.blue600, foregroundColor: Colors.white),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
           child: const Text('Save Summary'),
         ),
       ],

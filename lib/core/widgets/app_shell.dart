@@ -104,7 +104,16 @@ class _AppShellState extends ConsumerState<AppShell> {
                     notifications: widget.notifications,
                   ),
                   Expanded(
-                    child: widget.body,
+                    child: RefreshIndicator(
+                      onRefresh: _onRefresh,
+                      displacement: 10,
+                      edgeOffset: 0,
+                      color: AppColors.brand,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: widget.body,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -116,7 +125,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   Widget _buildDrawer() => Drawer(
-    backgroundColor: AppColors.slate900,
+    backgroundColor: AppColors.brand,
     child: _SidebarContent(
       navItems:  widget.navItems,
       activeTab: widget.activeTab,
@@ -154,7 +163,7 @@ class _Sidebar extends StatelessWidget {
     return SizedBox(
       width: AppConstants.sidebarWidth,
       child: Container(
-        color: AppColors.slate900,
+        color: AppColors.brand,
         child: _SidebarContent(
           navItems: navItems,
           activeTab: activeTab,
@@ -193,40 +202,42 @@ class _SidebarContent extends ConsumerWidget {
 
         // ── Role pill ──────────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradientColors.colors.map((c) => c.withValues(alpha: 0.25)).toList(),
-              ),
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: Row(
               children: [
                 AppAvatar(
                   initials: user?.displayAvatar ?? '?',
-                  size: AvatarSize.small,
+                  size: AvatarSize.medium,
                   role: role,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        roleLabel,
+                        roleLabel.toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         user?.name ?? '',
                         style: const TextStyle(
-                          color: AppColors.slate300,
-                          fontSize: 11,
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -240,14 +251,14 @@ class _SidebarContent extends ConsumerWidget {
         ),
 
         // ── Nav items ─────────────────────────────────────────────────────
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'NAVIGATION',
               style: TextStyle(
-                color: AppColors.slate500,
+                color: AppColors.white.withValues(alpha: 0.5),
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1,
@@ -259,7 +270,7 @@ class _SidebarContent extends ConsumerWidget {
 
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             itemCount: navItems.length,
             itemBuilder: (context, i) {
               final item     = navItems[i];
@@ -297,7 +308,7 @@ class _SidebarLogo extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
         child: Row(
           children: [
             ClipRRect(
@@ -310,25 +321,31 @@ class _SidebarLogo extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Jayashree Foundation',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Jayashree Foundation',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                Text(
-                  'NGO Management',
-                  style: TextStyle(
-                    color: AppColors.slate400,
-                    fontSize: 10,
+                  Text(
+                    'NGO Management',
+                    style: const TextStyle(
+                      color: AppColors.slate400,
+                      fontSize: 10,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -364,15 +381,16 @@ class _NavTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: isActive
-                  ? AppColors.blue600
+                  ? Colors.white.withValues(alpha: 0.15)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: AppColors.blue600.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                        spreadRadius: -2,
                       )
                     ]
                   : null,
@@ -420,15 +438,15 @@ class _NavTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (isActive)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4),
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      size: 14,
-                      color: AppColors.blue400,
+                  if (isActive)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
               ],
             ),
           ),
@@ -453,7 +471,7 @@ class _SignOutButton extends ConsumerWidget {
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          const Divider(color: AppColors.slate700, height: 1),
+          const Divider(color: Colors.white24, height: 1),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -557,13 +575,14 @@ class _TopBarState extends ConsumerState<_TopBar> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 72,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.slate800 : AppColors.white,
+        color: isDark ? AppColors.slate900 : AppColors.white,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? AppColors.slate700 : AppColors.slate200,
+            color: isDark ? AppColors.slate800 : AppColors.slate100,
+            width: 1.5,
           ),
         ),
       ),

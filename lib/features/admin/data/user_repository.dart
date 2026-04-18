@@ -13,14 +13,13 @@ class UserRepository {
   }
 
   Future<void> addUser(UserEntity user) async {
-    // Check if user already exists
     final existing = await _db
         .collection(_collection)
         .where('email', isEqualTo: user.email.toLowerCase().trim())
         .get();
-        
+
     if (existing.docs.isNotEmpty) {
-      throw Exception('User with this email already exists.');
+      throw Exception('A user with the email ${user.email} already exists in the system.');
     }
 
     await _db.collection(_collection).add({

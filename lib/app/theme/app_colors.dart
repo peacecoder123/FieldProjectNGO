@@ -6,6 +6,7 @@ abstract final class AppColors {
   AppColors._();
 
   // ── Brand (derived from logo navy) ──────────────────────────────────
+  static const Color brand     = Color(0xFF001B3A); // User primary color
   static const Color navy900 = Color(0xFF0C1A3A); // Logo primary navy
   static const Color navy800 = Color(0xFF14254D);
   static const Color navy700 = Color(0xFF1A3166);
@@ -85,7 +86,7 @@ abstract final class AppColors {
   static const Color black = Color(0xFF000000);
 
   // ── Semantic aliases ───────────────────────────────────────────────
-  static const Color primary    = navy500;
+  static const Color primary    = brand;
   static const Color success    = emerald500;
   static const Color warning    = amber500;
   static const Color error      = red500;

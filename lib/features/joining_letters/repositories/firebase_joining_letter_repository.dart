@@ -47,6 +47,15 @@ class FirebaseJoiningLetterRepository implements IJoiningLetterRepository {
   }
 
   @override
+  Future<JoiningLetterRequestEntity> partiallyApprove(String id) async {
+    await _db.collection(_collectionPath).doc(id).update({
+      'status': RequestStatus.waitingAdmin.name,
+    });
+    final doc = await _db.collection(_collectionPath).doc(id).get();
+    return _fromMap(doc.id, doc.data()!);
+  }
+
+  @override
   Future<JoiningLetterRequestEntity> approve(
     String id, {
     required String generatedBy,

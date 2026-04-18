@@ -99,6 +99,7 @@ class FirebaseTaskRepository implements ITaskRepository {
         'deadline': t.deadline,
         'assignedToId': t.assignedToId,
         'assignedToName': t.assignedToName,
+        'assignedToEmail': t.assignedToEmail,
         'assignedToType': t.assignedToType.name,
         'status': t.status.name,
         'requiresUpload': t.requiresUpload,
@@ -115,6 +116,7 @@ class FirebaseTaskRepository implements ITaskRepository {
         deadline: map['deadline'] as String? ?? '',
         assignedToId: map['assignedToId']?.toString() ?? '',
         assignedToName: map['assignedToName'] as String? ?? 'Unknown',
+        assignedToEmail: map['assignedToEmail'] as String? ?? '',
         assignedToType: enumValueOr(
           AssigneeType.values,
           map['assignedToType'] as String? ?? '',

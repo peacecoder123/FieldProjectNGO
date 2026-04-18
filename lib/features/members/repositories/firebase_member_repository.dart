@@ -56,6 +56,26 @@ class FirebaseMemberRepository implements IMemberRepository {
 
   @override
   Future<MemberEntity> add(MemberEntity member) async {
+    // Check for duplicate email
+    final emailDup = await _db
+        .collection(_collectionPath)
+        .where('email', isEqualTo: member.email.toLowerCase().trim())
+        .get();
+    if (emailDup.docs.isNotEmpty) {
+      throw Exception('A member with the email ${member.email} already exists.');
+    }
+
+    // Check for duplicate phone (if provided)
+    if (member.phone.isNotEmpty) {
+      final phoneDup = await _db
+          .collection(_collectionPath)
+          .where('phone', isEqualTo: member.phone.trim())
+          .get();
+      if (phoneDup.docs.isNotEmpty) {
+        throw Exception('A member with the phone number ${member.phone} already exists.');
+      }
+    }
+
     final docRef = await _db.collection(_collectionPath).add(_toMap(member));
     return member.copyWith(id: docRef.id);
   }

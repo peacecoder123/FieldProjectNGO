@@ -6,6 +6,7 @@ import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import '../data/entities.dart';
 import '../data/repositories.dart';
+import '../../services/notification_service.dart';
 
 // Firebase repositories
 import '../../features/payments/repositories/donation_repository.dart';
@@ -14,6 +15,7 @@ import '../../features/members/repositories/firebase_member_repository.dart';
 import '../../features/tasks/repositories/firebase_task_repository.dart';
 import '../../features/requests/repositories/firebase_general_request_repository.dart';
 import '../../features/requests/repositories/firebase_mou_request_repository.dart';
+import '../../features/requests/repositories/firebase_hospital_repository.dart';
 import '../../features/joining_letters/repositories/firebase_joining_letter_repository.dart';
 import '../../features/meetings/repositories/firebase_meeting_repository.dart';
 import '../../features/documents/repositories/document_request_repository.dart';
@@ -21,6 +23,7 @@ import '../../features/documents/repositories/firebase_document_request_reposito
 import '../../features/documents/repositories/firebase_document_storage_repository.dart';
 import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
 import '../../features/auth/repositories/firebase_auth_repository.dart';
+import '../../features/requests/repositories/firebase_hospital_repository.dart';
 import '../../features/admin/data/user_repository.dart';
 import '../../features/auth/domain/entities/user_entity.dart';
 
@@ -51,6 +54,9 @@ final generalRequestRepositoryProvider = Provider<IGeneralRequestRepository>(
 );
 final mouRequestRepositoryProvider = Provider<IMouRequestRepository>(
   (_) => FirebaseMouRequestRepository(),
+);
+final hospitalRepositoryProvider = Provider<IHospitalRepository>(
+  (_) => FirebaseHospitalRepository(),
 );
 final joiningLetterRepositoryProvider = Provider<IJoiningLetterRepository>(
   (_) => FirebaseJoiningLetterRepository(),
@@ -165,10 +171,29 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<TaskEntity>>> {
     super.dispose();
   }
 
-  Future<void> add(TaskEntity t) => _repo.add(t);
+  Future<void> add(TaskEntity t) async {
+    await _repo.add(t);
+    _notify('New Task Assigned', 'A new task "${t.title}" has been assigned to you.');
+  }
 
-  Future<void> updateStatus(String taskId, TaskStatus status, {String? approvedBy}) => 
-      _repo.updateStatus(taskId, status, approvedBy: approvedBy);
+  Future<void> updateStatus(String taskId, TaskStatus status, {String? approvedBy}) async {
+    await _repo.updateStatus(taskId, status, approvedBy: approvedBy);
+    
+    final t = state.value?.firstWhere((task) => task.id == taskId);
+    if (t != null) {
+      if (status == TaskStatus.waitingAdmin) {
+        _notify('Task Partially Approved', 'Mentor has partially approved "${t.title}". Waiting for Admin.');
+      } else if (status == TaskStatus.approved) {
+        _notify('Task Approved', 'Your submission for "${t.title}" has been fully approved!');
+      } else if (status == TaskStatus.rejected) {
+        _notify('Task Rejected', 'Submission for "${t.title}" was rejected.');
+      }
+    }
+  }
+
+  void _notify(String title, String body) {
+    PushNotificationService.instance.showNotification(title: title, body: body);
+  }
 
   Future<void> submit(String taskId, {String? imagePath, String? geotag}) async {
     final current = state.value?.firstWhere((t) => t.id == taskId);
@@ -314,12 +339,29 @@ class GeneralRequestNotifier
     super.dispose();
   }
 
-  Future<void> add(GeneralRequestEntity r) => _repo.add(r);
+  Future<void> add(GeneralRequestEntity r) async {
+    await _repo.add(r);
+    _notify('Request Submitted', 'Your general request has been sent for review.');
+  }
 
-  Future<void> approve(String id, {String? approvedBy}) => 
-      _repo.updateStatus(id, RequestStatus.approved, approvedBy: approvedBy);
+  Future<void> partiallyApprove(String id, {String? approvedBy}) async {
+    await _repo.updateStatus(id, RequestStatus.waitingAdmin, approvedBy: approvedBy);
+    _notify('Request Escalated', 'A request has been partially approved and sent to Admin.');
+  }
 
-  Future<void> reject(String id) => _repo.updateStatus(id, RequestStatus.rejected);
+  Future<void> approve(String id, {String? approvedBy}) async {
+    await _repo.updateStatus(id, RequestStatus.approved, approvedBy: approvedBy);
+    _notify('Request Approved', 'Your general request was approved!');
+  }
+
+  Future<void> reject(String id) async {
+    await _repo.updateStatus(id, RequestStatus.rejected);
+    _notify('Request Rejected', 'A request was rejected.');
+  }
+
+  void _notify(String title, String body) {
+    PushNotificationService.instance.showNotification(title: title, body: body);
+  }
 }
 
 final generalRequestProvider = StateNotifierProvider<GeneralRequestNotifier,
@@ -354,12 +396,29 @@ class MouRequestNotifier
     super.dispose();
   }
 
-  Future<void> add(MouRequestEntity r) => _repo.add(r);
+  Future<void> add(MouRequestEntity r) async {
+    await _repo.add(r);
+    _notify('MOU Request Submitted', 'New MOU request for ${r.patientName}.');
+  }
 
-  Future<void> approve(String id, {String? approvedBy}) => 
-      _repo.updateStatus(id, RequestStatus.approved, approvedBy: approvedBy);
+  Future<void> partiallyApprove(String id, {String? approvedBy}) async {
+    await _repo.updateStatus(id, RequestStatus.waitingAdmin, approvedBy: approvedBy);
+    _notify('MOU Escalated', 'MOU request partially approved.');
+  }
 
-  Future<void> reject(String id) => _repo.updateStatus(id, RequestStatus.rejected);
+  Future<void> approve(String id, {String? approvedBy}) async {
+    await _repo.updateStatus(id, RequestStatus.approved, approvedBy: approvedBy);
+    _notify('MOU Approved', 'MOU request completed.');
+  }
+
+  Future<void> reject(String id) async {
+    await _repo.updateStatus(id, RequestStatus.rejected);
+    _notify('MOU Rejected', 'MOU request was rejected.');
+  }
+
+  void _notify(String title, String body) {
+    PushNotificationService.instance.showNotification(title: title, body: body);
+  }
 }
 
 final mouRequestProvider = StateNotifierProvider<MouRequestNotifier,
@@ -393,19 +452,37 @@ class JoiningLetterNotifier
     super.dispose();
   }
 
-  Future<void> add(JoiningLetterRequestEntity r) => _repo.add(r);
+  Future<void> add(JoiningLetterRequestEntity r) async {
+    await _repo.add(r);
+    _notify('Letter Request Submitted', 'New joining letter request from ${r.name}.');
+  }
+
+  Future<void> partiallyApprove(String id) async {
+    await _repo.partiallyApprove(id);
+    _notify('Letter Request Escalated', 'A joining letter request is waiting for Admin approval.');
+  }
 
   Future<void> approve(
     String id, {
     required String generatedBy,
     required String tenure,
-  }) => _repo.approve(
+  }) async {
+    await _repo.approve(
       id,
       generatedBy: generatedBy,
       tenure:      tenure,
     );
+    _notify('Letter Generated', 'Your official joining letter is ready for download!');
+  }
 
-  Future<void> reject(String id) => _repo.reject(id);
+  Future<void> reject(String id) async {
+    await _repo.reject(id);
+    _notify('Letter Request Rejected', 'Your joining letter request was rejected.');
+  }
+
+  void _notify(String title, String body) {
+    PushNotificationService.instance.showNotification(title: title, body: body);
+  }
 }
 
 final joiningLetterProvider = StateNotifierProvider<JoiningLetterNotifier,
@@ -553,6 +630,40 @@ class UserManagementNotifier extends StateNotifier<AsyncValue<List<UserEntity>>>
   Future<void> updateUser(UserEntity user) => _repository.updateUser(user);
   Future<void> removeUser(String email) => _repository.removeUser(email);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOSPITAL STATE (REAL-TIME STREAM)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class HospitalNotifier extends StateNotifier<AsyncValue<List<HospitalEntity>>> {
+  HospitalNotifier(this._repo) : super(const AsyncValue.loading()) {
+    _listen();
+  }
+
+  final IHospitalRepository _repo;
+  StreamSubscription<List<HospitalEntity>>? _subscription;
+
+  void _listen() {
+    _subscription = _repo.watchAll().listen(
+      (list) => state = AsyncValue.data(list),
+      onError: (err, st) => state = AsyncValue.error(err, st),
+    );
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> add(HospitalEntity h) => _repo.add(h);
+  Future<void> delete(String id) => _repo.delete(id);
+}
+
+final hospitalProvider =
+    StateNotifierProvider<HospitalNotifier, AsyncValue<List<HospitalEntity>>>(
+  (ref) => HospitalNotifier(ref.watch(hospitalRepositoryProvider)),
+);
 
 final usersManagementProvider = StateNotifierProvider<UserManagementNotifier, AsyncValue<List<UserEntity>>>(
   (ref) => UserManagementNotifier(ref.watch(userRepositoryProvider)),

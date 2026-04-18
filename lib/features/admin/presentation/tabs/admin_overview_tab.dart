@@ -64,7 +64,7 @@ class AdminOverviewTab extends ConsumerWidget {
                 child: ListView(
                   shrinkWrap: true,
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
                   children: [
                     // ── Hero banner ────────────────────────────────────────
                   _HeroBanner(
@@ -78,14 +78,15 @@ class AdminOverviewTab extends ConsumerWidget {
                   // ── Stat cards ─────────────────────────────────────────
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final crossCount = constraints.maxWidth > 900 ? 5 : (constraints.maxWidth > 600 ? 3 : 2);
+                      final crossCount = constraints.maxWidth > 900 ? 5 : (constraints.maxWidth > 650 ? 3 : 2);
+                      final aspectRatio = constraints.maxWidth < 600 ? 1.4 : 1.5;
                       return GridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisCount: crossCount,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: crossCount == 4 ? 1.4 : 1.5,
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        childAspectRatio: aspectRatio,
                         children: [
                           StatCard(
                             title:          'Active Volunteers',
@@ -252,11 +253,7 @@ class _HeroBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.blue600, AppColors.indigo600, AppColors.violet600],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
+        color: AppColors.brand,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -266,9 +263,13 @@ class _HeroBanner extends StatelessWidget {
             children: [
               const Icon(Icons.bolt_rounded, color: Colors.white70, size: 14),
               const SizedBox(width: 4),
-              Text(
-                isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              Expanded(
+                child: Text(
+                  isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -345,15 +346,17 @@ class _DonationChart extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Donation Trend',
-                      style: Theme.of(context).textTheme.titleSmall),
-                  const Text('Last 6 months',
-                      style: TextStyle(
-                          fontSize: 11, color: AppColors.slate400)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Donation Trend',
+                        style: Theme.of(context).textTheme.titleSmall),
+                    const Text('Last 6 months',
+                        style: TextStyle(
+                            fontSize: 11, color: AppColors.slate400)),
+                  ],
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(

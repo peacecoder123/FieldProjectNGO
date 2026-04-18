@@ -116,6 +116,36 @@ class PushNotificationService {
     }
   }
 
+  /// Triggers a local notification immediately.
+  /// Used for workflow event feedback (simulating push notifications).
+  Future<void> showNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    await _localNotifications.show(
+      id: title.hashCode,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channel.id,
+          _channel.name,
+          channelDescription: _channel.description,
+          importance: Importance.max,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: payload,
+    );
+  }
+
   void _handleNotificationClick(RemoteMessage message) {
     debugPrint('Notification clicked (App opened from background): ${message.data}');
     // TODO: Add navigation logic here based on message.data

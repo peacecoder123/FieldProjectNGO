@@ -37,7 +37,7 @@ class MockAuthRepository implements IAuthRepository {
   }
 
   @override
-  Future<void> updateFcmToken(int userId, String? token) async {
+  Future<void> updateFcmToken(String userId, String? token) async {
     // Mock implementation doesn't need to persist to a real DB
     await Future.delayed(const Duration(milliseconds: 200));
     print('Mock: FCM token updated for $userId to $token');
@@ -287,6 +287,17 @@ class MockJoiningLetterRepository implements IJoiningLetterRepository {
   }
 
   @override
+  Future<JoiningLetterRequestEntity> partiallyApprove(String id) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    final idx = _data.indexWhere((r) => r.id == id);
+    if (idx != -1) {
+      _data[idx] = _data[idx].copyWith(status: RequestStatus.waitingAdmin);
+      return _data[idx];
+    }
+    throw Exception('Not found');
+  }
+
+  @override
   Future<JoiningLetterRequestEntity> reject(String id) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((r) => r.id == id);
@@ -357,7 +368,7 @@ class MockMeetingRepository implements IMeetingRepository {
   }
 
   @override
-  Future<MeetingEntity> markCompleted(int meetingId, {required String summaryAssignedTo}) async {
+  Future<MeetingEntity> markCompleted(String meetingId, {required String summaryAssignedTo}) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((m) => m.id == meetingId);
     if (idx != -1) {
@@ -365,5 +376,38 @@ class MockMeetingRepository implements IMeetingRepository {
       return _data[idx];
     }
     throw Exception('Not found');
+  }
+}
+// -- Hospitals ----------------------------------------------------------------
+class MockHospitalRepository implements IHospitalRepository {
+  final List<HospitalEntity> _data = [
+    const HospitalEntity(id: '1', name: 'KEM Hospital Mumbai', address: 'Acharya Donde Marg, Parel', city: 'Mumbai'),
+    const HospitalEntity(id: '2', name: 'Lilavati Hospital', address: 'A-791, Bandra Reclamation', city: 'Mumbai'),
+    const HospitalEntity(id: '3', name: 'Nanavati Max Hospital', address: 'S.V. Road, Vile Parle West', city: 'Mumbai'),
+    const HospitalEntity(id: '4', name: 'Hinduja Hospital', address: 'Veer Savarkar Marg, Mahim', city: 'Mumbai'),
+    const HospitalEntity(id: '5', name: 'Cooper Hospital', address: 'Vile Parle West', city: 'Mumbai'),
+  ];
+
+  @override
+  Future<List<HospitalEntity>> getAll() async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    return _data;
+  }
+
+  @override
+  Stream<List<HospitalEntity>> watchAll() => Stream.fromFuture(getAll());
+
+  @override
+  Future<HospitalEntity> add(HospitalEntity hospital) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    final newH = hospital.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString());
+    _data.add(newH);
+    return newH;
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    _data.removeWhere((h) => h.id == id);
   }
 }

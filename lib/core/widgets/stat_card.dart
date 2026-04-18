@@ -40,12 +40,12 @@ class StatCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: iconBackground,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: SizedBox(width: 18, height: 18, child: icon),
+                child: SizedBox(width: 16, height: 16, child: icon),
               ),
               if (trend != null)
                 Container(
@@ -93,7 +93,7 @@ class StatCard extends StatelessWidget {
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
               color: isDark ? AppColors.white : AppColors.slate900,
-              fontSize: 20,
+              fontSize: 18,
               height: 1.1,
             ),
             maxLines: 1,

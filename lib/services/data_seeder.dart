@@ -15,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future<void> seedFirestoreIfEmpty() async {
   final prefs = await SharedPreferences.getInstance();
   // Bump version to force re-seed when data schema changes.
-  const currentVersion = 'v11';
+  const currentVersion = 'v12';
 
   final seededVersion = prefs.getString('firestore_seeded_v') ?? '';
   if (seededVersion == currentVersion) return;
@@ -188,6 +188,15 @@ Future<void> seedFirestoreIfEmpty() async {
       {'id': '1', 'patientName': 'Ramesh Kumar', 'patientAge': 58, 'disease': 'Cardiac Surgery',  'hospital': 'KEM Hospital Mumbai', 'requestDate': '2025-03-12', 'status': 'pending',  'requesterName': 'Dr. Anjali Mehta', 'phone': '9876543200', 'address': 'Worli, Mumbai',    'bloodGroup': 'B+'},
       {'id': '2', 'patientName': 'Sunita Devi',  'patientAge': 42, 'disease': 'Kidney Dialysis', 'hospital': 'Hinduja Hospital',    'requestDate': '2025-02-28', 'status': 'approved', 'requesterName': 'Dr. Anjali Mehta', 'phone': '9823456701', 'address': 'Dharavi, Mumbai', 'bloodGroup': 'O+'},
     ];
+    
+    // ── Partner Hospitals ──────────────────────────────────────────
+    final hospitals = [
+      {'id': '1', 'name': 'KEM Hospital Mumbai',      'address': 'Acharya Donde Marg, Parel', 'city': 'Mumbai'},
+      {'id': '2', 'name': 'Lilavati Hospital',        'address': 'A-791, Bandra Reclamation', 'city': 'Mumbai'},
+      {'id': '3', 'name': 'Nanavati Max Hospital',    'address': 'S.V. Road, Vile Parle West', 'city': 'Mumbai'},
+      {'id': '4', 'name': 'Hinduja Hospital',         'address': 'Veer Savarkar Marg, Mahim', 'city': 'Mumbai'},
+      {'id': '5', 'name': 'Cooper Hospital',          'address': 'Vile Parle West',           'city': 'Mumbai'},
+    ];
 
     // ── Meetings ─────────────────────────────────────────────────
     final meetings = [
@@ -203,28 +212,50 @@ Future<void> seedFirestoreIfEmpty() async {
     ];
 
     // ── Clean up stale docs from old seeder versions ─────────────────────────
-    // Old seeder had wrong IDs (e.g. Rahul Verma was at users/"4", volunteers/"1")
-    // We must delete them so Firestore queries (which go by email) don't find double entries.
     final staleCleanup = [
-      db.collection('users').doc('4'),       // Old Rahul Verma user doc (was id=4)
-      db.collection('users').doc('2'),       // Old Priya Sharma user doc (was id=2)
-      db.collection('users').doc('3'),       // Old Anjali user doc (was id=3)
+      db.collection('users').doc('4'),
+      db.collection('users').doc('2'),
+      db.collection('users').doc('3'),
     ];
-    for (final ref in staleCleanup) {
-      try { await ref.delete(); } catch (_) {}
-    }
-    debugPrint('🧹 Cleaned up stale Firestore docs');
+    await Future.wait(staleCleanup.map((ref) => ref.delete().catchError((_) => {})));
+    debugPrint('🧹 Cleaned up stale Firestore docs (parallel)');
 
-    // Write all collections (individual sets to avoid 500-item batch limit)
-    for (final u in users)            { await db.collection('users').doc(u['id'].toString()).set(u); }
-    for (final v in volunteers)       { await db.collection('volunteers').doc(v['id'].toString()).set(v); }
-    for (final m in members)          { await db.collection('members').doc(m['id'].toString()).set(m); }
-    for (final t in tasks)            { await db.collection('tasks').doc(t['id'].toString()).set(t); }
-    for (final j in joiningLetters)   { await db.collection('joining_letter_requests').doc(j['id'].toString()).set(j); }
-    for (final g in generalRequests)  { await db.collection('general_requests').doc(g['id'].toString()).set(g); }
-    for (final m in mouRequests)      { await db.collection('mou_requests').doc(m['id'].toString()).set(m); }
-    for (final m in meetings)         { await db.collection('meetings').doc(m['id'].toString()).set(m); }
-    for (final d in donations)        { await db.collection('donations').doc(d['id'].toString()).set(d); }
+    // ── Write all collections using WriteBatch (Single Request) ───────────────
+    final batch = db.batch();
+
+    for (final u in users) {
+      batch.set(db.collection('users').doc(u['id'].toString()), u);
+    }
+    for (final v in volunteers) {
+      batch.set(db.collection('volunteers').doc(v['id'].toString()), v);
+    }
+    for (final m in members) {
+      batch.set(db.collection('members').doc(m['id'].toString()), m);
+    }
+    for (final t in tasks) {
+      batch.set(db.collection('tasks').doc(t['id'].toString()), t);
+    }
+    for (final j in joiningLetters) {
+      batch.set(db.collection('joining_letter_requests').doc(j['id'].toString()), j);
+    }
+    for (final g in generalRequests) {
+      batch.set(db.collection('general_requests').doc(g['id'].toString()), g);
+    }
+    for (final m in mouRequests) {
+      batch.set(db.collection('mou_requests').doc(m['id'].toString()), m);
+    }
+    for (final m in meetings) {
+      batch.set(db.collection('meetings').doc(m['id'].toString()), m);
+    }
+    for (final d in donations) {
+      batch.set(db.collection('donations').doc(d['id'].toString()), d);
+    }
+    for (final h in hospitals) {
+      batch.set(db.collection('hospitals').doc(h['id'].toString()), h);
+    }
+
+    // Commit all at once for maximum speed
+    await batch.commit();
 
     await prefs.setString('firestore_seeded_v', currentVersion);
     debugPrint('✅ Firestore re-seeded successfully (version: $currentVersion)');

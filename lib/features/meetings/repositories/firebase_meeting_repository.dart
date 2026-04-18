@@ -67,8 +67,8 @@ class FirebaseMeetingRepository implements IMeetingRepository {
       'status': MeetingStatus.completed.name,
       'summaryAssignedTo': summaryAssignedTo,
     });
-    final doc = await _db.collection(_collectionPath).doc(meetingId.toString()).get();
-    return _fromMap(doc.data()!);
+    final doc = await _db.collection(_collectionPath).doc(meetingId).get();
+    return _fromMap(doc.id, doc.data()!);
   }
 
   Map<String, dynamic> _toMap(MeetingEntity m) => {

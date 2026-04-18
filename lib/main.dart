@@ -26,24 +26,19 @@ Future<void> main() async {
     statusBarColor: Colors.transparent,
   ));
 
-  // Load shared prefs so theme & user can be hydrated before first frame
-  final prefs = await SharedPreferences.getInstance();
+  // Load core services concurrently to save startup time
+  final initializationResults = await Future.wait([
+    SharedPreferences.getInstance(),
+    Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+  ]);
 
-  // Initialize Firebase
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    debugPrint('Firebase initialized successfully');
+  final prefs = initializationResults[0] as SharedPreferences;
+  // Firebase initialized in initializationResults[1]
 
-    // Initialize Push Notifications
-    await PushNotificationService.instance.initialize();
-  } catch (e, stack) {
-    debugPrint('Firebase initialization error: $e');
-    debugPrint('Stack: $stack');
-    // Re-throw to fail fast
-    rethrow;
-  }
+  // Initialize Notifications in background (non-blocking for startup)
+  PushNotificationService.instance.initialize().catchError((e) {
+    debugPrint('Warning: Non-blocking Notification initialization error: $e');
+  });
 
   // Clear old boolean-flag key in case it exists from a previous version
   prefs.remove('firestore_seeded');

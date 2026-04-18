@@ -100,13 +100,31 @@ exports.notifyVolunteerOnTask = functions.firestore
     if (oldData && oldData.assignedToId === newData.assignedToId) return null;
 
     const assigneeId = newData.assignedToId;
+    const assigneeEmail = newData.assignedToEmail;
     const title = newData.title || "New Task";
 
+    let token = null;
+
+    // First try: Document ID (for legacy/consistent IDs)
     const userDoc = await admin.firestore().collection("users").doc(assigneeId.toString()).get();
-    const token = userDoc.exists ? userDoc.data().fcmToken : null;
+    if (userDoc.exists && userDoc.data().fcmToken) {
+      token = userDoc.data().fcmToken;
+    } else if (assigneeEmail) {
+      // Second try: Email lookup (Highly reliable as email is unique)
+      console.log(`ID lookup failed for ${assigneeId}. Trying email lookup: ${assigneeEmail}`);
+      const userSnap = await admin.firestore()
+        .collection("users")
+        .where("email", "==", assigneeEmail.toLowerCase().trim())
+        .limit(1)
+        .get();
+      
+      if (!userSnap.empty) {
+        token = userSnap.docs[0].data().fcmToken;
+      }
+    }
 
     if (!token) {
-      console.log(`No token found for volunteer ${assigneeId}. Skipping notification.`);
+      console.log(`No token found for user ${assigneeId} / ${assigneeEmail}. Skipping notification.`);
       return null;
     }
 
@@ -115,6 +133,21 @@ exports.notifyVolunteerOnTask = functions.firestore
       notification: {
         title: "New Task Assigned 📋",
         body: `You have been assigned: ${title}`,
+      },
+      android: {
+        priority: "high",
+        notification: {
+          channelId: "high_importance_channel",
+          clickAction: "FLUTTER_NOTIFICATION_CLICK"
+        }
+      },
+      apns: {
+        payload: {
+          aps: {
+            contentAvailable: true,
+            sound: "default"
+          }
+        }
       },
       data: {
         type: "task",
@@ -125,7 +158,7 @@ exports.notifyVolunteerOnTask = functions.firestore
 
     try {
       await admin.messaging().send(message);
-      console.log(`Notification sent to volunteer ${assigneeId}`);
+      console.log(`Notification sent to ${assigneeEmail || assigneeId}`);
     } catch (err) {
       console.error("FCM Error:", err);
     }

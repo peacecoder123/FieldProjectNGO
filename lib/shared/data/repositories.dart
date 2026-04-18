@@ -70,11 +70,19 @@ abstract interface class IMouRequestRepository {
   Future<MouRequestEntity> updateStatus(String id, RequestStatus status, {String? approvedBy});
 }
 
+abstract interface class IHospitalRepository {
+  Future<List<HospitalEntity>> getAll();
+  Stream<List<HospitalEntity>> watchAll();
+  Future<HospitalEntity> add(HospitalEntity hospital);
+  Future<void> delete(String id);
+}
+
 abstract interface class IJoiningLetterRepository {
   Future<List<JoiningLetterRequestEntity>> getAll();
   Stream<List<JoiningLetterRequestEntity>> watchAll();
   Future<JoiningLetterRequestEntity> add(JoiningLetterRequestEntity request);
   Future<JoiningLetterRequestEntity> approve(String id, {required String generatedBy, required String tenure});
+  Future<JoiningLetterRequestEntity> partiallyApprove(String id);
   Future<JoiningLetterRequestEntity> reject(String id);
 }
 

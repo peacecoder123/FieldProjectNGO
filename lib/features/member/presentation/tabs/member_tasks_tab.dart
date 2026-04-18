@@ -7,6 +7,7 @@ import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/core/widgets/submit_task_form.dart';
+import 'package:ngo_volunteer_management/core/widgets/app_task_image.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
@@ -75,10 +76,11 @@ class _MemberTaskItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statusColor = switch (task.status) {
-      TaskStatus.pending => AppColors.amber500,
-      TaskStatus.submitted => AppColors.blue500,
-      TaskStatus.approved => AppColors.emerald500,
-      TaskStatus.rejected => AppColors.red500,
+      TaskStatus.pending      => AppColors.amber500,
+      TaskStatus.submitted    => AppColors.blue500,
+      TaskStatus.waitingAdmin => AppColors.brand,
+      TaskStatus.approved     => AppColors.emerald500,
+      TaskStatus.rejected     => AppColors.red500,
     };
 
     return AppCard(
@@ -112,27 +114,65 @@ class _MemberTaskItem extends ConsumerWidget {
               icon: const Icon(Icons.cloud_upload_rounded, size: 18),
               label: const Text('Submit Completion'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.blue600,
+                backgroundColor: AppColors.brand,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 44),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
-          ] else if (task.status == TaskStatus.submitted) ...[
-            const SizedBox(height: 12),
+          ] else if (task.status == TaskStatus.submitted || task.status == TaskStatus.approved) ...[
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.blue50, borderRadius: BorderRadius.circular(8)),
-              child: const Row(
+              decoration: BoxDecoration(
+                color: task.status == TaskStatus.approved ? AppColors.emerald50 : AppColors.blue50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: task.status == TaskStatus.approved ? AppColors.emerald100 : AppColors.blue100),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline_rounded, size: 16, color: AppColors.blue600),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Your submission is under review by the admin.',
-                      style: TextStyle(fontSize: 12, color: AppColors.blue600, fontWeight: FontWeight.w500),
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        task.status == TaskStatus.approved ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                        size: 16,
+                        color: task.status == TaskStatus.approved ? AppColors.emerald600 : AppColors.blue600,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          task.status == TaskStatus.approved 
+                              ? 'Task approved! Great job.' 
+                              : 'Your submission is under review.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: task.status == TaskStatus.approved ? AppColors.emerald600 : AppColors.blue600,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  if (task.uploadedImage != null) ...[
+                    const SizedBox(height: 12),
+                    const Text('Submitted Evidence:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.slate500)),
+                    const SizedBox(height: 8),
+                    AppTaskImage(imageUrl: task.uploadedImage, height: 120, width: double.infinity),
+                  ],
+                  if (task.geotag != null && task.geotag!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_rounded, size: 12, color: AppColors.red500),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Geotagged: ${task.geotag}',
+                          style: const TextStyle(fontSize: 10, color: AppColors.slate500, fontFamily: 'monospace'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

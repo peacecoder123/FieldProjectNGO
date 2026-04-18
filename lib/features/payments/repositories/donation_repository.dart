@@ -36,9 +36,11 @@ class DonationRepository implements IDonationRepository {
         .orderBy('date', descending: true)
         .get();
 
-    return snapshot.docs
-        .map((doc) => DonationEntity.fromMap({'id': doc.id, ...doc.data()}))
-        .toList();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      data['id'] = doc.id;
+      return DonationEntity.fromMap(data);
+    }).toList();
   }
 
   @override
@@ -48,15 +50,19 @@ class DonationRepository implements IDonationRepository {
         .orderBy('date', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => DonationEntity.fromMap({'id': doc.id, ...doc.data()}))
-          .toList();
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return DonationEntity.fromMap(data);
+      }).toList();
     });
   }
 
   @override
   Future<DonationEntity> add(DonationEntity donation) async {
     final docRef = await _db.collection(_collectionPath).add(donation.toMap());
+    final data = donation.toMap();
+    await docRef.update({'id': docRef.id}); // write correct ID to payload too
     return donation.copyWith(id: docRef.id);
   }
 
@@ -70,7 +76,9 @@ class DonationRepository implements IDonationRepository {
     });
 
     final updatedDoc = await docRef.get();
-    return DonationEntity.fromMap({'id': updatedDoc.id, ...updatedDoc.data()!});
+    final data = updatedDoc.data()!;
+    data['id'] = updatedDoc.id;
+    return DonationEntity.fromMap(data);
   }
 
   @override
@@ -83,10 +91,10 @@ class DonationRepository implements IDonationRepository {
   }
 
   @override
-  Future<void> updatePaymentStatus(int donationId, PaymentStatus status) async {
+  Future<void> updatePaymentStatus(String donationId, PaymentStatus status) async {
     await _db
         .collection(_collectionPath)
-        .doc(donationId.toString())
+        .doc(donationId)
         .update({
       'paymentStatus': status.name,
     });

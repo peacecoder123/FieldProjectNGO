@@ -5,6 +5,7 @@ import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_avatar.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
+import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -25,206 +26,220 @@ class ProfileScreen extends ConsumerWidget {
       UserRole.volunteer  => AppColors.orange500,
     };
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Text(
-            'My Profile',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.white : AppColors.slate900,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Your personal information and account settings',
-            style: TextStyle(fontSize: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
-          ),
-          const SizedBox(height: 28),
-
-          // Avatar & Name Card
-          AppCard(
-            child: Row(
-              children: [
-                AppAvatar(
-                  initials: user.displayAvatar,
-                  role: user.role,
-                  size: AvatarSize.xlarge,
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Invalidate key providers to fetch fresh data
+        ref.invalidate(volunteerProvider);
+        ref.invalidate(memberProvider);
+        ref.invalidate(donationProvider);
+        ref.invalidate(taskProvider);
+        // Simulate a small delay for better UX
+        await Future.delayed(const Duration(milliseconds: 800));
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Text(
+                'My Profile',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.white : AppColors.slate900,
                 ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user.name,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.white : AppColors.slate900,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user.email,
-                        style: TextStyle(fontSize: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: roleColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: roleColor.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.verified_rounded, size: 14, color: roleColor),
-                            const SizedBox(width: 6),
-                            Text(
-                              user.role.displayName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: roleColor,
-                              ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Your personal information and account settings',
+                style: TextStyle(fontSize: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
+              ),
+              const SizedBox(height: 28),
+
+              // Avatar & Name Card
+              AppCard(
+                child: Row(
+                  children: [
+                    AppAvatar(
+                      initials: user.displayAvatar,
+                      role: user.role,
+                      size: AvatarSize.xlarge,
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user.name,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? AppColors.white : AppColors.slate900,
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Account Details
-          Text(
-            'Account Details',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.white : AppColors.slate800,
-            ),
-          ),
-          const SizedBox(height: 12),
-          AppCard(
-            child: Column(
-              children: [
-                _InfoRow(
-                  icon: Icons.person_rounded,
-                  label: 'Full Name',
-                  value: user.name,
-                  isDark: isDark,
-                ),
-                _Divider(),
-                _InfoRow(
-                  icon: Icons.email_rounded,
-                  label: 'Email Address',
-                  value: user.email,
-                  isDark: isDark,
-                ),
-                _Divider(),
-                _InfoRow(
-                  icon: Icons.shield_rounded,
-                  label: 'Role',
-                  value: user.role.displayName,
-                  isDark: isDark,
-                  valueColor: roleColor,
-                ),
-                _Divider(),
-                _InfoRow(
-                  icon: Icons.login_rounded,
-                  label: 'Authentication',
-                  value: 'Google Sign-In',
-                  isDark: isDark,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Security / Settings
-          Text(
-            'Security',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.white : AppColors.slate800,
-            ),
-          ),
-          const SizedBox(height: 12),
-          AppCard(
-            child: Column(
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.blue100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.key_rounded, size: 18, color: AppColors.blue600),
-                  ),
-                  title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w500)),
-                  subtitle: const Text('A password reset link will be sent to your email', style: TextStyle(fontSize: 12)),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.slate400),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Password reset link sent to ${user.email}'),
-                        backgroundColor: AppColors.blue600,
-                      ),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.red50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.logout_rounded, size: 18, color: AppColors.red600),
-                  ),
-                  title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w500, color: AppColors.red600)),
-                  subtitle: const Text('Sign out from this device', style: TextStyle(fontSize: 12)),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.slate400),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Sign Out?'),
-                        content: const Text('Are you sure you want to sign out?'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              ref.read(currentUserProvider.notifier).logout();
-                            },
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red600, foregroundColor: Colors.white),
-                            child: const Text('Sign Out'),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            user.email,
+                            style: TextStyle(fontSize: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: roleColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: roleColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified_rounded, size: 14, color: roleColor),
+                                const SizedBox(width: 6),
+                                Text(
+                                  user.role.displayName,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: roleColor,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              ],
+              ),
+              const SizedBox(height: 24),
+
+              // Account Details
+              Text(
+                'Account Details',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.white : AppColors.slate800,
+                ),
+              ),
+              const SizedBox(height: 12),
+              AppCard(
+                child: Column(
+                  children: [
+                    _InfoRow(
+                      icon: Icons.person_rounded,
+                      label: 'Full Name',
+                      value: user.name,
+                      isDark: isDark,
+                    ),
+                    _Divider(),
+                    _InfoRow(
+                      icon: Icons.email_rounded,
+                      label: 'Email Address',
+                      value: user.email,
+                      isDark: isDark,
+                    ),
+                    _Divider(),
+                    _InfoRow(
+                      icon: Icons.shield_rounded,
+                      label: 'Role',
+                      value: user.role.displayName,
+                      isDark: isDark,
+                      valueColor: roleColor,
+                    ),
+                    _Divider(),
+                    _InfoRow(
+                      icon: Icons.login_rounded,
+                      label: 'Authentication',
+                      value: 'Google Sign-In',
+                      isDark: isDark,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Security / Settings
+              Text(
+                'Security',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.white : AppColors.slate800,
+                ),
+              ),
+              const SizedBox(height: 12),
+              AppCard(
+                child: Column(
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.blue100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.key_rounded, size: 18, color: AppColors.blue600),
+                    ),
+                    title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w500)),
+                    subtitle: const Text('A password reset link will be sent to your email', style: TextStyle(fontSize: 12)),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.slate400),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Password reset link sent to ${user.email}'),
+                          backgroundColor: AppColors.brand,
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.red50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.logout_rounded, size: 18, color: AppColors.red600),
+                    ),
+                    title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w500, color: AppColors.red600)),
+                    subtitle: const Text('Sign out from this device', style: TextStyle(fontSize: 12)),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.slate400),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Sign Out?'),
+                          content: const Text('Are you sure you want to sign out?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                ref.read(currentUserProvider.notifier).logout();
+                              },
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.red600, foregroundColor: Colors.white),
+                              child: const Text('Sign Out'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
