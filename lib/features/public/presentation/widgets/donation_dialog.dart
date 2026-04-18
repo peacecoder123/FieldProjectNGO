@@ -8,10 +8,6 @@ import 'package:ngo_volunteer_management/services/payment/razorpay_config.dart';
 import 'package:ngo_volunteer_management/shared/providers/payment_provider.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
-import 'package:ngo_volunteer_management/services/document_generation/document_generator.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 /// A full-featured donation dialog that collects donor info and triggers
 /// Razorpay checkout. Can be shown via [DonationDialog.show].
@@ -80,15 +76,13 @@ class _DonationDialogState extends ConsumerState<DonationDialog> {
 
       if (outcome.isSuccess) {
         // Save donation to Firestore
-        final donationId = DateTime.now().millisecondsSinceEpoch.toString();
         final donation = DonationEntity(
-          id: donationId,
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
           donorName: _donorName,
           amount: _amount,
           date: AppFormatters.today(),
           type: DonationType.online,
-          receiptGenerated: true,
-          receiptNumber: 'REC-${DateTime.now().year}-$donationId',
+          receiptGenerated: false,
           purpose: 'General Donation',
           is80G: _is80G,
           razorpayPaymentId: outcome.paymentId,
@@ -102,7 +96,7 @@ class _DonationDialogState extends ConsumerState<DonationDialog> {
 
         if (!mounted) return;
         Navigator.of(context).pop();
-        _showSuccessDialog(donation);
+        _showSuccessDialog(outcome.paymentId ?? '');
       } else {
         setState(() => _isProcessing = false);
         _showSnackBar(outcome.errorMessage ?? 'Payment failed. Please try again.');
@@ -120,7 +114,7 @@ class _DonationDialogState extends ConsumerState<DonationDialog> {
     );
   }
 
-  void _showSuccessDialog(DonationEntity donation) {
+  void _showSuccessDialog(String paymentId) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -130,7 +124,7 @@ class _DonationDialogState extends ConsumerState<DonationDialog> {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppColors.emerald100,
                 shape: BoxShape.circle,
               ),
@@ -143,40 +137,23 @@ class _DonationDialogState extends ConsumerState<DonationDialog> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Your donation of ₹${donation.amount} has been received successfully.',
+              'Your donation of ₹$_amount has been received successfully.',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.slate500, fontSize: 14),
             ),
             const SizedBox(height: 8),
             Text(
-              'Transaction ID: ${donation.razorpayPaymentId}',
+              'Transaction ID: $paymentId',
               style: const TextStyle(color: AppColors.slate400, fontSize: 12),
             ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _downloadReceipt(donation);
-                },
-                icon: const Icon(Icons.download_rounded, size: 18),
-                label: const Text('Download Receipt'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.blue600,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
+              child: ElevatedButton(
                 onPressed: () => Navigator.pop(ctx),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.slate600,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emerald600,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
@@ -187,40 +164,6 @@ class _DonationDialogState extends ConsumerState<DonationDialog> {
         ),
       ),
     );
-  }
-
-  Future<void> _downloadReceipt(DonationEntity donation) async {
-    final generator = DocumentGenerator();
-    final docType = donation.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
-    final template = generator.getTemplateForType(docType);
-    
-    final doc = generator.resolveTemplate(template, {
-      'receipt_number': donation.receiptNumber ?? 'REC-PENDING',
-      'donor_name': donation.donorName,
-      'amount': donation.amount.toString(),
-      'date': AppFormatters.displayDate(donation.date),
-      'payment_mode': donation.type.name,
-      'purpose': donation.purpose,
-    });
-
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(32),
-            child: pw.Text(
-              doc.generatedContent,
-              style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
-            ),
-          );
-        },
-      ),
-    );
-
-    final bytes = await pdf.save();
-    await Printing.layoutPdf(onLayout: (_) async => bytes);
   }
 
   @override

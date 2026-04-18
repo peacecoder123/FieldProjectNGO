@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.jayashreefoundation.ngo_volunteer_management"
+        applicationId = "com.jayashreefoundation.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

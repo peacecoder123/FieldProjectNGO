@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
@@ -102,6 +103,20 @@ class _VolunteerTasksTabState extends ConsumerState<VolunteerTasksTab> {
                     ],
                   ),
                   const SizedBox(height: 32),
+                  if (task.uploadedImage != null) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showImagePreview(context, task),
+                        icon: const Icon(Icons.image_rounded, size: 18),
+                        label: const Text('View Uploaded Proof'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   if (task.status == TaskStatus.pending || task.status == TaskStatus.rejected)
                     SizedBox(
                       width: double.infinity,
@@ -128,6 +143,87 @@ class _VolunteerTasksTabState extends ConsumerState<VolunteerTasksTab> {
           },
         );
       },
+    );
+  }
+
+  void _showImagePreview(BuildContext context, TaskEntity task) {
+    if (task.uploadedImage == null) return;
+    final imageUrl = task.uploadedImage!;
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBar(
+                title: const Text('Task Evidence'),
+                centerTitle: true,
+                automaticallyImplyLeading: false,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: imageUrl.startsWith('data:image') 
+                    ? Image.memory(
+                        base64Decode(imageUrl.split(',').last),
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => _buildImageError(),
+                      )
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => _buildImageError(),
+                      ),
+                ),
+              ),
+              if (task.geotag != null && task.geotag!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.location_on_rounded, size: 16, color: AppColors.red500),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Captured at: ${task.geotag}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate700),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageError() {
+    return Container(
+      padding: const EdgeInsets.all(40),
+      color: AppColors.slate100,
+      child: const Column(
+        children: [
+          Icon(Icons.broken_image_rounded, size: 48, color: AppColors.slate400),
+          SizedBox(height: 12),
+          Text(
+            'Image not available',
+            style: TextStyle(color: AppColors.slate500),
+          ),
+        ],
+      ),
     );
   }
 

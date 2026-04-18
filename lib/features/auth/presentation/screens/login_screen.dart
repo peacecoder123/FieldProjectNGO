@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
@@ -220,6 +218,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   setState(() => _obscure = !_obscure),
                             ),
                           ),
+                          
+                          // Forgot Password
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () async {
+                                final email = _emailCtrl.text.trim();
+                                if (email.isEmpty) {
+                                  setState(() => _error = 'Please enter your email first to reset your password');
+                                  return;
+                                }
+                                setState(() { _loading = true; _error = null; });
+                                try {
+                                  await ref.read(authRepositoryProvider).resetPassword(email);
+                                  if (!mounted) return;
+                                  setState(() {
+                                    _loading = false;
+                                    _error = '✅ Password reset link strictly sent via Google to \$email.';
+                                  });
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  setState(() {
+                                    _loading = false;
+                                    _error = 'Failed to send reset link. User might not exist.';
+                                  });
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                'Forgot password?',
+                                style: TextStyle(color: AppColors.blue500, fontSize: 12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
 
                           // Error
                           if (_error != null) ...[
@@ -308,8 +345,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Google Auth Button
-                          // Google Auth Button
+                          // Google Sign-In Button
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton(
@@ -342,48 +378,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 16),
                           
-                          // Developer Tool: Quick Register
-                          if (kDebugMode)
-                            SizedBox(
-                              width: double.infinity,
-                              child: TextButton.icon(
-                                onPressed: () async {
-                                  setState(() => _loading = true);
-                                  try {
-                                    final db = FirebaseFirestore.instance;
-                                    final google = GoogleSignIn(
-                                      clientId: kIsWeb ? '1093449762008-vau99kj7q90uou7aau2esvidn9unl2ak.apps.googleusercontent.com' : null,
-                                    );
-                                    final account = await google.signIn();
-                                    if (account == null) throw Exception("Sign in cancelled");
-                                    
-                                    await db.collection('users').add({
-                                      'email': account.email.toLowerCase().trim(),
-                                      'name': account.displayName ?? 'New User',
-                                      'role': 'superAdmin',
-                                      'avatar': (account.displayName ?? 'U').substring(0, 1),
-                                    });
-                                    
-                                    if (!mounted) return;
-                                    setState(() {
-                                      _loading = false;
-                                      _error = "Success! '${account.email}' is now whitelisted. You can now login.";
-                                    });
-                                  } catch (e) {
-                                    if (!mounted) return;
-                                    setState(() {
-                                      _loading = false;
-                                      _error = "Whitelist failed: $e";
-                                    });
-                                  }
-                                },
-                                icon: const Icon(Icons.security, size: 16, color: AppColors.slate500),
-                                label: const Text(
-                                  '[DEBUG] Whitelist My Google Account',
-                                  style: TextStyle(color: AppColors.slate500, fontSize: 11),
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ),

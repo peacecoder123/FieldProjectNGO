@@ -65,12 +65,21 @@ class UserRepository {
       orElse: () => UserRole.volunteer,
     );
 
+    DateTime? inviteEmailSentAt;
+    if (data['inviteEmailSentAt'] != null) {
+      inviteEmailSentAt = (data['inviteEmailSentAt'] is Timestamp)
+          ? (data['inviteEmailSentAt'] as Timestamp).toDate()
+          : DateTime.tryParse(data['inviteEmailSentAt'].toString());
+    }
+
     return UserEntity(
       id:     doc.id,
       email:  data['email'] ?? '',
       name:   data['name'] ?? '',
       role:   role,
       avatar: data['avatar'] ?? '',
+      inviteEmailSentAt: inviteEmailSentAt,
+      inviteLink: data['inviteLink'] as String?,
     );
   }
 }

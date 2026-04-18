@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_shell.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
+import 'package:ngo_volunteer_management/shared/providers/dismissed_notifs_provider.dart';
 import 'package:ngo_volunteer_management/features/volunteer/presentation/tabs/volunteer_tasks_tab.dart';
 import 'package:ngo_volunteer_management/features/volunteer/presentation/tabs/volunteer_meetings_tab.dart';
 import 'package:ngo_volunteer_management/features/volunteer/presentation/tabs/volunteer_certificate_tab.dart';
@@ -42,11 +43,13 @@ class _VolunteerDashboardScreenState extends ConsumerState<VolunteerDashboardScr
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final tasksAsync = ref.watch(taskProvider);
+    final dismissed = ref.watch(dismissedNotifsProvider);
     
     // Safely calculate pending tasks ONLY for the currently logged-in volunteer
     final pendingTasks = tasksAsync.value?.where((t) => 
       t.assignedToId == currentUser?.id && 
-      t.status.name == 'pending'
+      t.status.name == 'pending' &&
+      !dismissed.contains(t.id)
     ).length ?? 0;
 
     return AppShell(

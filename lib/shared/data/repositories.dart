@@ -9,6 +9,7 @@ abstract interface class IAuthRepository {
   Future<UserEntity?> loginWithGoogle();
   Stream<UserEntity?> watchAuthState();
   Future<void> logout();
+  Future<void> resetPassword(String email);
   
   /// Syncs device FCM token with Firestore user document
   Future<void> updateFcmToken(String userId, String? token);

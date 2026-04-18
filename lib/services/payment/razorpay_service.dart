@@ -3,6 +3,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'razorpay_config.dart';
+import 'razorpay_web_stub.dart';
 
 /// Describes the result of a payment attempt.
 enum PaymentResult { success, failure, externalWallet }
@@ -30,19 +31,15 @@ class PaymentOutcome {
   bool get isSuccess => result == PaymentResult.success;
 }
 
-/// Thin wrapper around the Razorpay Flutter SDK.
-///
-/// Flow:
-/// 1. Call Firebase Cloud Function `createRazorpayOrder` to get a server-side order_id
-/// 2. Pass that order_id into the Razorpay checkout options
-/// 3. Open Razorpay checkout UI
-/// 4. Handle success/failure callbacks
+/// Thin wrapper around the Razorpay Flutter SDK with Web Support.
 class RazorpayService {
   RazorpayService() {
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handleSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handleError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    if (!kIsWeb) {
+      _razorpay = Razorpay();
+      _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handleSuccess);
+      _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handleError);
+      _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    }
   }
 
   late final Razorpay _razorpay;
@@ -50,7 +47,6 @@ class RazorpayService {
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
-  /// Opens Razorpay checkout for a general donation.
   Future<PaymentOutcome> openDonationCheckout({
     required int amount,
     required String donorName,
@@ -71,7 +67,6 @@ class RazorpayService {
     );
   }
 
-  /// Opens Razorpay checkout for a membership fee payment.
   Future<PaymentOutcome> openMembershipCheckout({
     required int amount,
     required String memberName,
@@ -92,14 +87,14 @@ class RazorpayService {
     );
   }
 
-  /// Cleans up the Razorpay instance. Call when the service is no longer needed.
   void dispose() {
-    _razorpay.clear();
+    if (!kIsWeb) {
+      _razorpay.clear();
+    }
   }
 
   // ── Internals ───────────────────────────────────────────────────────────────
 
-  /// Creates a server-side order via Firebase Cloud Function, then opens checkout.
   Future<PaymentOutcome> _open({
     required int amount,
     required String description,
@@ -108,7 +103,6 @@ class RazorpayService {
     required String prefillPhone,
     Map<String, String>? notes,
   }) async {
-    // Cancel any in-progress payment
     if (_completer != null && !_completer!.isCompleted) {
       _completer!.complete(const PaymentOutcome(
         result: PaymentResult.failure,
@@ -119,7 +113,6 @@ class RazorpayService {
     _completer = Completer<PaymentOutcome>();
 
     try {
-      // ── Step 1: Call Cloud Function to create a Razorpay Order ──────────
       debugPrint('📡 Calling createRazorpayOrder Cloud Function...');
       final callable = FirebaseFunctions.instance.httpsCallable('createRazorpayOrder');
       final result = await callable.call<Map<String, dynamic>>({
@@ -130,27 +123,45 @@ class RazorpayService {
       final orderId = result.data['orderId'] as String;
       debugPrint('✅ Got order_id: $orderId');
 
-      // ── Step 2: Build checkout options with the server order_id ─────────
-      final options = <String, dynamic>{
-        'key': RazorpayConfig.keyId,
-        'amount': amount * 100, // paise
-        'name': RazorpayConfig.companyName,
-        'description': description,
-        'currency': RazorpayConfig.currency,
-        'order_id': orderId, // <-- Server-generated order
-        'prefill': {
-          'name': prefillName,
-          'email': prefillEmail,
-          'contact': prefillPhone,
-        },
-        'theme': {
-          'color': RazorpayConfig.themeColor,
-        },
-        if (notes != null) 'notes': notes,
-      };
-
-      // ── Step 3: Open Razorpay checkout ─────────────────────────────────
-      _razorpay.open(options);
+      if (kIsWeb) {
+        debugPrint('🌐 Opening Razorpay Web Checkout...');
+        await openRazorpayWeb(
+          amount: amount,
+          key: RazorpayConfig.keyId,
+          name: RazorpayConfig.companyName,
+          description: description,
+          currency: RazorpayConfig.currency,
+          orderId: orderId,
+          prefillName: prefillName,
+          prefillEmail: prefillEmail,
+          prefillPhone: prefillPhone,
+          themeColor: RazorpayConfig.themeColor,
+          onResult: (outcome) {
+            if (_completer != null && !_completer!.isCompleted) {
+              _completer!.complete(outcome);
+            }
+          },
+        );
+      } else {
+        final options = <String, dynamic>{
+          'key': RazorpayConfig.keyId,
+          'amount': amount * 100,
+          'name': RazorpayConfig.companyName,
+          'description': description,
+          'currency': RazorpayConfig.currency,
+          'order_id': orderId,
+          'prefill': {
+            'name': prefillName,
+            'email': prefillEmail,
+            'contact': prefillPhone,
+          },
+          'theme': {
+            'color': RazorpayConfig.themeColor,
+          },
+          if (notes != null) 'notes': notes,
+        };
+        _razorpay.open(options);
+      }
     } catch (e) {
       debugPrint('Razorpay open error: $e');
       if (!_completer!.isCompleted) {

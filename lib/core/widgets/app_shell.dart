@@ -8,6 +8,7 @@ import 'app_avatar.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import '../../shared/providers/app_providers.dart';
 import '../../shared/providers/feature_providers.dart';
+import '../../shared/providers/dismissed_notifs_provider.dart';
 
 /// Navigation item descriptor (mirrors the React `NavItem` interface).
 class NavItem {
@@ -305,13 +306,20 @@ class _SidebarLogo extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                'assets/images/logo.png',
-                width: 36,
-                height: 36,
-                fit: BoxFit.cover,
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.all(4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 28,
+                  height: 28,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -675,38 +683,65 @@ class _TopBarState extends ConsumerState<_TopBar> {
     showDialog(
       context: context,
       builder: (dialogCtx) {
-        final joining  = ref.watch(joiningLetterProvider).value ?? [];
-        final requests = ref.watch(generalRequestProvider).value ?? [];
-        final mou      = ref.watch(mouRequestProvider).value ?? [];
+        final currentUser = ref.watch(currentUserProvider);
+        if (currentUser == null) return const SizedBox.shrink();
+        final role = currentUser.role;
+        final dismissed = ref.watch(dismissedNotifsProvider);
 
         final items = <Widget>[];
+        final pendingIds = <String>[];
 
-        for (final r in joining.where((r) => r.status.name == 'pending')) {
-          items.add(_buildNotifRow(
-            icon: Icons.file_present_rounded,
-            iconColor: AppColors.amber500,
-            isDark: isDark,
-            title: 'Joining Letter Request',
-            subtitle: '${r.name} requested on ${r.requestDate.toString().split(' ')[0]}',
-          ));
-        }
-        for (final r in requests.where((r) => r.status.name == 'pending')) {
-          items.add(_buildNotifRow(
-            icon: Icons.inbox_rounded,
-            iconColor: AppColors.blue500,
-            isDark: isDark,
-            title: 'General Request',
-            subtitle: '${r.requesterName}: ${r.requestType.displayLabel}',
-          ));
-        }
-        for (final r in mou.where((r) => r.status.name == 'pending')) {
-          items.add(_buildNotifRow(
-            icon: Icons.local_hospital_rounded,
-            iconColor: AppColors.red500,
-            isDark: isDark,
-            title: 'MOU Request',
-            subtitle: '${r.patientName} at ${r.hospital}',
-          ));
+        // Admin & Super Admin: Approvals
+        if (role == UserRole.admin || role == UserRole.superAdmin) {
+          final joining  = ref.watch(joiningLetterProvider).value ?? [];
+          final requests = ref.watch(generalRequestProvider).value ?? [];
+          final mou      = ref.watch(mouRequestProvider).value ?? [];
+
+          for (final r in joining.where((r) => r.status.name == 'pending' && !dismissed.contains(r.id))) {
+            pendingIds.add(r.id);
+            items.add(_buildNotifRow(
+              icon: Icons.file_present_rounded,
+              iconColor: AppColors.amber500,
+              isDark: isDark,
+              title: 'Joining Letter Request',
+              subtitle: '${r.name} requested on ${r.requestDate.toString().split(' ')[0]}',
+            ));
+          }
+          for (final r in requests.where((r) => r.status.name == 'pending' && !dismissed.contains(r.id))) {
+            pendingIds.add(r.id);
+            items.add(_buildNotifRow(
+              icon: Icons.inbox_rounded,
+              iconColor: AppColors.blue500,
+              isDark: isDark,
+              title: 'General Request',
+              subtitle: '${r.requesterName}: ${r.requestType.displayLabel}',
+            ));
+          }
+          for (final r in mou.where((r) => r.status.name == 'pending' && !dismissed.contains(r.id))) {
+            pendingIds.add(r.id);
+            items.add(_buildNotifRow(
+              icon: Icons.local_hospital_rounded,
+              iconColor: AppColors.red500,
+              isDark: isDark,
+              title: 'MOU Request',
+              subtitle: '${r.patientName} at ${r.hospital}',
+            ));
+          }
+        } else {
+          // Volunteer / Member: Assigned Tasks & Statuses
+          final tasks = ref.watch(taskProvider).value ?? [];
+          final myTasks = tasks.where((t) => t.assignedToId == currentUser.id).toList();
+          
+          for (final t in myTasks.where((t) => t.status.name == 'pending' && !dismissed.contains(t.id))) {
+            pendingIds.add(t.id);
+            items.add(_buildNotifRow(
+              icon: Icons.assignment_rounded,
+              iconColor: AppColors.blue500,
+              isDark: isDark,
+              title: 'New Task Assigned',
+              subtitle: t.title,
+            ));
+          }
         }
 
         if (items.isEmpty) {
@@ -716,7 +751,7 @@ class _TopBarState extends ConsumerState<_TopBar> {
               child: Text(
                 'No new notifications',
                 style: TextStyle(
-                  color: isDark ? AppColors.slate500 : AppColors.slate400,
+                  color: isDark ? AppColors.slate300 : AppColors.slate400,
                 ),
               ),
             ),
@@ -734,34 +769,9 @@ class _TopBarState extends ConsumerState<_TopBar> {
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
               TextButton(
-                onPressed: () {
-                  final approver = ref.read(currentUserProvider)?.name ?? 'Admin';
-                  
-                  // Clear Joining Letters
-                  final joiningNotifier = ref.read(joiningLetterProvider.notifier);
-                  final joining = ref.read(joiningLetterProvider).value ?? [];
-                  for (final r in joining.where((r) => r.status == RequestStatus.pending)) {
-                    joiningNotifier.approve(r.id, generatedBy: approver, tenure: '6 Months');
-                  }
-
-                  // Clear General Requests
-                  final generalNotifier = ref.read(generalRequestProvider.notifier);
-                  final requests = ref.read(generalRequestProvider).value ?? [];
-                  for (final r in requests.where((r) => r.status == RequestStatus.pending)) {
-                    generalNotifier.approve(r.id, approvedBy: approver);
-                  }
-
-                  // Clear MOU Requests
-                  final mouNotifier = ref.read(mouRequestProvider.notifier);
-                  final mous = ref.read(mouRequestProvider).value ?? [];
-                  for (final r in mous.where((r) => r.status == RequestStatus.pending)) {
-                    mouNotifier.approve(r.id, approvedBy: approver);
-                  }
-
+                onPressed: pendingIds.isEmpty ? null : () {
+                  ref.read(dismissedNotifsProvider.notifier).dismissAll(pendingIds);
                   Navigator.of(dialogCtx).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('✅ All pending requests have been approved.'), backgroundColor: AppColors.emerald600),
-                  );
                 },
                 child: const Text('Clear all', style: TextStyle(fontSize: 12)),
               ),
@@ -818,7 +828,7 @@ class _TopBarState extends ConsumerState<_TopBar> {
                   subtitle,
                   style: TextStyle(
                     fontSize: 11,
-                    color: isDark ? AppColors.slate400 : AppColors.slate500,
+                    color: isDark ? AppColors.slate300 : AppColors.slate500,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

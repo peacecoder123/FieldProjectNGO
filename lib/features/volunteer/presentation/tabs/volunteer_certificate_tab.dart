@@ -8,41 +8,27 @@ import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
-import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
-import 'package:printing/printing.dart';
 import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:printing/printing.dart';
 
 class VolunteerCertificateTab extends ConsumerWidget {
   const VolunteerCertificateTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lettersAsync  = ref.watch(joiningLetterProvider);
-    final documentAsync = ref.watch(documentRequestProvider);
-    final currentUser   = ref.watch(currentUserProvider);
+    final lettersAsync = ref.watch(joiningLetterProvider);
+    final currentUser = ref.watch(currentUserProvider);
 
     return lettersAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (letters) {
-        return documentAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
-          data: (docs) {
-            final approvedLetters = letters
-                .where((l) => l.name == currentUser?.name && l.status == RequestStatus.approved)
-                .toList();
+        final approved = letters
+            .where((l) => l.name == currentUser?.name && l.status == RequestStatus.approved)
+            .toList()
+          ..sort((a, b) => b.requestDate.compareTo(a.requestDate));
 
-            final approvedDocs = docs
-                .where((d) => d.userId == currentUser?.id.toString() && d.status == DocumentRequestStatus.approved)
-                .toList();
-
-            final allApproved = [
-              ...approvedLetters.map((l) => _CertItem.letter(l)),
-              ...approvedDocs.map((d) => _CertItem.doc(d)),
-            ]..sort((a, b) => b.date.compareTo(a.date));
-
-            if (allApproved.isEmpty) {
+        if (approved.isEmpty) {
           return const Padding(
             padding: EdgeInsets.all(20),
             child: Column(
@@ -66,23 +52,21 @@ class VolunteerCertificateTab extends ConsumerWidget {
         }
 
         return ListView.separated(
-          shrinkWrap: true,
+          shrinkWrap: true, // Fixes unbounded height crash
           physics: const ClampingScrollPhysics(),
           padding: const EdgeInsets.all(20),
-          itemCount: allApproved.length + 1,
+          itemCount: approved.length + 1,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             if (index == 0) {
               return const _CertificateHeader();
             }
-            final item = allApproved[index - 1];
-            return _CertificateRow(item: item);
+            final cert = approved[index - 1];
+            return _CertificateRow(certificate: cert);
           },
         );
       },
     );
-  },
-);
   }
 }
 
@@ -104,41 +88,17 @@ class _CertificateHeader extends StatelessWidget {
   }
 }
 
-class _CertItem {
-  final String title;
-  final String date;
-  final String typeLabel;
-  final dynamic original;
-  final bool isLetter;
-
-  _CertItem.letter(JoiningLetterRequestEntity l)
-      : title = 'Joining Letter – ${l.tenure}',
-        date = l.requestDate,
-        typeLabel = l.type.displayLabel,
-        original = l,
-        isLetter = true;
-
-  _CertItem.doc(DocumentRequestEntity d)
-      : title = d.documentType.displayLabel,
-        date = MyDateUtils.formatIso(d.requestedAt.toIso8601String()), // Helper for sorting
-        typeLabel = d.documentType.displayLabel,
-        original = d,
-        isLetter = false;
-}
-
-class MyDateUtils {
-  static String formatIso(String iso) => iso.split('T')[0];
-}
-
 class _CertificateRow extends StatelessWidget {
-  const _CertificateRow({required this.item});
+  const _CertificateRow({required this.certificate});
 
-  final _CertItem item;
+  final JoiningLetterRequestEntity certificate;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final textSecondary = isDark ? AppColors.slate400 : AppColors.slate500;
+    const iconColor = AppColors.blue600;
 
     return AppCard(
       elevation: 1,
@@ -151,12 +111,12 @@ class _CertificateRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.title,
+                  certificate.type.displayLabel,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Issued: ${AppFormatters.displayDate(item.date)}',
+                  'Issued: ${AppFormatters.displayDate(certificate.requestDate)}',
                   style: TextStyle(
                     color: textSecondary,
                     fontSize: 12,
@@ -168,29 +128,15 @@ class _CertificateRow extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             child: IconButton(
-              icon: const Icon(Icons.download_rounded, color: AppColors.blue600),
+              icon: Icon(Icons.download_rounded, color: iconColor),
               onPressed: () async {
-                if (item.isLetter) {
-                  final l = item.original as JoiningLetterRequestEntity;
-                  final pdfBytes = await PdfGeneratorService.generateJoiningLetterPdf(
-                    name: l.name,
-                    tenure: l.tenure,
-                    requestDate: AppFormatters.displayDate(l.requestDate),
-                    approvedBy: l.generatedBy,
-                  );
-                  await Printing.sharePdf(
-                    bytes: pdfBytes,
-                    filename: 'Joining_Letter_${l.tenure.replaceAll(' ', '_')}.pdf',
-                  );
-                } else {
-                  final d = item.original as DocumentRequestEntity;
-                  final pdfData = await PdfGeneratorService.generateCertificatePdf(
-                    certificateNo: d.certificateNo ?? 'PENDING',
-                    date: d.approvedAt ?? DateTime.now(),
-                    recipientName: d.userName,
-                  );
-                  await Printing.layoutPdf(onLayout: (format) => pdfData);
-                }
+                final pdfData = await PdfGeneratorService.generateJoiningLetterPdf(
+                  name: certificate.name,
+                  tenure: certificate.tenure,
+                  requestDate: certificate.requestDate,
+                  approvedBy: certificate.generatedBy ?? 'Local Admin',
+                );
+                await Printing.layoutPdf(onLayout: (format) => pdfData);
               },
               style: IconButton.styleFrom(padding: EdgeInsets.zero),
             ),
@@ -199,4 +145,4 @@ class _CertificateRow extends StatelessWidget {
       ),
     );
   }
-}
+}

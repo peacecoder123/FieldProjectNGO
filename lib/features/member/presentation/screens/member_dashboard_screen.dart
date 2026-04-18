@@ -9,6 +9,9 @@ import 'package:ngo_volunteer_management/features/member/presentation/tabs/membe
 import 'package:ngo_volunteer_management/features/member/presentation/tabs/member_payments_tab.dart';
 import 'package:ngo_volunteer_management/features/member/presentation/tabs/member_volunteers_tab.dart';
 import 'package:ngo_volunteer_management/features/admin/presentation/screens/profile_screen.dart';
+import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
+import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
+import 'package:ngo_volunteer_management/shared/providers/dismissed_notifs_provider.dart';
 
 // ── Member Dashboard ──────────────────────────────────────────────────────────
 
@@ -45,10 +48,21 @@ class _MemberDashboardState extends ConsumerState<MemberDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserProvider);
+    final tasksAsync = ref.watch(taskProvider);
+    final dismissed = ref.watch(dismissedNotifsProvider);
+    
+    final pendingTasks = tasksAsync.value?.where((t) => 
+      t.assignedToId == currentUser?.id && 
+      t.status.name == 'pending' &&
+      !dismissed.contains(t.id)
+    ).length ?? 0;
+
     return AppShell(
       navItems:    _navItems,
       activeTab:   _activeTab,
       onTabChange: (id) => setState(() => _activeTab = id),
+      notifications: pendingTasks,
       body:        _buildTab(),
     );
   }

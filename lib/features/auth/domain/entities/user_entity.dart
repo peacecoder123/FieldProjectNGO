@@ -16,6 +16,7 @@ class UserEntity extends Equatable {
     this.avatar,
     this.fcmToken,
     this.inviteEmailSentAt,
+    this.inviteLink,
   });
 
   final String    id; // Changed to String
@@ -25,6 +26,7 @@ class UserEntity extends Equatable {
   final String?   avatar;
   final String?   fcmToken; // From merged3
   final DateTime? inviteEmailSentAt; // From main
+  final String?   inviteLink; // For manual sharing
 
   /// One or two-character initials used for the avatar widget.
   /// Falls back to derived initials if not supplied.
@@ -43,6 +45,7 @@ class UserEntity extends Equatable {
     String?    avatar,
     String?    fcmToken,
     DateTime?  inviteEmailSentAt,
+    String?    inviteLink,
   }) {
     return UserEntity(
       id:                id                ?? this.id,
@@ -52,12 +55,13 @@ class UserEntity extends Equatable {
       avatar:            avatar            ?? this.avatar,
       fcmToken:          fcmToken          ?? this.fcmToken,
       inviteEmailSentAt: inviteEmailSentAt ?? this.inviteEmailSentAt,
+      inviteLink:        inviteLink        ?? this.inviteLink,
     );
   }
 
   // ── Equatable ──────────────────────────────────────────────────────────────
   @override
-  List<Object?> get props => [id, name, email, role, avatar, fcmToken, inviteEmailSentAt];
+  List<Object?> get props => [id, name, email, role, avatar, fcmToken, inviteEmailSentAt, inviteLink];
 
   // ── Serialisation ───────────────────────────────────────────────────────
   factory UserEntity.fromJson(Map<String, dynamic> json) {
@@ -76,6 +80,7 @@ class UserEntity extends Equatable {
               ? DateTime.tryParse(json['inviteEmailSentAt'])
               : (json['inviteEmailSentAt'] as dynamic).toDate())
           : null,
+      inviteLink: json['inviteLink'] as String?,
     );
   }
 
@@ -87,5 +92,6 @@ class UserEntity extends Equatable {
     'avatar':            avatar,
     'fcmToken':          fcmToken,
     'inviteEmailSentAt': inviteEmailSentAt?.toIso8601String(),
+    'inviteLink':        inviteLink,
   };
 }

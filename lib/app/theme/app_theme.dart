@@ -47,11 +47,11 @@ abstract final class AppTheme {
       brightness: brightness,
       fontFamily: GoogleFonts.poppins().fontFamily,
       textTheme: textTheme,
-      scaffoldBackgroundColor: AppColors.white,
+      scaffoldBackgroundColor: isDark ? AppColors.slate900 : AppColors.slate50,
 
       // ── AppBar ─────────────────────────────────────────────────────────────
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.brand,
+        backgroundColor: isDark ? AppColors.slate900 : AppColors.brand,
         foregroundColor: AppColors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -264,7 +264,7 @@ abstract final class AppTheme {
     final baseColor =
         isDark ? AppColors.white : AppColors.slate900;
     final mutedColor =
-        isDark ? AppColors.slate400 : AppColors.slate500;
+        isDark ? AppColors.slate300 : AppColors.slate500;
 
     return TextTheme(
       // Display

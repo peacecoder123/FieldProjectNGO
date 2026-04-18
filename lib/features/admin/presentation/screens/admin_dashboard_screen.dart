@@ -5,6 +5,7 @@ import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_shell.dart';
 import '../../../../shared/providers/feature_providers.dart';
+import '../../../../shared/providers/dismissed_notifs_provider.dart';
 import '../tabs/admin_overview_tab.dart';
 import '../tabs/volunteers_tab.dart';
 import '../tabs/members_tab.dart';
@@ -51,11 +52,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final requests = ref.watch(generalRequestProvider).value ?? [];
     final mou      = ref.watch(mouRequestProvider).value ?? [];
     final docs     = ref.watch(documentRequestProvider).value ?? [];
+    final dismissed = ref.watch(dismissedNotifsProvider);
     
-    final joiningPending = joining.where((r) => r.status.name == 'pending').length;
-    final requestsPending = requests.where((r) => r.status.name == 'pending').length
-                          + mou.where((r) => r.status.name == 'pending').length
-                          + docs.where((r) => r.status.name == 'pending').length;
+    final joiningPending = joining.where((r) => r.status.name == 'pending' && !dismissed.contains(r.id)).length;
+    final requestsPending = requests.where((r) => r.status.name == 'pending' && !dismissed.contains(r.id)).length
+                          + mou.where((r) => r.status.name == 'pending' && !dismissed.contains(r.id)).length
+                          + docs.where((r) => r.status.name == 'pending' && !dismissed.contains(r.id)).length;
                           
     final int totalNotifications = joiningPending + requestsPending;
 
