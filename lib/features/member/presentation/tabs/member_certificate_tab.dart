@@ -199,6 +199,9 @@ class _DocumentRequestCard extends ConsumerWidget {
                     certificateNo: req.certificateNo ?? 'PENDING',
                     date: req.approvedAt ?? DateTime.now(),
                     recipientName: req.userName,
+                    organisation: req.organisation ?? 'Jayashree Foundation',
+                    internshipArea: req.internshipArea ?? 'Social Welfare & Community Development',
+                    internshipDuration: req.internshipDuration ?? '',
                   );
                   await Printing.layoutPdf(onLayout: (format) => pdfData);
                 },

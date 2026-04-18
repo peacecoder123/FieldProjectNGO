@@ -251,6 +251,9 @@ class PdfGeneratorService {
     required String certificateNo,
     required DateTime date,
     required String recipientName,
+    String organisation = 'Jayashree Foundation',
+    String internshipArea = 'Social Welfare & Community Development',
+    String internshipDuration = '',
   }) async {
     final pdf = pw.Document();
     
@@ -277,7 +280,7 @@ class PdfGeneratorService {
                     if (logoImage != null)
                       pw.Container(height: 80, child: pw.Image(logoImage)),
                     pw.SizedBox(height: 15),
-                    pw.Text('JAYASHREE FOUNDATION', 
+                    pw.Text(organisation.toUpperCase(), 
                       style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold, color: _navyBlue, letterSpacing: 2)
                     ),
                     pw.SizedBox(height: 5),
@@ -309,19 +312,27 @@ class PdfGeneratorService {
               
               // 4. Body
               pw.Paragraph(
-                text: 'This certificate is proudly presented to Mr./Ms. ${recipientName.isEmpty ? '____________________' : recipientName}, for successfully completing his/her internship with Jayashree Foundation.',
+                text: 'This certificate is proudly presented to Mr./Ms. ${recipientName.isEmpty ? '____________________' : recipientName}, for successfully completing his/her internship with $organisation in the area of $internshipArea${internshipDuration.isNotEmpty ? ' for the period $internshipDuration' : ''}.',
                 style: pw.TextStyle(fontSize: 13, lineSpacing: 5),
               ),
               
               pw.Paragraph(
-                text: 'During the internship period, they actively contributed to various social welfare initiatives. Their dedication, discipline, and teamwork greatly supported the objectives of the foundation.',
+                text: 'During the internship period, they actively contributed to various initiatives under the $internshipArea domain organized by $organisation. Their responsibilities included assisting in program coordination, community outreach activities, awareness campaigns, and initiatives aimed at social empowerment and public welfare.',
                 style: pw.TextStyle(fontSize: 13, lineSpacing: 5),
               ),
               
               pw.Paragraph(
-                text: 'We appreciate their valuable contribution and wish them continued success in their future professional career.',
+                text: 'Throughout the internship, ${recipientName.isEmpty ? 'the candidate' : recipientName} demonstrated excellent dedication, discipline, teamwork, and a strong willingness to learn. Their proactive approach and positive attitude greatly supported the objectives and activities of $organisation.',
                 style: pw.TextStyle(fontSize: 13, lineSpacing: 5),
               ),
+              
+              pw.Paragraph(
+                text: 'The management of $organisation appreciates their valuable contribution and wishes them continued success in their academic journey and future professional career.',
+                style: pw.TextStyle(fontSize: 13, lineSpacing: 5),
+              ),
+              
+              pw.SizedBox(height: 10),
+              pw.Text('Thank You!', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
               
               pw.Spacer(),
               
@@ -336,7 +347,7 @@ class PdfGeneratorService {
                       pw.Container(width: 140, height: 1.2, color: PdfColors.black),
                       pw.SizedBox(height: 5),
                       pw.Text('President', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                      pw.Text('Jayashree Foundation', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                      pw.Text(organisation, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
                     ]
                   ),
                   

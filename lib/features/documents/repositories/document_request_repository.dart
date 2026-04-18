@@ -6,5 +6,5 @@ abstract class IDocumentRequestRepository {
   Future<DocumentRequestEntity> getById(String id);
   Future<void> add(DocumentRequestEntity request);
   Future<void> update(DocumentRequestEntity request);
-  Future<void> updateStatus(String id, DocumentRequestStatus status, {String? approvedBy, String? certificateNo});
+  Future<void> updateStatus(String id, DocumentRequestStatus status, {String? approvedBy, String? certificateNo, String? organisation, String? internshipArea, String? internshipDuration});
 }
