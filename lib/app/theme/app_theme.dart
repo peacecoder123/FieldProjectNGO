@@ -47,7 +47,7 @@ abstract final class AppTheme {
       brightness: brightness,
       fontFamily: GoogleFonts.poppins().fontFamily,
       textTheme: textTheme,
-      scaffoldBackgroundColor: AppColors.white,
+      scaffoldBackgroundColor: isDark ? AppColors.slate900 : AppColors.white,
 
       // ── AppBar ─────────────────────────────────────────────────────────────
       appBarTheme: AppBarTheme(

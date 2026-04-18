@@ -101,6 +101,78 @@ class _VolunteerTasksTabState extends ConsumerState<VolunteerTasksTab> {
                       ),
                     ],
                   ),
+
+                  if (task.status == TaskStatus.submitted || task.status == TaskStatus.approved) ...[
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: task.status == TaskStatus.approved 
+                          ? (isDark ? AppColors.emerald500.withValues(alpha: 0.1) : AppColors.emerald50) 
+                          : (isDark ? AppColors.blue500.withValues(alpha: 0.1) : AppColors.blue50),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: task.status == TaskStatus.approved 
+                            ? (isDark ? AppColors.emerald500.withValues(alpha: 0.2) : AppColors.emerald100) 
+                            : (isDark ? AppColors.blue500.withValues(alpha: 0.2) : AppColors.blue100),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                task.status == TaskStatus.approved ? Icons.check_circle_rounded : Icons.info_outline_rounded, 
+                                size: 18, 
+                                color: task.status == TaskStatus.approved ? AppColors.emerald500 : AppColors.blue500
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                task.status == TaskStatus.approved ? 'Task Approved' : 'Under Review',
+                                style: TextStyle(
+                                  fontSize: 14, 
+                                  fontWeight: FontWeight.bold,
+                                  color: task.status == TaskStatus.approved ? AppColors.emerald600 : AppColors.blue600
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (task.uploadedImage != null) ...[
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Submitted Evidence:',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate500),
+                            ),
+                            const SizedBox(height: 8),
+                            AppTaskImage(imageUrl: task.uploadedImage, height: 200, width: double.infinity),
+                          ],
+                          if (task.geotag != null && task.geotag!.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_rounded, size: 14, color: AppColors.red500),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    task.geotag!,
+                                    style: const TextStyle(
+                                      fontSize: 12, 
+                                      color: AppColors.slate500, 
+                                      fontFamily: 'monospace'
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 32),
                   if (task.status == TaskStatus.pending || task.status == TaskStatus.rejected)
                     SizedBox(

@@ -1,12 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-
-// PDF & Printing Imports
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
@@ -19,6 +13,8 @@ import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:ngo_volunteer_management/services/download_service.dart';
 
 // Services
 import 'package:ngo_volunteer_management/services/logging/audit_logger.dart';
@@ -313,7 +309,6 @@ class _DonationItem extends ConsumerWidget {
       }
     }
   }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -410,7 +405,7 @@ class _DonationItem extends ConsumerWidget {
                     // 1. Generate Receipt in DB
                     await ref.read(donationProvider.notifier).generateReceipt(donation.id);
                     
-                    // 2. Fire Audit Log to Firebase
+                    // 2. Fire Audit Log
                     await AuditLogger.logDocumentGeneration(
                       documentType: donation.is80G ? '80G Certificate' : 'Donation Receipt',
                       targetId: donation.id.toString(),
@@ -428,9 +423,14 @@ class _DonationItem extends ConsumerWidget {
                       orElse: () => donation,
                     );
 
-                    // 3. Open Preview
                     if (context.mounted) {
-                      await _showPdfPreview(context, latestDonation: latest);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Receipt generated successfully!'),
+                          backgroundColor: AppColors.emerald600,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     }
                   },
                   icon: const Icon(Icons.receipt_long_rounded, size: 16),
@@ -449,7 +449,22 @@ class _DonationItem extends ConsumerWidget {
                child: Material(
                  color: Colors.transparent,
                  child: InkWell(
-                   onTap: () => _showPdfPreview(context),
+                   onTap: () async {
+                      final parsedDate = DateTime.parse(donation.date);
+                      final pdfData = await PdfGeneratorService.generateReceiptPdf(
+                        receiptNo: donation.receiptNumber ?? 'REC-${parsedDate.year}-${donation.id}',
+                        date: parsedDate,
+                        donorName: donation.donorName,
+                        amount: donation.amount.toDouble(),
+                        amountWords: 'Rupees ${donation.amount} only',
+                        paymentMode: donation.type.name.toUpperCase(),
+                        purpose: donation.purpose,
+                      );
+                      DownloadService.downloadBytes(
+                        pdfData,
+                        'Receipt_${donation.receiptNumber?.replaceAll(' ', '_') ?? donation.id}.pdf',
+                      );
+                   },
                    borderRadius: BorderRadius.circular(6),
                    child: Container(
                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
