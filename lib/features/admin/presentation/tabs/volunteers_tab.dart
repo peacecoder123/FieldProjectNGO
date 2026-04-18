@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,8 +9,8 @@ import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
-import 'package:ngo_volunteer_management/features/admin/presentation/widgets/task_details_modal.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
+import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 
@@ -42,35 +43,17 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
       children: [
         SectionHeader(
           subtitle: 'Manage NGO volunteers and their tasks',
-          actions: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => _showDeleteVolunteerGlobalModal(context),
-                icon: const Icon(Icons.person_remove_rounded, size: 18),
-                label: const Text('Delete Volunteer'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.red500,
-                  side: const BorderSide(color: AppColors.red500),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+          actions: OutlinedButton.icon(
+            onPressed: () => _showDeleteVolunteerGlobalModal(context),
+            icon: const Icon(Icons.person_remove_rounded, size: 18),
+            label: const Text('Delete Volunteer'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.red500,
+              side: const BorderSide(color: AppColors.red500),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () => _showAddVolunteerModal(context),
-                icon: const Icon(Icons.person_add_rounded, size: 18),
-                label: const Text('Add Volunteer'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.brand,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -115,36 +98,39 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.slate100,
-              borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.slate100,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.person_search_rounded,
+                size: 28,
+                color: AppColors.slate400,
+              ),
             ),
-            child: const Icon(
-              Icons.person_search_rounded,
-              size: 28,
-              color: AppColors.slate400,
+            const SizedBox(height: 16),
+            const Text(
+              'No volunteers found',
+              style: TextStyle(
+                color: AppColors.slate500,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No volunteers found',
-            style: TextStyle(
-              color: AppColors.slate500,
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 4),
+            const Text(
+              'Try adjusting your search or filter',
+              style: TextStyle(color: AppColors.slate400, fontSize: 12),
             ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Try adjusting your search or filter',
-            style: TextStyle(color: AppColors.slate400, fontSize: 12),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -156,9 +142,11 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
 
         if (isWide) {
           return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 2.5,
+              childAspectRatio: 2.2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
@@ -173,16 +161,16 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
           );
         }
 
-        return ListView.separated(
-          itemCount: volunteers.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final v = volunteers[index];
-            return _VolunteerCard(
-              volunteer: v,
-              onTap: () => _showVolunteerDetails(context, v),
-            );
-          },
+        return Column(
+          children: volunteers
+              .map((v) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _VolunteerCard(
+                      volunteer: v,
+                      onTap: () => _showVolunteerDetails(context, v),
+                    ),
+                  ))
+              .toList(),
         );
       },
     );
@@ -270,7 +258,7 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
                   children: [
                     const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                     const SizedBox(width: 12),
-                    Expanded(child: Text('${v.name} has been added as a volunteer.')),
+                    Expanded(child: Text('\${v.name} has been added as a volunteer.')),
                   ],
                 ),
                 backgroundColor: AppColors.emerald500,
@@ -366,38 +354,33 @@ class _VolunteerCard extends ConsumerWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   volunteer.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: isDark ? AppColors.white : AppColors.slate900,
                   ),
                 ),
                 Text(
                   volunteer.email,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.slate500,
-                    fontSize: 12,
+                  style: TextStyle(
+                    color: isDark ? AppColors.slate400 : AppColors.slate500,
+                    fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     Icon(Icons.assignment_rounded,
-                        size: 12, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                        size: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
                     const SizedBox(width: 4),
                     Text(
                       '$taskCount tasks',
                       style: TextStyle(
                         color: isDark ? AppColors.slate400 : AppColors.slate500,
-                        fontSize: 11,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -405,25 +388,28 @@ class _VolunteerCard extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppBadge.personStatus(volunteer.status),
-              const SizedBox(height: 4),
-              Text(
-                volunteer.assignedAdmin.isNotEmpty
-                    ? volunteer.assignedAdmin
-                    : 'No admin',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.slate400,
-                  fontSize: 10,
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppBadge.personStatus(volunteer.status),
+                const SizedBox(height: 4),
+                Flexible(
+                  child: Text(
+                    volunteer.assignedAdmin.isNotEmpty
+                        ? 'Admin: ${volunteer.assignedAdmin}'
+                        : 'No admin',
+                    style: const TextStyle(
+                      color: AppColors.slate400,
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(width: 8),
           const Icon(Icons.chevron_right_rounded, color: AppColors.slate300),
@@ -437,19 +423,19 @@ class _VolunteerCard extends ConsumerWidget {
 // ADD VOLUNTEER FORM
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _AddVolunteerForm extends StatefulWidget {
+class _AddVolunteerForm extends ConsumerStatefulWidget {
   const _AddVolunteerForm({required this.onSubmit});
 
-  final Future<void> Function(VolunteerEntity) onSubmit;
+  final void Function(VolunteerEntity) onSubmit;
 
   @override
-  State<_AddVolunteerForm> createState() => _AddVolunteerFormState();
+  ConsumerState<_AddVolunteerForm> createState() => _AddVolunteerFormState();
 }
 
-class _AddVolunteerFormState extends State<_AddVolunteerForm> {
+class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
+
   final _formKey = GlobalKey<FormState>();
 
-  bool _isLoading = false;
   String _name = '';
   String _email = '';
   String _phone = '';
@@ -457,6 +443,9 @@ class _AddVolunteerFormState extends State<_AddVolunteerForm> {
   String _skills = '';
   String _assignedAdmin = '';
   String _tenure = 'monthly';
+  String? _mentorId;
+  String? _mentorName;
+
 
   @override
   Widget build(BuildContext context) {
@@ -517,12 +506,30 @@ class _AddVolunteerFormState extends State<_AddVolunteerForm> {
               onSaved: (val) => _skills = val ?? '',
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Assigned Admin',
-                prefixIcon: Icon(Icons.shield_rounded),
+            ref.watch(usersManagementProvider).when(
+              data: (users) {
+                final admins = users.where((u) => u.role == UserRole.admin || u.role == UserRole.superAdmin).toList();
+                return DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Assigned Admin',
+                    prefixIcon: Icon(Icons.shield_rounded),
+                  ),
+                  value: _assignedAdmin.isEmpty ? null : _assignedAdmin,
+                  hint: const Text('Select Admin'),
+                  items: admins
+                      .map((u) => DropdownMenuItem(value: u.name, child: Text(u.name)))
+                      .toList(),
+                  onChanged: (val) => setState(() => _assignedAdmin = val ?? ''),
+                );
+              },
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Assigned Admin',
+                  prefixIcon: Icon(Icons.shield_rounded),
+                ),
+                onSaved: (val) => _assignedAdmin = val ?? '',
               ),
-              onSaved: (val) => _assignedAdmin = val ?? '',
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
@@ -530,7 +537,7 @@ class _AddVolunteerFormState extends State<_AddVolunteerForm> {
                 labelText: 'Tenure',
                 prefixIcon: Icon(Icons.calendar_month_rounded),
               ),
-              value: _tenure,
+              initialValue: _tenure,
               items: const [
                 DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
                 DropdownMenuItem(value: 'annual', child: Text('Annual')),
@@ -541,24 +548,45 @@ class _AddVolunteerFormState extends State<_AddVolunteerForm> {
                 }
               },
             ),
+            const SizedBox(height: 12),
+            ref.watch(memberProvider).when(
+              data: (members) => DropdownButtonFormField<String?>(
+                decoration: const InputDecoration(
+                  labelText: 'Assign Mentor (Member)',
+                  prefixIcon: Icon(Icons.supervisor_account_rounded),
+                ),
+                value: _mentorId,
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('No Mentor')),
+                  ...members.map((m) => DropdownMenuItem(
+                    value: m.id,
+                    child: Text(m.name),
+                  )),
+                ],
+                onChanged: (val) {
+                  setState(() {
+                    _mentorId = val;
+                    if (val != null) {
+                      _mentorName = members.firstWhere((m) => m.id == val).name;
+                    } else {
+                      _mentorName = null;
+                    }
+                  });
+                },
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => const Text('Error loading members'),
+            ),
             const SizedBox(height: 24),
+
             ElevatedButton(
-              onPressed: _isLoading ? null : _handleSubmit,
+              onPressed: _handleSubmit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.brand,
+                backgroundColor: AppColors.blue600,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text('Add Volunteer'),
+              child: const Text('Add Volunteer'),
             ),
           ],
         ),
@@ -566,36 +594,31 @@ class _AddVolunteerFormState extends State<_AddVolunteerForm> {
     );
   }
 
-  Future<void> _handleSubmit() async {
+  void _handleSubmit() {
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
-      setState(() => _isLoading = true);
-      try {
-        await widget.onSubmit(
-          VolunteerEntity(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            name: _name.trim(),
-            email: _email.trim(),
-            phone: _phone.trim(),
-            address: _address.trim(),
-            joinDate: AppFormatters.today(),
-            status: PersonStatus.active,
-            assignedAdmin: _assignedAdmin.trim(),
-            taskIds: const [],
-            tenure: _tenure,
-            skills: _skills
-                .split(',')
-                .map((s) => s.trim())
-                .where((s) => s.isNotEmpty)
-                .toList(),
-            avatar: '',
-          ),
-        );
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
-      }
+      widget.onSubmit(
+        VolunteerEntity(
+          id: '',
+          name: _name.trim(),
+          email: _email.trim(),
+          phone: _phone.trim(),
+          address: _address.trim(),
+          joinDate: AppFormatters.today(),
+          status: PersonStatus.active,
+          assignedAdmin: _assignedAdmin.trim(),
+          taskIds: const [],
+          tenure: _tenure,
+          skills: _skills
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList(),
+          avatar: '',
+          mentorId: _mentorId,
+          mentorName: _mentorName,
+        ),
+      );
     }
   }
 }
@@ -853,6 +876,12 @@ class _VolunteerDetailsContent extends ConsumerWidget {
           ),
           const Divider(height: 24),
           _InfoRow(
+            label: 'Assigned Mentor (Member)',
+            value: volunteer.mentorName ?? 'Not assigned',
+            icon: Icons.supervisor_account_rounded,
+          ),
+          const Divider(height: 24),
+          _InfoRow(
             label: 'Status',
             value: volunteer.status.displayName,
             icon: Icons.badge_rounded,
@@ -982,114 +1011,93 @@ class _TaskItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return InkWell(
-      onTap: () => _showDetails(context),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.slate800 : AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? AppColors.slate700 : AppColors.slate200,
-          ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.slate800 : AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppColors.slate700 : AppColors.slate200,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    task.title,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  task.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              _TaskStatusBadge(status: task.status),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            task.description,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.slate500,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.event_rounded,
+                    size: 14,
+                    color: AppColors.slate400,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Due: ${AppFormatters.displayDate(task.deadline)}',
                     style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                      fontSize: 12,
+                      color: AppColors.slate500,
                     ),
                   ),
-                ),
-                _TaskStatusBadge(status: task.status),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              task.description,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.slate500,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.event_rounded,
-                            size: 14,
-                            color: AppColors.slate400,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Due: ${AppFormatters.displayDate(task.deadline)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.slate500,
-                            ),
-                          ),
-                        ],
+                  if (task.requiresUpload) ...[
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
                       ),
-                      if (task.requiresUpload)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.amber100,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'Requires Upload',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors.amber600,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                      decoration: BoxDecoration(
+                        color: AppColors.amber100,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'Requires Upload',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.amber600,
+                          fontWeight: FontWeight.w600,
                         ),
-                      if (task.geotag != null && task.geotag!.isNotEmpty)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.location_on_rounded, size: 14, color: AppColors.red500),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'Geotagged',
-                              style: TextStyle(fontSize: 12, color: AppColors.slate500),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-                if (task.status == TaskStatus.submitted || task.status == TaskStatus.waitingAdmin)
-                  Row(
-                    children: [
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              if (task.status == TaskStatus.submitted)
+                Row(
+                  children: [
+                    if (task.uploadedImage != null)
                       TextButton.icon(
-                        onPressed: () => _showDetails(context),
-                        icon: const Icon(Icons.visibility_rounded, size: 16),
+                        onPressed: () => _showImagePreview(context, task),
+                        icon: const Icon(Icons.image_rounded, size: 16),
                         label: const Text('View'),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.blue600,
@@ -1098,43 +1106,120 @@ class _TaskItem extends ConsumerWidget {
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.check_circle_rounded,
-                          color: AppColors.emerald500,
-                          size: 24,
-                        ),
-                        onPressed: () => ref
-                            .read(taskProvider.notifier)
-                            .updateStatus(task.id, TaskStatus.approved),
-                        tooltip: 'Approve',
+                    IconButton(
+                      icon: const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.emerald500,
+                        size: 24,
                       ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.cancel_rounded,
-                          color: AppColors.red500,
-                          size: 24,
-                        ),
-                        onPressed: () => ref
-                            .read(taskProvider.notifier)
-                            .updateStatus(task.id, TaskStatus.rejected),
-                        tooltip: 'Reject',
+                      onPressed: () {
+                        final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
+                        ref.read(taskProvider.notifier).updateStatus(
+                          task.id, 
+                          TaskStatus.approved,
+                          approvedBy: adminName,
+                        );
+                      },
+                      tooltip: 'Approve',
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.cancel_rounded,
+                        color: AppColors.red500,
+                        size: 24,
+                      ),
+                      onPressed: () => ref
+                          .read(taskProvider.notifier)
+                          .updateStatus(task.id, TaskStatus.rejected),
+                      tooltip: 'Reject',
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImagePreview(BuildContext context, TaskEntity task) {
+    if (task.uploadedImage == null) return;
+    final imageUrl = task.uploadedImage!;
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBar(
+                title: const Text('Task Evidence'),
+                centerTitle: true,
+                automaticallyImplyLeading: false,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: imageUrl.startsWith('data:image') 
+                    ? Image.memory(
+                        base64Decode(imageUrl.split(',').last),
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => _buildImageError(),
+                      )
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => _buildImageError(),
+                      ),
+                ),
+              ),
+              if (task.geotag != null && task.geotag!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.location_on_rounded, size: 16, color: AppColors.red500),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Captured at: ${task.geotag}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate700),
                       ),
                     ],
                   ),
-              ],
-            ),
-          ],
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showDetails(BuildContext context) {
-    AppModal.show(
-      context: context,
-      title: 'Task Submission Detail',
-      child: TaskDetailsModal(task: task),
+  Widget _buildImageError() {
+    return Container(
+      padding: const EdgeInsets.all(40),
+      color: AppColors.slate100,
+      child: const Column(
+        children: [
+          Icon(Icons.broken_image_rounded, size: 48, color: AppColors.slate400),
+          SizedBox(height: 12),
+          Text(
+            'Image not available',
+            style: TextStyle(color: AppColors.slate500),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1151,11 +1236,11 @@ class _TaskStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
-      TaskStatus.pending      => AppColors.amber500,
-      TaskStatus.submitted    => AppColors.blue500,
-      TaskStatus.waitingAdmin => AppColors.brand,
-      TaskStatus.approved     => AppColors.emerald500,
-      TaskStatus.rejected      => AppColors.red500,
+      TaskStatus.pending => AppColors.amber500,
+      TaskStatus.submitted => AppColors.blue500,
+      TaskStatus.waitingAdmin => AppColors.purple500,
+      TaskStatus.approved => AppColors.emerald500,
+      TaskStatus.rejected => AppColors.red500,
     };
 
     return Container(
@@ -1250,7 +1335,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
             ElevatedButton(
               onPressed: _handleSubmit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.brand,
+                backgroundColor: AppColors.blue600,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -1279,7 +1364,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
       _formKey.currentState?.save();
       widget.onSubmit(
         TaskEntity(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: '',
           title: _title.trim(),
           description: _description.trim(),
           deadline: AppFormatters.toIso(_deadline),
