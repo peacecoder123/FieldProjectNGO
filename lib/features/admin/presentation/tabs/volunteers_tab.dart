@@ -71,6 +71,7 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
               await Future.delayed(const Duration(milliseconds: 800));
             },
             child: volunteersAsync.when(
+              skipLoadingOnRefresh: true,
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (volunteers) {

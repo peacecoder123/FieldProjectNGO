@@ -160,6 +160,7 @@ class _VolunteerTasksTabState extends ConsumerState<VolunteerTasksTab> {
     final tasksAsync = ref.watch(taskProvider);
 
     return tasksAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (tasks) {

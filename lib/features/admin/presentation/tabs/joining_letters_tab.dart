@@ -30,6 +30,7 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
     final requestsAsync = ref.watch(joiningLetterProvider);
 
     return requestsAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, s) => Center(child: Text('Error loading requests: $e')),
       data: (requests) {
@@ -319,7 +320,7 @@ class _JoiningRequestCard extends ConsumerWidget {
             pw.Text('Approved by: ${req.generatedBy}'),
             pw.SizedBox(height: 60),
             pw.Divider(),
-            pw.Text('Jayashree Foundation — Official Joining Letter', style: const pw.TextStyle(fontSize: 10)),
+            pw.Text('Jayashree Foundation | Official Joining Letter', style: const pw.TextStyle(fontSize: 10)),
           ],
         ),
       ),

@@ -20,6 +20,7 @@ class DocumentationTab extends ConsumerWidget {
     final currentUser = ref.watch(currentUserProvider);
 
     return docsAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (docs) {

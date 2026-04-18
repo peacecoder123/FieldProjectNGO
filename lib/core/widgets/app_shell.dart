@@ -104,15 +104,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                     notifications: widget.notifications,
                   ),
                   Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: _onRefresh,
-                      displacement: 10,
-                      edgeOffset: 0,
-                      color: AppColors.brand,
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: widget.body,
-                      ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: widget.body,
                     ),
                   ),
                 ],

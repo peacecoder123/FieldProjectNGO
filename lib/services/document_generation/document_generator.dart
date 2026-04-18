@@ -536,7 +536,7 @@ Jayashree Foundation
       bodyTemplate: '''
 ═══════════════════════════════════════════════════════
         MEMORANDUM OF UNDERSTANDING (MOU)
-     Medical Assistance — Jayashree Foundation
+     Medical Assistance - Jayashree Foundation
 ═══════════════════════════════════════════════════════
 
 Date: {{date}}

@@ -263,37 +263,51 @@ class MemberPaymentsTab extends ConsumerWidget {
                             const SizedBox(height: 4),
                             TextButton.icon(
                               onPressed: () async {
-                                final generator = DocumentGenerator();
-                                final docType = p.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
-                                final template = generator.getTemplateForType(docType);
+                                try {
+                                  final generator = DocumentGenerator();
+                                  final docType = p.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
+                                  final template = generator.getTemplateForType(docType);
                                 
-                                final doc = generator.resolveTemplate(template, {
-                                  'receipt_number': p.receiptNumber ?? 'REC-PENDING',
-                                  'donor_name': p.donorName,
-                                  'amount': p.amount.toString(),
-                                  'date': AppFormatters.displayDate(p.date),
-                                  'payment_mode': p.type.name,
-                                  'purpose': p.purpose,
-                                });
+                                  final doc = generator.resolveTemplate(template, {
+                                    'receipt_number': p.receiptNumber ?? 'REC-PENDING',
+                                    'donor_name': p.donorName,
+                                    'amount': p.amount.toString(),
+                                    'date': p.date,
+                                    'payment_mode': p.type.name,
+                                    'purpose': p.purpose,
+                                  });
 
-                                final pdf = pw.Document();
-                                pdf.addPage(
-                                  pw.Page(
-                                    pageFormat: PdfPageFormat.a4,
-                                    build: (context) {
-                                      return pw.Padding(
-                                        padding: const pw.EdgeInsets.all(32),
-                                        child: pw.Text(
-                                          doc.generatedContent,
-                                          style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                );
+                                  // Post-process: replace ISO date with human-readable format
+                                  final displayContent = doc.generatedContent.replaceAll(
+                                    p.date,
+                                    AppFormatters.displayDate(p.date),
+                                  );
 
-                                final bytes = await pdf.save();
-                                await Printing.layoutPdf(onLayout: (_) async => bytes);
+                                  final pdf = pw.Document();
+                                  pdf.addPage(
+                                    pw.Page(
+                                      pageFormat: PdfPageFormat.a4,
+                                      build: (context) {
+                                        return pw.Padding(
+                                          padding: const pw.EdgeInsets.all(32),
+                                          child: pw.Text(
+                                            displayContent,
+                                            style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  );
+
+                                  final bytes = await pdf.save();
+                                  await Printing.layoutPdf(onLayout: (_) async => bytes);
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Could not generate receipt: $e')),
+                                    );
+                                  }
+                                }
                               },
                               icon: const Icon(Icons.download_rounded, size: 14),
                               label: const Text('Receipt', style: TextStyle(fontSize: 12)),

@@ -195,3 +195,7 @@ final fcmTokenSyncProvider = Provider<void>((ref) {
     debugPrint('Sync: No user logged in. FCM sync skipped.');
   }
 });
+
+/// Global provider for the active dashboard tab ID.
+/// Initial value is 'overview'.
+final dashboardTabProvider = StateProvider<String>((ref) => 'overview');

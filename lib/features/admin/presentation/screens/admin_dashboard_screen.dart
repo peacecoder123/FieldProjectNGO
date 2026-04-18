@@ -26,9 +26,8 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
-  String _activeTab = 'overview';
 
-  Widget _buildTab(bool isActuallySuperAdmin) => switch (_activeTab) {
+  Widget _buildTab(String activeTab, bool isActuallySuperAdmin) => switch (activeTab) {
     'overview'        => AdminOverviewTab(isSuperAdmin: isActuallySuperAdmin),
     'volunteers'      => VolunteersTab(isSuperAdmin: isActuallySuperAdmin),
     'members'         => const MembersTab(),
@@ -74,12 +73,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       const NavItem(id: 'profile',    label: 'Profile',         icon: Icons.account_circle_rounded),
     ];
 
+    final activeTab = ref.watch(dashboardTabProvider);
+
     return AppShell(
       navItems:      navItems,
-      activeTab:     _activeTab,
-      onTabChange:   (id) => setState(() => _activeTab = id),
+      activeTab:     activeTab,
+      onTabChange:   (id) => ref.read(dashboardTabProvider.notifier).state = id,
       notifications: totalNotifications,
-      body:          _buildTab(isActuallySuperAdmin),
+      body:          _buildTab(activeTab, isActuallySuperAdmin),
     );
   }
 }
