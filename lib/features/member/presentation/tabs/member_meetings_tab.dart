@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
@@ -62,7 +63,16 @@ class _MeetingItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isPast = DateTime.parse(meeting.date).isBefore(DateTime.now());
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPast = DateTime.tryParse(meeting.date)?.isBefore(DateTime.now()) ?? false;
+    final hasSummary = meeting.summary != null && meeting.summary!.isNotEmpty;
+
+    Future<void> openLink(String url) async {
+      final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    }
 
     return AppCard(
       child: Column(
@@ -72,7 +82,7 @@ class _MeetingItem extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text(meeting.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+              Expanded(child: Text(meeting.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : AppColors.slate900))),
               const SizedBox(width: 12),
               if (isAttendee) const AppBadge(label: 'ATTENDING', color: AppColors.emerald500),
             ],
@@ -80,60 +90,156 @@ class _MeetingItem extends ConsumerWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.calendar_month_rounded, size: 14, color: AppColors.slate400),
+              Icon(Icons.calendar_month_rounded, size: 14, color: isDark ? AppColors.slate400 : AppColors.slate400),
               const SizedBox(width: 4),
-              Text(AppFormatters.displayDate(meeting.date), style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
+              Text(AppFormatters.displayDate(meeting.date), style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
               const SizedBox(width: 12),
-              const Icon(Icons.access_time_rounded, size: 14, color: AppColors.slate400),
+              Icon(Icons.access_time_rounded, size: 14, color: isDark ? AppColors.slate400 : AppColors.slate400),
               const SizedBox(width: 4),
-              Text(meeting.time, style: const TextStyle(fontSize: 12, color: AppColors.slate500)),
+              Text(meeting.time, style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
             ],
           ),
           if (meeting.link != null && meeting.link!.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.link_rounded, size: 14, color: AppColors.blue500),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    meeting.link!,
-                    style: const TextStyle(fontSize: 12, color: AppColors.blue600, decoration: TextDecoration.underline),
+            InkWell(
+              onTap: () => openLink(meeting.link!),
+              child: Row(
+                children: [
+                  const Icon(Icons.link_rounded, size: 14, color: AppColors.blue500),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      meeting.link!,
+                      style: const TextStyle(fontSize: 12, color: AppColors.blue600, decoration: TextDecoration.underline),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  const Icon(Icons.open_in_new_rounded, size: 12, color: AppColors.blue500),
+                ],
+              ),
             ),
           ],
           const SizedBox(height: 16),
-          if (meeting.summary != null && meeting.summary!.isNotEmpty)
+          // Assignment badge
+          if (!hasSummary && isPast && meeting.summaryAssignedTo != null) ...[
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(8)),
-              child: Column(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.blue600.withValues(alpha: 0.15) : AppColors.blue50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isDark ? AppColors.blue600.withValues(alpha: 0.3) : AppColors.blue100),
+              ),
+              child: Row(
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.check_circle_rounded, size: 16, color: AppColors.emerald500),
-                      SizedBox(width: 6),
-                      Text('Meeting Summary Submitted', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.emerald700)),
-                    ],
+                  const Icon(Icons.assignment_ind_rounded, size: 16, color: AppColors.blue600),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Summary assigned to: ${meeting.summaryAssignedTo}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.blue600),
                   ),
                 ],
               ),
+            ),
+          ],
+          // Action buttons
+          if (hasSummary)
+            ElevatedButton.icon(
+              onPressed: () => _showSummaryDialog(context, meeting),
+              icon: const Icon(Icons.visibility_rounded, size: 16),
+              label: const Text('View Summary'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? AppColors.emerald600.withValues(alpha: 0.2) : AppColors.emerald50,
+                foregroundColor: AppColors.emerald600,
+                elevation: 0,
+                minimumSize: const Size(double.infinity, 40),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
             )
-          else if (isPast)
+          else if (isPast && (meeting.summaryAssignedTo == null || meeting.summaryAssignedTo == 'Member'))
+            // Member can only add summary if assigned to Member (or unassigned)
             ElevatedButton.icon(
               onPressed: () => _showAddSummaryModal(context, ref),
               icon: const Icon(Icons.edit_note_rounded, size: 18),
               label: const Text('Add Meeting Summary'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.slate100,
-                foregroundColor: AppColors.slate700,
+                backgroundColor: isDark ? AppColors.slate700 : AppColors.slate100,
+                foregroundColor: isDark ? AppColors.slate300 : AppColors.slate700,
                 elevation: 0,
                 minimumSize: const Size(double.infinity, 40),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  void _showSummaryDialog(BuildContext context, MeetingEntity meeting) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.slate800 : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.description_rounded, color: AppColors.emerald600, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                meeting.title,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.slate900),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_rounded, size: 13, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                  const SizedBox(width: 6),
+                  Text('${AppFormatters.displayDate(meeting.date)} at ${meeting.time}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                ],
+              ),
+              if (meeting.addedBy != null) ...[
+                const SizedBox(height: 4),
+                Text('Added by ${meeting.addedBy}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+              ],
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 12),
+              Text(
+                'Meeting Summary',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? AppColors.slate200 : AppColors.slate800),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.slate900 : AppColors.slate50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
+                ),
+                child: Text(
+                  meeting.summary!,
+                  style: TextStyle(fontSize: 14, height: 1.6, color: isDark ? AppColors.slate300 : AppColors.slate700),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
@@ -181,7 +287,7 @@ class _AddSummaryFormState extends State<_AddSummaryForm> {
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => widget.onSubmit(_controller.text),
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.blue600, foregroundColor: Colors.white),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
           child: const Text('Save Summary'),
         ),
       ],

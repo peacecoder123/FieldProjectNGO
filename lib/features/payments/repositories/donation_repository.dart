@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
 import 'package:ngo_volunteer_management/shared/data/repositories.dart';
+import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 
 class DonationRepository implements IDonationRepository {
   final String _collectionPath = 'donations';
@@ -35,9 +36,11 @@ class DonationRepository implements IDonationRepository {
         .orderBy('date', descending: true)
         .get();
 
-    return snapshot.docs
-        .map((doc) => DonationEntity.fromMap(doc.data()))
-        .toList();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      data['id'] = doc.id;
+      return DonationEntity.fromMap(data);
+    }).toList();
   }
 
   @override
@@ -47,35 +50,53 @@ class DonationRepository implements IDonationRepository {
         .orderBy('date', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => DonationEntity.fromMap(doc.data()))
-          .toList();
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return DonationEntity.fromMap(data);
+      }).toList();
     });
   }
 
   @override
   Future<DonationEntity> add(DonationEntity donation) async {
-    // Save to Firestore using the donation ID as the document ID
-    await _db
-        .collection(_collectionPath)
-        .doc(donation.id.toString())
-        .set(donation.toMap());
-
-    return donation;
+    final docRef = await _db.collection(_collectionPath).add(donation.toMap());
+    final data = donation.toMap();
+    await docRef.update({'id': docRef.id}); // write correct ID to payload too
+    return donation.copyWith(id: docRef.id);
   }
 
   @override
-  Future<DonationEntity> generateReceipt(int donationId, String receiptNumber) async {
-    final docRef = _db.collection(_collectionPath).doc(donationId.toString());
+  Future<DonationEntity> generateReceipt(String donationId, String receiptNumber) async {
+    final docRef = _db.collection(_collectionPath).doc(donationId);
     
-    // Update the document in Firestore
     await docRef.update({
       'receiptGenerated': true,
       'receiptNumber': receiptNumber,
     });
 
-    // Fetch and return the updated document
     final updatedDoc = await docRef.get();
-    return DonationEntity.fromMap(updatedDoc.data()!);
+    final data = updatedDoc.data()!;
+    data['id'] = updatedDoc.id;
+    return DonationEntity.fromMap(data);
+  }
+
+  @override
+  Future<DonationEntity> update(DonationEntity donation) async {
+    await _db
+        .collection(_collectionPath)
+        .doc(donation.id.toString())
+        .update(donation.toMap());
+    return donation;
+  }
+
+  @override
+  Future<void> updatePaymentStatus(String donationId, PaymentStatus status) async {
+    await _db
+        .collection(_collectionPath)
+        .doc(donationId)
+        .update({
+      'paymentStatus': status.name,
+    });
   }
 }

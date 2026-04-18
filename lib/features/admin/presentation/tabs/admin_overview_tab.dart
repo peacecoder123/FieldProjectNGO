@@ -8,7 +8,6 @@ import '../../../../core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import '../../../../core/widgets/stat_card.dart';
 import '../../../../shared/data/entities.dart';
-import '../../../../shared/data/mock_data_source.dart';
 import '../../../../shared/providers/feature_providers.dart';
 
 class AdminOverviewTab extends ConsumerWidget {
@@ -21,25 +20,32 @@ class AdminOverviewTab extends ConsumerWidget {
     final membersAsync    = ref.watch(memberProvider);
     final tasksAsync      = ref.watch(taskProvider);
     final donationsAsync  = ref.watch(donationProvider);
+    final monthlyDonations = ref.watch(monthlyDonationAggregationProvider);
     final joiningAsync    = ref.watch(joiningLetterProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return volunteersAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error:   (e, _) => Center(child: Text('Error: $e')),
       data: (volunteers) => membersAsync.when(
+        skipLoadingOnRefresh: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error:   (e, _) => Center(child: Text('Error: $e')),
         data: (members) => tasksAsync.when(
+          skipLoadingOnRefresh: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error:   (e, _) => Center(child: Text('Error: $e')),
           data: (tasks) => donationsAsync.when(
+            skipLoadingOnRefresh: true,
             loading: () => const Center(child: CircularProgressIndicator()),
             error:   (e, _) => Center(child: Text('Error: $e')),
             data: (donations) {
               final activeVols    = volunteers.where((v) => v.status == PersonStatus.active).length;
               final activeMems    = members.where((m) => m.status == PersonStatus.active).length;
-              final totalDonation = donations.fold(0, (s, d) => s + d.amount);
+              final totalDonation = donations.where((d) => d.paymentStatus != PaymentStatus.failed).fold(0, (s, d) => s + d.amount);
+              final donationCount = donations.where((d) => d.paymentStatus != PaymentStatus.failed).length;
+              final onlineCount   = donations.where((d) => d.type == DonationType.online && d.paymentStatus == PaymentStatus.success).length;
               final pendingReqs   = joiningAsync.value?.where((r) => r.status == RequestStatus.pending).length ?? 0;
               final pendingTasks  = tasks.where((t) => t.status == TaskStatus.submitted).length;
 
@@ -50,12 +56,21 @@ class AdminOverviewTab extends ConsumerWidget {
                 _ChartPoint('Rejected',  tasks.where((t) => t.status == TaskStatus.rejected).length,  AppColors.red500),
               ];
 
-              return ListView(
-                shrinkWrap: true,
-                physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
-                children: [
-                  // ── Hero banner ────────────────────────────────────────
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(volunteerProvider);
+                  ref.invalidate(memberProvider);
+                  ref.invalidate(taskProvider);
+                  ref.invalidate(donationProvider);
+                  ref.invalidate(joiningLetterProvider);
+                  await Future.delayed(const Duration(milliseconds: 800));
+                },
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
+                  children: [
+                    // ── Hero banner ────────────────────────────────────────
                   _HeroBanner(
                     isSuperAdmin:     isSuperAdmin,
                     activeVolunteers: activeVols,
@@ -65,46 +80,64 @@ class AdminOverviewTab extends ConsumerWidget {
                   const SizedBox(height: 12),
 
                   // ── Stat cards ─────────────────────────────────────────
-                  Column(
-                    children: [
-                      StatCard(
-                        title:          'Active Volunteers',
-                        value:          '$activeVols',
-                        subtitle:       '${volunteers.length} total',
-                        icon:           const Icon(Icons.volunteer_activism_rounded, size: 18, color: AppColors.navy500),
-                        iconBackground: AppColors.navy100,
-                        trend:          '12%',
-                        trendUp:        true,
-                      ),
-                      const SizedBox(height: 8),
-                      StatCard(
-                        title:          'Active Members',
-                        value:          '$activeMems',
-                        subtitle:       '${members.where((m) => m.membershipType == MembershipType.eightyG).length} with 80G',
-                        icon:           const Icon(Icons.people_rounded, size: 18, color: AppColors.emerald600),
-                        iconBackground: AppColors.emerald100,
-                        trend:          '8%',
-                        trendUp:        true,
-                      ),
-                      const SizedBox(height: 8),
-                      StatCard(
-                        title:          'Total Donations',
-                        value:          AppFormatters.inr(totalDonation),
-                        subtitle:       '${donations.where((d) => !d.receiptGenerated).length} receipts pending',
-                        icon:           const Icon(Icons.currency_rupee_rounded, size: 18, color: AppColors.purple600),
-                        iconBackground: AppColors.purple100,
-                        trend:          '23%',
-                        trendUp:        true,
-                      ),
-                      const SizedBox(height: 8),
-                      StatCard(
-                        title:          'Pending Requests',
-                        value:          '$pendingReqs',
-                        subtitle:       '$pendingTasks tasks need review',
-                        icon:           const Icon(Icons.inbox_rounded, size: 18, color: AppColors.amber600),
-                        iconBackground: AppColors.amber100,
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final crossCount = constraints.maxWidth > 900 ? 5 : (constraints.maxWidth > 650 ? 3 : 2);
+                      final aspectRatio = constraints.maxWidth < 600 ? 1.4 : 1.5;
+                      return GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: crossCount,
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        childAspectRatio: aspectRatio,
+                        children: [
+                          StatCard(
+                            title:          'Active Volunteers',
+                            value:          '$activeVols',
+                            subtitle:       '${volunteers.length} total',
+                            icon:           const Icon(Icons.volunteer_activism_rounded, size: 20, color: AppColors.blue600),
+                            iconBackground: AppColors.blue100,
+                            trend:          '12%',
+                            trendUp:        true,
+                          ),
+                          StatCard(
+                            title:          'Active Members',
+                            value:          '$activeMems',
+                            subtitle:       '${members.where((m) => m.membershipType == MembershipType.eightyG).length} with 80G',
+                            icon:           const Icon(Icons.people_rounded, size: 20, color: AppColors.emerald600),
+                            iconBackground: AppColors.emerald100,
+                            trend:          '8%',
+                            trendUp:        true,
+                          ),
+                          StatCard(
+                            title:          'Total Donations',
+                            value:          AppFormatters.inr(totalDonation),
+                            subtitle:       '${donations.where((d) => !d.receiptGenerated).length} receipts pending',
+                            icon:           const Icon(Icons.currency_rupee_rounded, size: 20, color: AppColors.purple600),
+                            iconBackground: AppColors.purple100,
+                            trend:          '23%',
+                            trendUp:        true,
+                          ),
+                          StatCard(
+                            title:          'Online Payments',
+                            value:          '$onlineCount',
+                            subtitle:       'Via Razorpay checkout',
+                            icon:           const Icon(Icons.credit_card_rounded, size: 20, color: AppColors.rose600),
+                            iconBackground: AppColors.rose100,
+                            trend:          '15%',
+                            trendUp:        true,
+                          ),
+                          StatCard(
+                            title:          'Pending Requests',
+                            value:          '$pendingReqs',
+                            subtitle:       '$pendingTasks tasks need review',
+                            icon:           const Icon(Icons.inbox_rounded, size: 20, color: AppColors.amber600),
+                            iconBackground: AppColors.amber100,
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 20),
 
@@ -112,6 +145,16 @@ class AdminOverviewTab extends ConsumerWidget {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final isWide = constraints.maxWidth > 700;
+                      
+                      final Map<String, int> monthlyTotals = {};
+                      for (final d in donations) {
+                        final month = AppFormatters.displayDate(d.date).split(' ')[1];
+                        monthlyTotals[month] = (monthlyTotals[month] ?? 0) + d.amount;
+                      }
+                      final List<MonthlyDonationPoint> chartData = monthlyTotals.entries
+                          .map((e) => MonthlyDonationPoint(month: e.key, amount: e.value))
+                          .toList();
+
                       if (isWide) {
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,7 +162,7 @@ class AdminOverviewTab extends ConsumerWidget {
                             Expanded(
                               flex: 2,
                               child: _DonationChart(
-                                data: MockDataSource.monthlyDonations,
+                                data: monthlyDonations,
                                 isDark: isDark,
                               ),
                             ),
@@ -137,7 +180,7 @@ class AdminOverviewTab extends ConsumerWidget {
                       return Column(
                         children: [
                           _DonationChart(
-                            data: MockDataSource.monthlyDonations,
+                            data: monthlyDonations,
                             isDark: isDark,
                           ),
                           const SizedBox(height: 12),
@@ -183,7 +226,8 @@ class AdminOverviewTab extends ConsumerWidget {
                       );
                     },
                   ),
-                ],
+                  ],
+                ),
               );
             },
           ),
@@ -213,11 +257,7 @@ class _HeroBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.blue600, AppColors.indigo600, AppColors.violet600],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
+        color: AppColors.brand,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -227,9 +267,13 @@ class _HeroBanner extends StatelessWidget {
             children: [
               const Icon(Icons.bolt_rounded, color: Colors.white70, size: 14),
               const SizedBox(width: 4),
-              Text(
-                isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              Expanded(
+                child: Text(
+                  isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -306,15 +350,17 @@ class _DonationChart extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Donation Trend',
-                      style: Theme.of(context).textTheme.titleSmall),
-                  const Text('Last 6 months',
-                      style: TextStyle(
-                          fontSize: 11, color: AppColors.slate400)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Donation Trend',
+                        style: Theme.of(context).textTheme.titleSmall),
+                    const Text('Last 6 months',
+                        style: TextStyle(
+                            fontSize: 11, color: AppColors.slate400)),
+                  ],
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -501,43 +547,20 @@ class _ActivityFeed extends StatelessWidget {
         children: [
           Text('Recent Activity',
               style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 16),
-          ..._activities.map(
-            (a) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5),
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color:        a.$3,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(a.$1,
-                            style: TextStyle(
-                                fontSize: 13, color: isDark ? AppColors.slate200 : AppColors.slate700)),
-                        const SizedBox(height: 2),
-                        Text(a.$2,
-                            style: TextStyle(
-                                fontSize: 11, color: isDark ? AppColors.slate500 : AppColors.slate400)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+          const SizedBox(height: 24),
+          const Center(
+            child: Column(
+              children: [
+                Icon(Icons.history_rounded, size: 40, color: AppColors.slate300),
+                SizedBox(height: 12),
+                Text(
+                  'Activity tracking coming soon',
+                  style: TextStyle(color: AppColors.slate400, fontSize: 13),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: 24),
         ],
       ),
     );

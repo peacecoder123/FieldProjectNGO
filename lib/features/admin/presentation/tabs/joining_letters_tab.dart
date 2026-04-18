@@ -4,13 +4,12 @@ import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
-import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
+import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
-import 'package:printing/printing.dart';
 import 'package:ngo_volunteer_management/services/download_service.dart';
 
 class JoiningLettersTab extends ConsumerStatefulWidget {
@@ -29,17 +28,25 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
     final requestsAsync = ref.watch(joiningLetterProvider);
 
     return requestsAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => const Center(child: Text('Error loading requests')),
+      error: (e, s) => Center(child: Text('Error loading requests: $e')),
       data: (requests) {
-        final filtered = requests.where((r) => _statusFilter == null || r.status == _statusFilter).toList();
+        final filtered = requests
+            .where((r) => _statusFilter == null || r.status == _statusFilter)
+            .toList();
 
-        return ListView(
-          shrinkWrap: true,
-          physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          children: [
-            const SectionHeader(
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(joiningLetterProvider);
+            await Future.delayed(const Duration(milliseconds: 800));
+          },
+          child: ListView(
+            shrinkWrap: true,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            children: [
+              const SectionHeader(
               title: 'Joining Letters',
               subtitle: 'Review and approve requests for official joining letters',
             ),
@@ -51,19 +58,33 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 48),
-                  child: Text('No requests found', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                )
+                  child: Column(
+                    children: [
+                      Icon(Icons.file_present_rounded, size: 48, color: isDark ? AppColors.slate600 : AppColors.slate300),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No requests found',
+                        style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500),
+                      ),
+                    ],
+                  ),
+                ),
               )
             else
-              ...filtered.map((req) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _JoiningRequestCard(request: req),
-              )),
+              Column(
+                children: filtered
+                    .map((req) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _JoiningRequestCard(request: req),
+                        ))
+                    .toList(),
+              ),
           ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildFilters({required bool isDark}) {
     return SingleChildScrollView(
@@ -82,6 +103,13 @@ class _JoiningLettersTabState extends ConsumerState<JoiningLettersTab> {
             isSelected: _statusFilter == RequestStatus.pending,
             isDark: isDark,
             onSelected: () => setState(() => _statusFilter = RequestStatus.pending),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: 'Waiting Admin',
+            isSelected: _statusFilter == RequestStatus.waitingAdmin,
+            isDark: isDark,
+            onSelected: () => setState(() => _statusFilter = RequestStatus.waitingAdmin),
           ),
           const SizedBox(width: 8),
           _FilterChip(
@@ -138,56 +166,42 @@ class _JoiningRequestCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentUser = ref.watch(currentUserProvider);
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(request.name, style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: isDark ? AppColors.white : AppColors.slate900,
-                  )),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Requested for ${request.type.displayLabel} on ${AppFormatters.displayDate(request.requestDate)}',
-                    style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(request.name, style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isDark ? AppColors.white : AppColors.slate900,
+                    )),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Requested for ${request.type.displayLabel} on ${AppFormatters.displayDate(request.requestDate)}',
+                      style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                    ),
+                  ],
+                ),
               ),
               _StatusBadge(status: request.status),
             ],
           ),
-          if (request.status == RequestStatus.pending) ...[
+
+          if (request.status == RequestStatus.pending || request.status == RequestStatus.waitingAdmin) ...[
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => ref.read(joiningLetterProvider.notifier).reject(request.id),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: isDark ? AppColors.red500 : AppColors.red600,
-                    ),
-                    child: const Text('Reject'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _showApproveModal(context, ref),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.emerald600,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Approve'),
-                  ),
-                ),
-              ],
+            _TenureSelector(
+              request: request,
+              approverName: currentUser?.name ?? 'Admin',
             ),
           ] else if (request.status == RequestStatus.approved) ...[
             const SizedBox(height: 12),
@@ -205,7 +219,7 @@ class _JoiningRequestCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Approved by ${request.generatedBy} with tenure: ${request.tenure}',
+                      'Approved by ${request.generatedBy} • Tenure: ${request.tenure}',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -252,14 +266,12 @@ class _JoiningRequestCard extends ConsumerWidget {
                 children: [
                   const Icon(Icons.cancel_rounded, size: 16, color: AppColors.red500),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Rejected',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: isDark ? AppColors.red100 : AppColors.red600,
-                      ),
+                  Text(
+                    'Rejected',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? AppColors.red100 : AppColors.red600,
                     ),
                   ),
                 ],
@@ -270,17 +282,73 @@ class _JoiningRequestCard extends ConsumerWidget {
       ),
     );
   }
+}
 
-  void _showApproveModal(BuildContext context, WidgetRef ref) {
-    AppModal.show(
-      context: context,
-      title: 'Generate Joining Letter',
-      child: _ApproveRequestForm(
-        onSubmit: (by, tenure) {
-          ref.read(joiningLetterProvider.notifier).approve(request.id, generatedBy: by, tenure: tenure);
-          Navigator.pop(context);
-        },
-      ),
+// Inline tenure selector + approve/reject (avoids "Approved By" text prompt)
+class _TenureSelector extends ConsumerStatefulWidget {
+  const _TenureSelector({required this.request, required this.approverName});
+  final JoiningLetterRequestEntity request;
+  final String approverName;
+
+  @override
+  ConsumerState<_TenureSelector> createState() => _TenureSelectorState();
+}
+
+class _TenureSelectorState extends ConsumerState<_TenureSelector> {
+  String _tenure = '6 Months';
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String>(
+          value: _tenure,
+          decoration: InputDecoration(
+            labelText: 'Tenure',
+            filled: true,
+            fillColor: isDark ? AppColors.slate800 : AppColors.slate50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+          items: ['3 Months', '6 Months', '1 Year', 'Permanent']
+              .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+              .toList(),
+          onChanged: (val) => setState(() => _tenure = val!),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => ref.read(joiningLetterProvider.notifier).reject(widget.request.id),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark ? AppColors.red500 : AppColors.red600,
+                ),
+                child: const Text('Reject'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  ref.read(joiningLetterProvider.notifier).approve(
+                    widget.request.id,
+                    generatedBy: widget.approverName,
+                    tenure: _tenure,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brand,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Approve'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -292,64 +360,11 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
-      RequestStatus.pending => AppColors.amber500,
-      RequestStatus.approved => AppColors.emerald500,
-      RequestStatus.rejected => AppColors.red500,
+      RequestStatus.pending      => AppColors.amber500,
+      RequestStatus.waitingAdmin => AppColors.brand,
+      RequestStatus.approved     => AppColors.emerald500,
+      RequestStatus.rejected      => AppColors.red500,
     };
     return AppBadge(label: status.displayName.toUpperCase(), color: color);
-  }
-}
-
-class _ApproveRequestForm extends StatefulWidget {
-  const _ApproveRequestForm({required this.onSubmit});
-  final Function(String, String) onSubmit;
-
-  @override
-  State<_ApproveRequestForm> createState() => _ApproveRequestFormState();
-}
-
-class _ApproveRequestFormState extends State<_ApproveRequestForm> {
-  final _formKey = GlobalKey<FormState>();
-  String generatedBy = '';
-  String tenure = '6 Months';
-
-  @override
-  Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextFormField(
-            decoration: const InputDecoration(labelText: 'Approved By (Admin Name)'),
-            onSaved: (val) => generatedBy = val ?? '',
-            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: tenure,
-            decoration: const InputDecoration(labelText: 'Tenure'),
-            items: ['3 Months', '6 Months', '1 Year', 'Permanent'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-            onChanged: (val) => setState(() => tenure = val!),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              if (_formKey.currentState?.validate() ?? false) {
-                _formKey.currentState?.save();
-                widget.onSubmit(generatedBy, tenure);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.emerald600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: const Text('Generate & Approve'),
-          ),
-        ],
-      ),
-    );
   }
 }

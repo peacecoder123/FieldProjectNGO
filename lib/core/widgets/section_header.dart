@@ -8,12 +8,12 @@ import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
     super.key,
-    required this.title,
+    this.title,
     this.subtitle,
     this.actions,
   });
 
-  final String  title;
+  final String? title;
   final String? subtitle;
   final Widget? actions;
 
@@ -23,38 +23,58 @@ class SectionHeader extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      padding: const EdgeInsets.only(bottom: 24),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 600;
+          final headerContent = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (title != null)
                 Text(
-                  title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: isDark ? AppColors.white : AppColors.slate900,
-                    fontWeight: FontWeight.w700,
+                  title!,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: isDark ? AppColors.white : AppColors.brand,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.slate400 : AppColors.slate500,
-                    ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  subtitle!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: isDark ? AppColors.slate400 : AppColors.slate500,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
+                ),
               ],
-            ),
-          ),
-          if (actions != null) ...[
-            const SizedBox(width: 12),
-            actions!,
-          ],
-        ],
+            ],
+          );
+
+          if (!isWide && actions != null) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                headerContent,
+                const SizedBox(height: 16),
+                actions!,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: headerContent),
+              if (actions != null) ...[
+                const SizedBox(width: 16),
+                actions!,
+              ],
+            ],
+          );
+        },
       ),
     );
   }

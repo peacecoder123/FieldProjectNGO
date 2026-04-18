@@ -30,55 +30,71 @@ class FirebaseVolunteerRepository implements IVolunteerRepository {
   @override
   Future<List<VolunteerEntity>> getAll() async {
     final snapshot = await _db.collection(_collectionPath).get();
-    return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+    return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
   }
 
   @override
   Stream<List<VolunteerEntity>> watchAll() {
     return _db.collection(_collectionPath).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+      return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
     });
   }
 
   @override
-  Future<VolunteerEntity?> getById(int id) async {
-    final doc = await _db.collection(_collectionPath).doc(id.toString()).get();
+  Future<VolunteerEntity?> getById(String id) async {
+    final doc = await _db.collection(_collectionPath).doc(id).get();
     if (!doc.exists) return null;
-    return _fromMap(doc.data()!);
+    return _fromMap(doc.id, doc.data()!);
   }
 
   @override
-  Stream<VolunteerEntity?> watchById(int id) {
-    return _db.collection(_collectionPath).doc(id.toString()).snapshots().map(
-      (snap) => snap.exists ? _fromMap(snap.data()!) : null,
+  Stream<VolunteerEntity?> watchById(String id) {
+    return _db.collection(_collectionPath).doc(id).snapshots().map(
+      (snap) => snap.exists ? _fromMap(snap.id, snap.data()!) : null,
     );
   }
 
   @override
   Future<VolunteerEntity> add(VolunteerEntity volunteer) async {
-    await _db
+    // Check for duplicate email
+    final emailDup = await _db
         .collection(_collectionPath)
-        .doc(volunteer.id.toString())
-        .set(_toMap(volunteer));
-    return volunteer;
+        .where('email', isEqualTo: volunteer.email.toLowerCase().trim())
+        .get();
+    if (emailDup.docs.isNotEmpty) {
+      throw Exception('A volunteer with the email ${volunteer.email} already exists.');
+    }
+
+    // Check for duplicate phone (if provided)
+    if (volunteer.phone.isNotEmpty) {
+      final phoneDup = await _db
+          .collection(_collectionPath)
+          .where('phone', isEqualTo: volunteer.phone.trim())
+          .get();
+      if (phoneDup.docs.isNotEmpty) {
+        throw Exception('A volunteer with the phone number ${volunteer.phone} already exists.');
+      }
+    }
+
+    final docRef = await _db.collection(_collectionPath).add(_toMap(volunteer));
+    return volunteer.copyWith(id: docRef.id);
   }
 
   @override
   Future<VolunteerEntity> update(VolunteerEntity volunteer) async {
     await _db
         .collection(_collectionPath)
-        .doc(volunteer.id.toString())
+        .doc(volunteer.id)
         .update(_toMap(volunteer));
     return volunteer;
   }
 
   @override
-  Future<void> delete(int id) async {
-    await _db.collection(_collectionPath).doc(id.toString()).delete();
+  Future<void> delete(String id) async {
+    await _db.collection(_collectionPath).doc(id).delete();
   }
 
   Map<String, dynamic> _toMap(VolunteerEntity v) => {
-        'id': v.id,
         'name': v.name,
         'email': v.email,
         'phone': v.phone,
@@ -95,20 +111,20 @@ class FirebaseVolunteerRepository implements IVolunteerRepository {
       };
 
 
-  VolunteerEntity _fromMap(Map<String, dynamic> map) => VolunteerEntity(
-        id: map['id'] as int,
-        name: map['name'] as String,
-        email: map['email'] as String,
-        phone: map['phone'] as String,
-        address: map['address'] as String,
-        joinDate: map['joinDate'] as String,
-        status: PersonStatus.fromString(map['status'] as String),
-        assignedAdmin: map['assignedAdmin'] as String,
-        taskIds: (map['taskIds'] as List<dynamic>).cast<int>(),
-        tenure: map['tenure'] as String,
-        skills: (map['skills'] as List<dynamic>).cast<String>(),
-        avatar: map['avatar'] as String,
-        mentorId: map['mentorId'] as int?,
+  VolunteerEntity _fromMap(String id, Map<String, dynamic> map) => VolunteerEntity(
+        id: id,
+        name: map['name'] as String? ?? 'Unknown',
+        email: map['email'] as String? ?? '',
+        phone: map['phone'] as String? ?? '',
+        address: map['address'] as String? ?? '',
+        joinDate: map['joinDate'] as String? ?? '',
+        status: PersonStatus.fromString(map['status'] as String? ?? 'pending'),
+        assignedAdmin: map['assignedAdmin'] as String? ?? '',
+        taskIds: (map['taskIds'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+        tenure: map['tenure'] as String? ?? '',
+        skills: (map['skills'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+        avatar: map['avatar'] as String? ?? '',
+        mentorId: map['mentorId']?.toString(),
         mentorName: map['mentorName'] as String?,
       );
 

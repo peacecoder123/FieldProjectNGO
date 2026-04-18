@@ -30,51 +30,56 @@ class FirebaseJoiningLetterRepository implements IJoiningLetterRepository {
   @override
   Future<List<JoiningLetterRequestEntity>> getAll() async {
     final snapshot = await _db.collection(_collectionPath).get();
-    return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+    return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
   }
 
   @override
   Stream<List<JoiningLetterRequestEntity>> watchAll() {
     return _db.collection(_collectionPath).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+      return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
     });
   }
 
   @override
   Future<JoiningLetterRequestEntity> add(JoiningLetterRequestEntity request) async {
-    await _db
-        .collection(_collectionPath)
-        .doc(request.id.toString())
-        .set(_toMap(request));
-    return request;
+    final docRef = await _db.collection(_collectionPath).add(_toMap(request));
+    return request.copyWith(id: docRef.id);
+  }
+
+  @override
+  Future<JoiningLetterRequestEntity> partiallyApprove(String id) async {
+    await _db.collection(_collectionPath).doc(id).update({
+      'status': RequestStatus.waitingAdmin.name,
+    });
+    final doc = await _db.collection(_collectionPath).doc(id).get();
+    return _fromMap(doc.id, doc.data()!);
   }
 
   @override
   Future<JoiningLetterRequestEntity> approve(
-    int id, {
+    String id, {
     required String generatedBy,
     required String tenure,
   }) async {
-    await _db.collection(_collectionPath).doc(id.toString()).update({
+    await _db.collection(_collectionPath).doc(id).update({
       'status': RequestStatus.approved.name,
       'generatedBy': generatedBy,
       'tenure': tenure,
     });
-    final doc = await _db.collection(_collectionPath).doc(id.toString()).get();
-    return _fromMap(doc.data()!);
+    final doc = await _db.collection(_collectionPath).doc(id).get();
+    return _fromMap(doc.id, doc.data()!);
   }
 
   @override
-  Future<JoiningLetterRequestEntity> reject(int id) async {
-    await _db.collection(_collectionPath).doc(id.toString()).update({
+  Future<JoiningLetterRequestEntity> reject(String id) async {
+    await _db.collection(_collectionPath).doc(id).update({
       'status': RequestStatus.rejected.name,
     });
-    final doc = await _db.collection(_collectionPath).doc(id.toString()).get();
-    return _fromMap(doc.data()!);
+    final doc = await _db.collection(_collectionPath).doc(id).get();
+    return _fromMap(doc.id, doc.data()!);
   }
 
   Map<String, dynamic> _toMap(JoiningLetterRequestEntity r) => {
-        'id': r.id,
         'name': r.name,
         'type': r.type.name,
         'requestDate': r.requestDate,
@@ -84,21 +89,21 @@ class FirebaseJoiningLetterRepository implements IJoiningLetterRepository {
         if (r.generatedBy != null) 'generatedBy': r.generatedBy,
       };
 
-  JoiningLetterRequestEntity _fromMap(Map<String, dynamic> map) => JoiningLetterRequestEntity(
-        id: map['id'] as int,
-        name: map['name'] as String,
+  JoiningLetterRequestEntity _fromMap(String id, Map<String, dynamic> map) => JoiningLetterRequestEntity(
+        id: id,
+        name: map['name'] as String? ?? 'Unknown',
         type: enumValueOr(
           JoiningLetterType.values,
-          map['type'] as String,
+          map['type'] as String? ?? '',
           JoiningLetterType.volunteer,
         ),
-        requestDate: map['requestDate'] as String,
+        requestDate: map['requestDate'] as String? ?? '',
         status: enumValueOr(
           RequestStatus.values,
-          map['status'] as String,
+          map['status'] as String? ?? '',
           RequestStatus.pending,
         ),
-        tenure: map['tenure'] as String,
+        tenure: map['tenure'] as String? ?? '',
         isNewMember: map['isNewMember'] as bool? ?? false,
         generatedBy: map['generatedBy'] as String?,
       );

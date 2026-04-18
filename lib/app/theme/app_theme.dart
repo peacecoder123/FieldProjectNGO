@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 /// Builds the Material 3 [ThemeData] for light and dark modes.
@@ -6,8 +7,7 @@ import 'app_colors.dart';
 /// Design decisions:
 /// • Uses [ColorScheme.fromSeed] seeded on [AppColors.blue600] so that M3
 ///   tonal surfaces stay close to the React Tailwind palette.
-/// • Typography uses Inter (falls back to system sans-serif if font assets are
-///   not bundled — safe for codex review).
+/// • Typography uses Poppins via Google Fonts for a clean, geometric look.
 /// • Every component theme is explicit so behaviour is predictable.
 abstract final class AppTheme {
   AppTheme._();
@@ -23,46 +23,42 @@ abstract final class AppTheme {
     final isDark = brightness == Brightness.dark;
 
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.blue600,
+      seedColor: AppColors.brand,
       brightness: brightness,
-      // Override surfaces to match the Tailwind slate palette exactly
-      surface:          isDark ? AppColors.slate900 : AppColors.white,
-      onSurface:        isDark ? AppColors.white     : AppColors.slate900,
-      surfaceContainerHighest:
-                        isDark ? AppColors.slate800  : AppColors.slate100,
-      surfaceContainer: isDark ? AppColors.slate800  : AppColors.slate50,
-      primary:          AppColors.blue600,
+      // Override surfaces to match the two-color brand palette
+      surface:          AppColors.white,
+      onSurface:        AppColors.brand,
+      surfaceContainerHighest: AppColors.slate100,
+      surfaceContainer: AppColors.slate50,
+      primary:          AppColors.brand,
       onPrimary:        AppColors.white,
-      secondary:        AppColors.indigo600,
+      secondary:        AppColors.brand,
       onSecondary:      AppColors.white,
       error:            AppColors.red500,
       onError:          AppColors.white,
       outline:          isDark ? AppColors.slate700  : AppColors.slate200,
     );
 
-    final textTheme = _buildTextTheme(isDark);
+    final textTheme = GoogleFonts.poppinsTextTheme(_buildTextTheme(isDark));
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       brightness: brightness,
-      fontFamily: 'Inter',
+      fontFamily: GoogleFonts.poppins().fontFamily,
       textTheme: textTheme,
-      scaffoldBackgroundColor:
-          isDark ? AppColors.slate900 : AppColors.slate50,
+      scaffoldBackgroundColor: AppColors.white,
 
       // ── AppBar ─────────────────────────────────────────────────────────────
       appBarTheme: AppBarTheme(
-        backgroundColor:
-            isDark ? AppColors.slate800 : AppColors.white,
-        foregroundColor:
-            isDark ? AppColors.white    : AppColors.slate900,
+        backgroundColor: AppColors.brand,
+        foregroundColor: AppColors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
-          color: isDark ? AppColors.white : AppColors.slate900,
+          color: AppColors.white,
         ),
       ),
 
@@ -83,7 +79,7 @@ abstract final class AppTheme {
       // ── ElevatedButton ─────────────────────────────────────────────────────
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.blue600,
+          backgroundColor: AppColors.brand,
           foregroundColor: AppColors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -116,7 +112,7 @@ abstract final class AppTheme {
       // ── TextButton ─────────────────────────────────────────────────────────
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.blue600,
+          foregroundColor: AppColors.brand,
           textStyle: textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w500,
           ),
@@ -133,19 +129,15 @@ abstract final class AppTheme {
             const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(
-            color: isDark ? AppColors.slate600 : AppColors.slate300,
-          ),
+          borderSide: const BorderSide(color: AppColors.slate300),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(
-            color: isDark ? AppColors.slate600 : AppColors.slate300,
-          ),
+          borderSide: const BorderSide(color: AppColors.slate300),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.blue600, width: 2),
+          borderSide: const BorderSide(color: AppColors.brand, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -194,19 +186,18 @@ abstract final class AppTheme {
 
       // ── NavigationRail ─────────────────────────────────────────────────────
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor:
-            isDark ? AppColors.slate900 : AppColors.slate900,
+        backgroundColor: AppColors.brand,
         selectedIconTheme: const IconThemeData(color: AppColors.white),
         unselectedIconTheme:
-            const IconThemeData(color: AppColors.slate400),
+            IconThemeData(color: AppColors.white.withValues(alpha: 0.6)),
         selectedLabelTextStyle: textTheme.labelSmall?.copyWith(
           color: AppColors.white,
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelTextStyle: textTheme.labelSmall?.copyWith(
-          color: AppColors.slate400,
+          color: AppColors.white.withValues(alpha: 0.6),
         ),
-        indicatorColor: AppColors.blue600,
+        indicatorColor: AppColors.white.withValues(alpha: 0.2),
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -214,11 +205,10 @@ abstract final class AppTheme {
 
       // ── TabBar ─────────────────────────────────────────────────────────────
       tabBarTheme: TabBarThemeData(
-        labelColor: AppColors.blue600,
-        unselectedLabelColor:
-            isDark ? AppColors.slate400 : AppColors.slate500,
+        labelColor: AppColors.white,
+        unselectedLabelColor: AppColors.white.withValues(alpha: 0.6),
         indicator: BoxDecoration(
-          color: AppColors.blue600,
+          color: AppColors.brand,
           borderRadius: BorderRadius.circular(8),
         ),
         indicatorSize: TabBarIndicatorSize.tab,

@@ -1,12 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-
-// PDF & Printing Imports
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
@@ -16,17 +10,14 @@ import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/core/widgets/stat_card.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
-import 'package:ngo_volunteer_management/shared/data/mock_data_source.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
 import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
-import 'package:printing/printing.dart';
 import 'package:ngo_volunteer_management/services/download_service.dart';
 
 // Services
 import 'package:ngo_volunteer_management/services/logging/audit_logger.dart';
-import 'package:ngo_volunteer_management/services/document_generation/document_generator.dart';
 
 class DonationsTab extends ConsumerStatefulWidget {
   const DonationsTab({super.key});
@@ -42,9 +33,11 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
   @override
   Widget build(BuildContext context) {
     final donationsAsync = ref.watch(donationProvider);
+    final monthlyDonations = ref.watch(monthlyDonationAggregationProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return donationsAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (donations) {
@@ -55,13 +48,18 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
           return matchesSearch && matchesType;
         }).toList();
 
-        return ListView(
-          shrinkWrap: true,
-          physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          children: [
-            SectionHeader(
-              title: 'Donations',
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(donationProvider);
+            await Future.delayed(const Duration(milliseconds: 800));
+          },
+          child: ListView(
+            shrinkWrap: true,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            children: [
+              SectionHeader(
+              
               subtitle: 'Track financial contributions and generate receipts',
               actions: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -71,7 +69,7 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
                     icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
                     label: const Text('Add Donation'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.purple600,
+                      backgroundColor: AppColors.brand,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
@@ -88,10 +86,10 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
                 return GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: isWide ? 3 : (constraints.maxWidth > 400 ? 2 : 1),
+                  crossAxisCount: isWide ? 3 : 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: isWide ? 2.2 : 2.0,
+                  childAspectRatio: isWide ? 2.2 : 1.4,
                   children: [
                     StatCard(
                       title: 'Total Donations',
@@ -118,7 +116,7 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
             const SizedBox(height: 20),
 
             // Charts
-            _DonationTrendChart(data: MockDataSource.monthlyDonations, isDark: isDark),
+            _DonationTrendChart(data: monthlyDonations, isDark: isDark),
             const SizedBox(height: 20),
 
             // Filters
@@ -139,10 +137,11 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
                 child: _DonationItem(donation: d),
               )),
           ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildFilters() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -252,136 +251,98 @@ class _DonationItem extends ConsumerWidget {
   const _DonationItem({required this.donation});
   final DonationEntity donation;
 
-  Future<void> _showPdfPreview(BuildContext context) async {
-    final generator = DocumentGenerator();
-    
-    // Choose the correct template based on 80G status
-    final docType = donation.is80G ? DocumentType.eightyGCertificate : DocumentType.donationReceipt;
-    final template = generator.getTemplateForType(docType);
-    
-    // Resolve the dynamic template fields
-    final doc = generator.resolveTemplate(template, {
-      'receipt_number': donation.receiptNumber ?? 'REC-PENDING',
-      'donor_name': donation.donorName,
-      'amount': donation.amount.toString(),
-      'date': AppFormatters.displayDate(donation.date),
-      'payment_mode': donation.type.name,
-      'purpose': donation.purpose,
-    });
-
-    // Create the actual PDF layout
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(32),
-            child: pw.Text(
-              doc.generatedContent,
-              style: const pw.TextStyle(fontSize: 14, lineSpacing: 2),
-            ),
-          );
-        },
-      ),
-    );
-
-    final pdfBytes = await pdf.save();
-
-    // Show the interactive UI Dialog
-    if (context.mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          insetPadding: const EdgeInsets.all(20),
-          child: SizedBox(
-            width: 800,
-            height: 600,
-            child: PdfPreview(
-              build: (format) => pdfBytes,
-              allowPrinting: true,
-              allowSharing: true,
-              canChangeOrientation: false,
-              canChangePageFormat: false,
-            ),
-          ),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return AppCard(
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.purple600.withValues(alpha: 0.3) : AppColors.purple100,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(Icons.currency_rupee_rounded, color: isDark ? AppColors.purple400 : AppColors.purple600),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(donation.donorName, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: isDark ? AppColors.white : AppColors.slate900)),
-                Text(
-                  '${AppFormatters.displayDate(donation.date)} • ${donation.type.name.toUpperCase()}',
-                  style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             children: [
-              Text(
-                AppFormatters.inr(donation.amount),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? AppColors.white : AppColors.slate900),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.purple600.withValues(alpha: 0.3) : AppColors.purple100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.currency_rupee_rounded, color: isDark ? AppColors.purple400 : AppColors.purple600),
               ),
-              const SizedBox(height: 4),
-              if (donation.receiptGenerated)
-                Row(
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AppBadge(label: 'Receipt: ${donation.receiptNumber}', color: AppColors.emerald500),
-                    const SizedBox(width: 8),
-                    TextButton.icon(
-                      onPressed: () async {
-                        final parsedDate = DateTime.parse(donation.date);
-                        final pdfData = await PdfGeneratorService.generateReceiptPdf(
-                          receiptNo: donation.receiptNumber ?? 'REC-${parsedDate.year}-${donation.id}',
-                          date: parsedDate,
-                          donorName: donation.donorName,
-                          amount: donation.amount.toDouble(),
-                          amountWords: 'Rupees ${donation.amount} only',
-                          paymentMode: donation.type.name.toUpperCase(),
-                          purpose: donation.purpose,
-                        );
-                        DownloadService.downloadBytes(
-                          pdfData, 
-                          'Receipt_${donation.receiptNumber?.replaceAll(' ', '_') ?? donation.id}.pdf',
-                        );
-                      },
-                      icon: const Icon(Icons.download_rounded, size: 14),
-                      label: const Text('Download Receipt', style: TextStyle(fontSize: 11)),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor: AppColors.slate600,
+                    Text(
+                      donation.donorName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: isDark ? AppColors.white : AppColors.slate900,
                       ),
                     ),
+                    const SizedBox(height: 2),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        Text(
+                          '${AppFormatters.displayDate(donation.date)} • ${donation.type.name.toUpperCase()}',
+                          style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontSize: 11),
+                        ),
+                        if (donation.type == DonationType.online) 
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: donation.paymentStatus == PaymentStatus.success 
+                                  ? (isDark ? AppColors.emerald700.withValues(alpha: 0.3) : AppColors.emerald50) 
+                                  : (isDark ? AppColors.red600.withValues(alpha: 0.3) : AppColors.red50),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: donation.paymentStatus == PaymentStatus.success 
+                                    ? (isDark ? AppColors.emerald500 : AppColors.emerald200) 
+                                    : (isDark ? AppColors.red500 : AppColors.red100),
+                              ),
+                            ),
+                            child: Text(
+                              donation.paymentStatus.displayName,
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                                color: donation.paymentStatus == PaymentStatus.success 
+                                    ? (isDark ? AppColors.emerald400 : AppColors.emerald700) 
+                                    : (isDark ? AppColors.red500 : AppColors.red600),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
-                )
-              else
-                TextButton(
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    AppFormatters.inr(donation.amount),
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: isDark ? AppColors.white : AppColors.slate900),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (!donation.receiptGenerated) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
                   onPressed: () async {
                     // 1. Generate Receipt in DB
                     await ref.read(donationProvider.notifier).generateReceipt(donation.id);
@@ -396,6 +357,13 @@ class _DonationItem extends ConsumerWidget {
                         'amount': donation.amount,
                       },
                     );
+ 
+                    // Fetch latest donation from state to ensure receiptNumber is present
+                    final updatedDonations = ref.read(donationProvider).value ?? [];
+                    final latest = updatedDonations.firstWhere(
+                      (d) => d.id == donation.id, 
+                      orElse: () => donation,
+                    );
 
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -407,15 +375,68 @@ class _DonationItem extends ConsumerWidget {
                       );
                     }
                   },
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                  label: const Text('Generate Receipt'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? AppColors.blue400 : AppColors.blue600,
+                    side: BorderSide(color: isDark ? AppColors.blue400.withValues(alpha: 0.5) : AppColors.blue200),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
-                  child: const Text('Generate Receipt', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
-            ],
-          ),
+              ),
+            ),
+          ] else if (donation.receiptGenerated && (donation.receiptNumber?.isNotEmpty ?? false)) ... [
+            Padding(
+               padding: const EdgeInsets.only(top: 12),
+               child: Material(
+                 color: Colors.transparent,
+                 child: InkWell(
+                   onTap: () async {
+                      final parsedDate = DateTime.parse(donation.date);
+                      final pdfData = await PdfGeneratorService.generateReceiptPdf(
+                        receiptNo: donation.receiptNumber ?? 'REC-${parsedDate.year}-${donation.id}',
+                        date: parsedDate,
+                        donorName: donation.donorName,
+                        amount: donation.amount.toDouble(),
+                        amountWords: 'Rupees ${donation.amount} only',
+                        paymentMode: donation.type.name.toUpperCase(),
+                        purpose: donation.purpose,
+                      );
+                      DownloadService.downloadBytes(
+                        pdfData,
+                        'Receipt_${donation.receiptNumber?.replaceAll(' ', '_') ?? donation.id}.pdf',
+                      );
+                   },
+                   borderRadius: BorderRadius.circular(6),
+                   child: Container(
+                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                     decoration: BoxDecoration(
+                       color: isDark ? AppColors.emerald700.withValues(alpha: 0.1) : AppColors.emerald50,
+                       borderRadius: BorderRadius.circular(6),
+                       border: Border.all(color: isDark ? AppColors.emerald500.withValues(alpha: 0.5) : AppColors.emerald200),
+                     ),
+                     child: Row(
+                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                       children: [
+                         Expanded(
+                           child: Text(
+                             'Receipt: ${donation.receiptNumber}', 
+                             style: TextStyle(
+                               color: isDark ? AppColors.emerald400 : AppColors.emerald700, 
+                               fontWeight: FontWeight.bold, 
+                               fontSize: 12,
+                             ), 
+                             overflow: TextOverflow.ellipsis,
+                           ),
+                         ),
+                         Icon(Icons.picture_as_pdf_rounded, color: isDark ? AppColors.emerald400 : AppColors.emerald600, size: 20),
+                       ],
+                     ),
+                   ),
+                 ),
+               ),
+             ),
+          ],
         ],
       ),
     );
@@ -476,7 +497,7 @@ class _AddDonationFormState extends State<_AddDonationForm> {
               if (_formKey.currentState?.validate() ?? false) {
                 _formKey.currentState?.save();
                 widget.onSubmit(DonationEntity(
-                  id: DateTime.now().millisecondsSinceEpoch,
+                  id: '',
                   donorName: donorName,
                   amount: amount,
                   date: AppFormatters.today(),
@@ -488,7 +509,7 @@ class _AddDonationFormState extends State<_AddDonationForm> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.purple600,
+              backgroundColor: AppColors.brand,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),

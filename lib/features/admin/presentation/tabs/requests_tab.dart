@@ -5,7 +5,9 @@ import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
+import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
+import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/features/admin/presentation/tabs/document_approvals_tab.dart';
 
@@ -22,7 +24,7 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
@@ -39,32 +41,61 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return ListView(
-      shrinkWrap: true,
-      physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.all(20),
-      children: [
-        const SectionHeader(
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(generalRequestProvider);
+        ref.invalidate(mouRequestProvider);
+        ref.invalidate(joiningLetterProvider);
+        await Future.delayed(const Duration(milliseconds: 800));
+      },
+      child: ListView(
+        shrinkWrap: true,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: [
+          const SectionHeader(
           title: 'Requests & Inquiries',
           subtitle: 'Handle formal documents, MOU requests and general inquiries',
         ),
         const SizedBox(height: 24),
         TabBar(
           controller: _tabController,
-          labelColor: isDark ? AppColors.blue400 : AppColors.blue600,
-          unselectedLabelColor: AppColors.slate400,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelColor: Colors.white,
+          unselectedLabelColor: isDark ? AppColors.slate400 : AppColors.slate500,
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: Colors.transparent,
           overlayColor: WidgetStateProperty.all(Colors.transparent),
           indicator: BoxDecoration(
-            color: AppColors.blue600.withValues(alpha: isDark ? 0.2 : 0.1),
-            borderRadius: BorderRadius.circular(8),
+            color: AppColors.brand,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.brand.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           onTap: (_) => setState(() {}),
           tabs: const [
-            Tab(text: 'General Requests'),
-            Tab(text: 'MOU Requests'),
-            Tab(text: 'Certificates'),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Tab(text: 'General'),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Tab(text: 'MOU'),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: const Tab(text: 'Certificates'),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: const Tab(text: 'Hospitals'),
+            ),
           ],
         ),
         const SizedBox(height: 24),
@@ -73,9 +104,12 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
           _GeneralRequestsList()
         else if (_tabController.index == 1)
           _MouRequestsList()
+        else if (_tabController.index == 2)
+          const DocumentApprovalsList()
         else
-          const DocumentApprovalsList(),
-      ],
+          const _HospitalManagementList(),
+        ],
+      ),
     );
   }
 }
@@ -87,6 +121,7 @@ class _GeneralRequestsList extends ConsumerWidget {
     final requestsAsync = ref.watch(generalRequestProvider);
 
     return requestsAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e', style: TextStyle(color: isDark ? AppColors.red500 : AppColors.red600)),
@@ -122,18 +157,21 @@ class _GeneralRequestsList extends ConsumerWidget {
                     color: isDark ? AppColors.slate200 : AppColors.slate900,
                   )),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.person_outline_rounded, size: 14, color: isDark ? AppColors.slate500 : AppColors.slate400),
-                      const SizedBox(width: 4),
-                      Text(req.requesterName, style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                      const SizedBox(width: 12),
-                      Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? AppColors.slate500 : AppColors.slate400),
-                      const SizedBox(width: 4),
-                      Text(AppFormatters.displayDate(req.requestDate), style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                    ],
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        Icon(Icons.person_outline_rounded, size: 14, color: isDark ? AppColors.slate500 : AppColors.slate400),
+                        const SizedBox(width: 4),
+                        Text(req.requesterName, style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                        const SizedBox(width: 12),
+                        Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? AppColors.slate500 : AppColors.slate400),
+                        const SizedBox(width: 4),
+                        Text(AppFormatters.displayDate(req.requestDate), style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                      ],
+                    ),
                   ),
-                  if (req.status == RequestStatus.pending) ...[
+                  if (req.status == RequestStatus.pending || req.status == RequestStatus.waitingAdmin) ...[
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -149,8 +187,11 @@ class _GeneralRequestsList extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => ref.read(generalRequestProvider.notifier).approve(req.id),
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.emerald600, foregroundColor: Colors.white),
+                            onPressed: () {
+                              final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
+                              ref.read(generalRequestProvider.notifier).approve(req.id, approvedBy: adminName);
+                            },
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
                             child: const Text('Approve'),
                           ),
                         ),
@@ -174,6 +215,7 @@ class _MouRequestsList extends ConsumerWidget {
     final requestsAsync = ref.watch(mouRequestProvider);
 
     return requestsAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Text('Error: $e', style: TextStyle(color: isDark ? AppColors.red500 : AppColors.red600)),
@@ -220,7 +262,7 @@ class _MouRequestsList extends ConsumerWidget {
                   _MouInfoRow(label: 'Disease', value: req.disease),
                   _MouInfoRow(label: 'Requested By', value: req.requesterName),
                   _MouInfoRow(label: 'Contact', value: req.phone),
-                  if (req.status == RequestStatus.pending) ...[
+                  if (req.status == RequestStatus.pending || req.status == RequestStatus.waitingAdmin) ...[
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -233,8 +275,11 @@ class _MouRequestsList extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => ref.read(mouRequestProvider.notifier).approve(req.id),
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.emerald600, foregroundColor: Colors.white),
+                            onPressed: () {
+                              final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
+                              ref.read(mouRequestProvider.notifier).approve(req.id, approvedBy: adminName);
+                            },
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
                             child: const Text('Approve'),
                           ),
                         ),
@@ -284,10 +329,156 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
-      RequestStatus.pending => AppColors.amber500,
-      RequestStatus.approved => AppColors.emerald500,
-      RequestStatus.rejected => AppColors.red500,
+      RequestStatus.pending      => AppColors.amber500,
+      RequestStatus.waitingAdmin => AppColors.brand,
+      RequestStatus.approved     => AppColors.emerald500,
+      RequestStatus.rejected      => AppColors.red500,
     };
     return AppBadge(label: status.displayName.toUpperCase(), color: color);
+  }
+}
+
+class _HospitalManagementList extends ConsumerWidget {
+  const _HospitalManagementList();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hospitalsAsync = ref.watch(hospitalProvider);
+
+    return Column(
+      children: [
+        AppCard(
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Manage Partner Hospitals', style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isDark ? AppColors.white : AppColors.slate900,
+                    )),
+                    const SizedBox(height: 4),
+                    Text('Add or remove hospitals eligible for MOU', style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppColors.slate400 : AppColors.slate500,
+                    )),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showAddHospitalDialog(context, ref),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Hospital'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brand,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        hospitalsAsync.when(
+          skipLoadingOnRefresh: true,
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (list) {
+            if (list.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Text('No hospitals found', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                ),
+              );
+            }
+            return Column(
+              children: list.map((h) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: AppCard(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.rose500.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.local_hospital_rounded, color: AppColors.rose500),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(h.name, style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: isDark ? AppColors.white : AppColors.slate900,
+                            )),
+                            Text('${h.address}, ${h.city}', style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? AppColors.slate400 : AppColors.slate500,
+                            )),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => ref.read(hospitalProvider.notifier).delete(h.id),
+                        icon: const Icon(Icons.delete_outline_rounded, color: AppColors.red500),
+                        tooltip: 'Remove Hospital',
+                      ),
+                    ],
+                  ),
+                ),
+              )).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showAddHospitalDialog(BuildContext context, WidgetRef ref) {
+    final nameController = TextEditingController();
+    final addressController = TextEditingController();
+    final cityController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Partner Hospital'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Hospital Name')),
+            const SizedBox(height: 12),
+            TextField(controller: addressController, decoration: const InputDecoration(labelText: 'Address')),
+            const SizedBox(height: 12),
+            TextField(controller: cityController, decoration: const InputDecoration(labelText: 'City')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                ref.read(hospitalProvider.notifier).add(HospitalEntity(
+                  id: '',
+                  name: nameController.text,
+                  address: addressController.text,
+                  city: cityController.text.isEmpty ? 'Mumbai' : cityController.text,
+                ));
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -1,12 +1,17 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/app_constants.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import '../../features/auth/domain/entities/user_entity.dart';
 import 'package:ngo_volunteer_management/services/document_generation/document_generator.dart';
+import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
+import 'package:ngo_volunteer_management/services/notification_service.dart';
+import 'dart:async';
 
 // ── Infrastructure ────────────────────────────────────────────────────────────
 
@@ -58,9 +63,15 @@ final currentUserProvider =
 );
 
 class _CurrentUserNotifier extends StateNotifier<UserEntity?> {
-  _CurrentUserNotifier(this._prefs) : super(_loadFromPrefs(_prefs));
+  _CurrentUserNotifier(this._prefs) : super(_loadFromPrefs(_prefs)) {
+    // If we have a user from prefs on startup, start listening
+    if (state != null) {
+      _startDocumentListener(state!.id);
+    }
+  }
 
   final SharedPreferences _prefs;
+  StreamSubscription? _docSubscription;
 
   static UserEntity? _loadFromPrefs(SharedPreferences prefs) {
     final raw = prefs.getString(AppConstants.prefCurrentUser);
@@ -80,11 +91,64 @@ class _CurrentUserNotifier extends StateNotifier<UserEntity?> {
       AppConstants.prefCurrentUser,
       jsonEncode(user.toJson()),
     );
+    _startDocumentListener(user.id);
   }
 
   void logout() {
+    _docSubscription?.cancel();
     state = null;
     _prefs.remove(AppConstants.prefCurrentUser);
+  }
+
+  void _startDocumentListener(String userId) {
+    _docSubscription?.cancel();
+    if (userId.isEmpty) return;
+
+    _docSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists && snapshot.data() != null) {
+        final updatedUser = _fromDoc(snapshot);
+        if (updatedUser != state) {
+          state = updatedUser;
+          _prefs.setString(
+            AppConstants.prefCurrentUser,
+            jsonEncode(updatedUser.toJson()),
+          );
+          debugPrint('Real-time Update: Current user data synced from Firestore.');
+        }
+      }
+    });
+  }
+
+  UserEntity _fromDoc(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final roleStr = data['role'] as String? ?? 'volunteer';
+    
+    final role = UserRole.values.firstWhere(
+      (r) => r.name.toLowerCase() == roleStr.toLowerCase().trim(),
+      orElse: () => UserRole.volunteer,
+    );
+
+    return UserEntity(
+      id:                doc.id,
+      email:             data['email'] ?? '',
+      name:              data['name']  ?? '',
+      role:              role,
+      avatar:            data['avatar'] as String?,
+      fcmToken:          data['fcmToken'] as String?,
+      inviteEmailSentAt: data['inviteEmailSentAt'] != null 
+          ? (data['inviteEmailSentAt'] as Timestamp).toDate() 
+          : null,
+    );
+  }
+
+  @override
+  void dispose() {
+    _docSubscription?.cancel();
+    super.dispose();
   }
 }
 
@@ -107,3 +171,31 @@ final currentRoleProvider = Provider<UserRole?>(
 final documentGeneratorProvider = Provider<DocumentGenerator>(
   (ref) => DocumentGenerator(),
 );
+
+/// Provider to synchronize the device's FCM token with the backend.
+/// It watches the currentUser state and triggers an update whenever a user logs in.
+final fcmTokenSyncProvider = Provider<void>((ref) {
+  final user = ref.watch(currentUserProvider);
+  final authRepo = ref.watch(authRepositoryProvider);
+
+  if (user != null) {
+    debugPrint('Sync: User ${user.email} detected. Attempting FCM sync...');
+    // Small delay to ensure browser/Firebase is fully settled
+    Future.delayed(const Duration(seconds: 2), () {
+      PushNotificationService.instance.getFcmToken().then((token) {
+        if (token != null) {
+          debugPrint('Sync: Token obtained successfully. Updating Firestore...');
+          authRepo.updateFcmToken(user.id, token);
+        } else {
+          debugPrint('Sync: Could not obtain FCM token. Check console for errors.');
+        }
+      });
+    });
+  } else {
+    debugPrint('Sync: No user logged in. FCM sync skipped.');
+  }
+});
+
+/// Global provider for the active dashboard tab ID.
+/// Initial value is 'overview'.
+final dashboardTabProvider = StateProvider<String>((ref) => 'overview');

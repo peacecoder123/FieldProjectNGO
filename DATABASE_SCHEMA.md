@@ -73,6 +73,11 @@ Stores information about donations received.
 | purpose | String | Purpose of donation |
 | is80G | bool | Whether eligible for 80G deduction |
 | receiptNumber | String? | Receipt number (if generated) |
+| razorpayPaymentId | String? | Razorpay payment ID (for online payments) |
+| razorpayOrderId | String? | Razorpay order ID |
+| paymentStatus | PaymentStatus | Payment status (pending/success/failed) |
+| donorEmail | String? | Donor's email address |
+| donorPhone | String? | Donor's phone number |
 
 ### 5. general_requests
 Stores joining letter and certificate requests.
@@ -179,6 +184,11 @@ Stores aggregated monthly donation data for charts.
 - cheque
 - online_transfer
 - in_kind
+
+### PaymentStatus
+- pending
+- success
+- failed
 
 ### GeneralRequestType
 - joining-letter

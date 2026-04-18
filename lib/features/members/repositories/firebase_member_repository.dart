@@ -30,55 +30,71 @@ class FirebaseMemberRepository implements IMemberRepository {
   @override
   Future<List<MemberEntity>> getAll() async {
     final snapshot = await _db.collection(_collectionPath).get();
-    return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+    return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
   }
 
   @override
   Stream<List<MemberEntity>> watchAll() {
     return _db.collection(_collectionPath).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
+      return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
     });
   }
 
   @override
-  Future<MemberEntity?> getById(int id) async {
-    final doc = await _db.collection(_collectionPath).doc(id.toString()).get();
+  Future<MemberEntity?> getById(String id) async {
+    final doc = await _db.collection(_collectionPath).doc(id).get();
     if (!doc.exists) return null;
-    return _fromMap(doc.data()!);
+    return _fromMap(doc.id, doc.data()!);
   }
 
   @override
-  Stream<MemberEntity?> watchById(int id) {
-    return _db.collection(_collectionPath).doc(id.toString()).snapshots().map(
-      (snap) => snap.exists ? _fromMap(snap.data()!) : null,
+  Stream<MemberEntity?> watchById(String id) {
+    return _db.collection(_collectionPath).doc(id).snapshots().map(
+      (snap) => snap.exists ? _fromMap(snap.id, snap.data()!) : null,
     );
   }
 
   @override
   Future<MemberEntity> add(MemberEntity member) async {
-    await _db
+    // Check for duplicate email
+    final emailDup = await _db
         .collection(_collectionPath)
-        .doc(member.id.toString())
-        .set(_toMap(member));
-    return member;
+        .where('email', isEqualTo: member.email.toLowerCase().trim())
+        .get();
+    if (emailDup.docs.isNotEmpty) {
+      throw Exception('A member with the email ${member.email} already exists.');
+    }
+
+    // Check for duplicate phone (if provided)
+    if (member.phone.isNotEmpty) {
+      final phoneDup = await _db
+          .collection(_collectionPath)
+          .where('phone', isEqualTo: member.phone.trim())
+          .get();
+      if (phoneDup.docs.isNotEmpty) {
+        throw Exception('A member with the phone number ${member.phone} already exists.');
+      }
+    }
+
+    final docRef = await _db.collection(_collectionPath).add(_toMap(member));
+    return member.copyWith(id: docRef.id);
   }
 
   @override
   Future<MemberEntity> update(MemberEntity member) async {
     await _db
         .collection(_collectionPath)
-        .doc(member.id.toString())
+        .doc(member.id)
         .update(_toMap(member));
     return member;
   }
 
   @override
-  Future<void> delete(int id) async {
-    await _db.collection(_collectionPath).doc(id.toString()).delete();
+  Future<void> delete(String id) async {
+    await _db.collection(_collectionPath).doc(id).delete();
   }
 
   Map<String, dynamic> _toMap(MemberEntity m) => {
-        'id': m.id,
         'name': m.name,
         'email': m.email,
         'phone': m.phone,
@@ -92,23 +108,23 @@ class FirebaseMemberRepository implements IMemberRepository {
         'avatar': m.avatar,
       };
 
-  MemberEntity _fromMap(Map<String, dynamic> map) => MemberEntity(
-        id: map['id'] as int,
-        name: map['name'] as String,
-        email: map['email'] as String,
-        phone: map['phone'] as String,
-        address: map['address'] as String,
-        joinDate: map['joinDate'] as String,
-        renewalDate: map['renewalDate'] as String,
-        status: PersonStatus.fromString(map['status'] as String),
+  MemberEntity _fromMap(String id, Map<String, dynamic> map) => MemberEntity(
+        id: id,
+        name: map['name'] as String? ?? 'Unknown',
+        email: map['email'] as String? ?? '',
+        phone: map['phone'] as String? ?? '',
+        address: map['address'] as String? ?? '',
+        joinDate: map['joinDate'] as String? ?? '',
+        renewalDate: map['renewalDate'] as String? ?? '',
+        status: PersonStatus.fromString(map['status'] as String? ?? 'pending'),
         membershipType: enumValueOr(
           MembershipType.values,
-          map['membershipType'] as String,
+          map['membershipType'] as String? ?? '',
           MembershipType.nonEightyG,
         ),
-        taskIds: (map['taskIds'] as List<dynamic>).cast<int>(),
-        isPaid: map['isPaid'] as bool,
-        avatar: map['avatar'] as String,
+        taskIds: (map['taskIds'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+        isPaid: map['isPaid'] as bool? ?? false,
+        avatar: map['avatar'] as String? ?? '',
       );
 
   T enumValueOr<T extends Enum>(List<T> values, String name, T fallback) {

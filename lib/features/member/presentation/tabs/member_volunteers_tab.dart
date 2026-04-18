@@ -24,6 +24,7 @@ class MemberVolunteersTab extends ConsumerWidget {
     if (currentUser == null) return const Center(child: Text('Please login'));
 
     return volunteersAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (volunteers) {
@@ -35,13 +36,14 @@ class MemberVolunteersTab extends ConsumerWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20),
-
           children: [
+            const _ApprovalQueue(),
+            const SizedBox(height: 32),
             SectionHeader(
               title: 'Guided Volunteers',
               subtitle: 'Manage volunteers working under your guidance',
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             if (mentoredVolunteers.isEmpty)
               _buildEmptyState(isDark)
             else
@@ -205,7 +207,7 @@ class _VolunteerDetailsContent extends ConsumerWidget {
                 icon: const Icon(Icons.add_task_rounded, size: 16),
                 label: const Text('Assign Task'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.blue600,
+                  backgroundColor: AppColors.brand,
                   foregroundColor: Colors.white,
                   visualDensity: VisualDensity.compact,
                 ),
@@ -340,12 +342,13 @@ class _AddTaskFormState extends State<_AddTaskForm> {
               if (_formKey.currentState?.validate() ?? false) {
                 _formKey.currentState?.save();
                 widget.onSubmit(TaskEntity(
-                  id: DateTime.now().millisecondsSinceEpoch,
+                  id: '',
                   title: _title,
                   description: '',
                   deadline: AppFormatters.toIso(_deadline),
                   assignedToId: widget.volunteer.id,
                   assignedToName: widget.volunteer.name,
+                  assignedToEmail: widget.volunteer.email,
                   assignedToType: AssigneeType.volunteer,
                   status: TaskStatus.pending,
                   requiresUpload: _requiresUpload,
@@ -354,7 +357,7 @@ class _AddTaskFormState extends State<_AddTaskForm> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.blue600,
+              backgroundColor: AppColors.brand,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
@@ -363,5 +366,183 @@ class _AddTaskFormState extends State<_AddTaskForm> {
         ],
       ),
     );
+  }
+}
+
+class _ApprovalQueue extends ConsumerWidget {
+  const _ApprovalQueue();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+    final tasksAsync = ref.watch(taskProvider);
+    final volunteersAsync = ref.watch(volunteerProvider);
+    
+    if (currentUser == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'Pending Approvals',
+          subtitle: 'Review task submissions from your guided volunteers',
+        ),
+        const SizedBox(height: 16),
+        tasksAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('Error: $e'),
+          data: (tasks) {
+            return volunteersAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (e, _) => const SizedBox.shrink(),
+              data: (volunteers) {
+                // Get IDs of volunteers mentored by this member
+                final mentoredIds = volunteers
+                    .where((v) => v.mentorId == currentUser.id)
+                    .map((v) => v.id)
+                    .toSet();
+
+                // Filter for submitted tasks from mentored volunteers
+                final pendingTasks = tasks.where((t) => 
+                  mentoredIds.contains(t.assignedToId) && 
+                  t.status == TaskStatus.submitted
+                ).toList();
+
+                if (pendingTasks.isEmpty) {
+                  return AppCard(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_outline_rounded, size: 20, color: AppColors.emerald500),
+                        const SizedBox(width: 12),
+                        const Text('All caught up! No pending approvals.',
+                          style: TextStyle(color: AppColors.slate500, fontSize: 13)),
+                      ],
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: pendingTasks.map((t) => _ApprovalItem(task: t)).toList(),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ApprovalItem extends ConsumerWidget {
+  const _ApprovalItem({required this.task});
+  final TaskEntity task;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AppAvatar(
+                  initials: AppFormatters.initials(task.assignedToName),
+                  size: AvatarSize.small,
+                  role: UserRole.volunteer,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(task.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                      Text('Submitted by ${task.assignedToName}', style: const TextStyle(color: AppColors.slate500, fontSize: 11)),
+                    ],
+                  ),
+                ),
+                AppBadge.taskStatus(task.status),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (task.uploadedImage != null)
+              Container(
+                height: 120,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  image: DecorationImage(
+                    image: NetworkImage(task.uploadedImage!),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _handleAction(ref, context, isApprove: false),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.red500,
+                      side: const BorderSide(color: AppColors.red100),
+                    ),
+                    child: const Text('Reject'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _handleAction(ref, context, isApprove: true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.emerald500,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Partial Approve'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAction(WidgetRef ref, BuildContext context, {required bool isApprove}) async {
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser == null) return;
+
+    try {
+      if (isApprove) {
+        await ref.read(taskProvider.notifier).updateStatus(
+          task.id, 
+          TaskStatus.waitingAdmin,
+          approvedBy: currentUser.name,
+        );
+      } else {
+        await ref.read(taskProvider.notifier).updateStatus(
+          task.id, 
+          TaskStatus.rejected,
+        );
+      }
+      
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isApprove ? 'Task partially approved and escalated to Admin.' : 'Task rejected.'),
+          backgroundColor: isApprove ? AppColors.emerald500 : AppColors.red500,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.red500),
+      );
+    }
   }
 }

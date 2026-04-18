@@ -32,14 +32,16 @@ enum UserRole {
 enum TaskStatus {
   pending,
   submitted,
+  waitingAdmin,
   approved,
   rejected;
 
   String get displayName => switch (this) {
-    TaskStatus.pending   => 'Pending',
-    TaskStatus.submitted => 'Submitted',
-    TaskStatus.approved  => 'Approved',
-    TaskStatus.rejected  => 'Rejected',
+    TaskStatus.pending      => 'Pending',
+    TaskStatus.submitted    => 'Submitted',
+    TaskStatus.waitingAdmin => 'Waiting Admin Approval',
+    TaskStatus.approved     => 'Approved',
+    TaskStatus.rejected      => 'Rejected',
   };
 
   static TaskStatus fromString(String value) =>
@@ -53,13 +55,15 @@ enum TaskStatus {
 
 enum RequestStatus {
   pending,
+  waitingAdmin,
   approved,
   rejected;
 
   String get displayName => switch (this) {
-    RequestStatus.pending  => 'Pending',
-    RequestStatus.approved => 'Approved',
-    RequestStatus.rejected => 'Rejected',
+    RequestStatus.pending      => 'Pending',
+    RequestStatus.waitingAdmin => 'Waiting Admin Approval',
+    RequestStatus.approved     => 'Approved',
+    RequestStatus.rejected      => 'Rejected',
   };
 
   static RequestStatus fromString(String value) =>
@@ -129,6 +133,26 @@ enum DonationType {
       );
 }
 
+// ── Payment status (Razorpay transaction result) ──────────────────────────────
+
+enum PaymentStatus {
+  pending,
+  success,
+  failed;
+
+  String get displayName => switch (this) {
+    PaymentStatus.pending => 'Pending',
+    PaymentStatus.success => 'Success',
+    PaymentStatus.failed  => 'Failed',
+  };
+
+  static PaymentStatus fromString(String value) =>
+      PaymentStatus.values.firstWhere(
+        (e) => e.name == value,
+        orElse: () => PaymentStatus.pending,
+      );
+}
+
 // ── Request type ──────────────────────────────────────────────────────────────
 
 enum GeneralRequestType {
@@ -176,7 +200,8 @@ enum DocumentFileType {
   pdf,
   doc,
   xlsx,
-  jpg;
+  jpg,
+  png;
 
   String get displayLabel => name.toUpperCase();
 
