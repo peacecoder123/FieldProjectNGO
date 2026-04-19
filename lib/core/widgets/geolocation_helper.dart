@@ -5,7 +5,7 @@ import 'package:geolocator/geolocator.dart';
 
 // Web-only geolocation — conditional import avoids mobile compilation issues
 import 'web_geolocation_stub.dart'
-    if (dart.library.html) 'web_geolocation.dart';
+    if (dart.library.js_interop) 'web_geolocation.dart';
 
 /// Cross-platform geolocation helper.
 class GeolocationHelper {

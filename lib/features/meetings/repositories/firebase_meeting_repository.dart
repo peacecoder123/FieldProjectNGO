@@ -51,11 +51,13 @@ class FirebaseMeetingRepository implements IMeetingRepository {
     String meetingId, {
     required String summary,
     required String addedBy,
+    List<String>? attendees,
   }) async {
     await _db.collection(_collectionPath).doc(meetingId).update({
       'summary': summary,
       'addedBy': addedBy,
       'status': MeetingStatus.completed.name,
+      if (attendees != null) 'attendees': attendees,
     });
     final doc = await _db.collection(_collectionPath).doc(meetingId).get();
     return _fromMap(doc.id, doc.data()!);

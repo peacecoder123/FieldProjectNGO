@@ -12,7 +12,7 @@ import 'geolocation_helper.dart';
 // Conditional import: web version uses WebRTC
 // Mobile version uses image_picker camera
 import 'camera_service_stub.dart'
-    if (dart.library.html) 'camera_service_web.dart';
+    if (dart.library.js_interop) 'camera_service_web.dart';
 
 class SubmitTaskForm extends StatefulWidget {
   const SubmitTaskForm({super.key, required this.onSubmit});

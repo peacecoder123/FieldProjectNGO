@@ -221,6 +221,21 @@ class _DocumentCard extends StatelessWidget {
     };
 
     Future<void> _handleDownload() async {
+      if (doc.downloadUrl != null && doc.downloadUrl!.isNotEmpty) {
+        final uri = Uri.parse(doc.downloadUrl!);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not open document link')),
+            );
+          }
+        }
+        return;
+      }
+
+      // Fallback for docs without URL (mostly generated ones or old mocks)
       final pdfData = await PdfGeneratorService.generateGenericDocumentPdf(
         title: doc.title,
         category: doc.category,

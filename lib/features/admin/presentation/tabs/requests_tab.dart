@@ -68,12 +68,12 @@ class _RequestsTabState extends ConsumerState<RequestsTab> with SingleTickerProv
           dividerColor: Colors.transparent,
           overlayColor: WidgetStateProperty.all(Colors.transparent),
           indicator: BoxDecoration(
-            color: AppColors.brand,
-            borderRadius: BorderRadius.circular(12),
+            color: isDark ? AppColors.brand : AppColors.brand,
+            borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: AppColors.brand.withValues(alpha: 0.3),
-                blurRadius: 8,
+                color: AppColors.brand.withValues(alpha: isDark ? 0.4 : 0.2),
+                blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -150,25 +150,62 @@ class _GeneralRequestsList extends ConsumerWidget {
                       _StatusBadge(status: req.status),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   Text(req.details, style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                    color: isDark ? AppColors.slate200 : AppColors.slate900,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: isDark ? AppColors.white : AppColors.slate900,
                   )),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_outline_rounded, size: 14, color: isDark ? AppColors.slate500 : AppColors.slate400),
-                        const SizedBox(width: 4),
-                        Text(req.requesterName, style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                        const SizedBox(width: 12),
-                        Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? AppColors.slate500 : AppColors.slate400),
-                        const SizedBox(width: 4),
-                        Text(AppFormatters.displayDate(req.requestDate), style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                      ],
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.slate800.withValues(alpha: 0.5) : AppColors.slate50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate100),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isNarrow = constraints.maxWidth < 280;
+                        return Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.person_pin_rounded, size: 14, color: AppColors.brand),
+                                const SizedBox(width: 8),
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(maxWidth: isNarrow ? 120 : 180),
+                                  child: Text(
+                                    req.requesterName, 
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12, 
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? AppColors.slate300 : AppColors.slate700
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.calendar_month_rounded, size: 14, color: AppColors.brand),
+                                const SizedBox(width: 8),
+                                Text(AppFormatters.displayDate(req.requestDate), style: TextStyle(
+                                  fontSize: 12, 
+                                  color: isDark ? AppColors.slate400 : AppColors.slate500
+                                )),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   if (req.status == RequestStatus.pending || req.status == RequestStatus.waitingAdmin) ...[
@@ -176,23 +213,34 @@ class _GeneralRequestsList extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
+                          child: OutlinedButton.icon(
                             onPressed: () => ref.read(generalRequestProvider.notifier).reject(req.id),
+                            icon: const Icon(Icons.close_rounded, size: 14),
+                            label: const Text('Reject', style: TextStyle(fontSize: 12)),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: isDark ? AppColors.red500 : AppColors.red600,
+                              side: BorderSide(color: isDark ? AppColors.red500.withValues(alpha: 0.5) : AppColors.red100),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
-                            child: const Text('Reject'),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: ElevatedButton(
+                          child: ElevatedButton.icon(
                             onPressed: () {
                               final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
                               ref.read(generalRequestProvider.notifier).approve(req.id, approvedBy: adminName);
                             },
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
-                            child: const Text('Approve'),
+                            icon: const Icon(Icons.check_rounded, size: 14),
+                            label: const Text('Approve', style: TextStyle(fontSize: 12)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.brand, 
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
                           ),
                         ),
                       ],
@@ -238,30 +286,59 @@ class _MouRequestsList extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Patient: ${req.patientName}', style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: isDark ? AppColors.white : AppColors.slate900,
-                          )),
-                          Text(req.hospital, style: TextStyle(
-                            color: isDark ? AppColors.rose500 : AppColors.rose600,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          )),
-                        ],
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.rose500.withValues(alpha: isDark ? 0.2 : 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.emergency_rounded, color: AppColors.rose500, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(req.patientName, style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: isDark ? AppColors.white : AppColors.slate900,
+                            )),
+                            const SizedBox(height: 2),
+                            Text(req.hospital, style: TextStyle(
+                              color: isDark ? AppColors.rose500.withValues(alpha: 0.8) : AppColors.rose600,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              letterSpacing: 0.5,
+                            )),
+                          ],
+                        ),
                       ),
                       _StatusBadge(status: req.status),
                     ],
                   ),
-                  Divider(height: 24, color: isDark ? AppColors.slate700 : AppColors.slate200),
-                  _MouInfoRow(label: 'Disease', value: req.disease),
-                  _MouInfoRow(label: 'Requested By', value: req.requesterName),
-                  _MouInfoRow(label: 'Contact', value: req.phone),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.slate900.withValues(alpha: 0.5) : AppColors.slate50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
+                    ),
+                    child: Column(
+                      children: [
+                        _MouInfoRow(label: 'Diagnosis', value: req.disease, icon: Icons.health_and_safety_rounded),
+                        const SizedBox(height: 10),
+                        _MouInfoRow(label: 'Volunteer', value: req.requesterName, icon: Icons.person_rounded),
+                        const SizedBox(height: 10),
+                        _MouInfoRow(label: 'Contact', value: req.phone, icon: Icons.phone_rounded),
+                      ],
+                    ),
+                  ),
                   if (req.status == RequestStatus.pending || req.status == RequestStatus.waitingAdmin) ...[
                     const SizedBox(height: 16),
                     Row(
@@ -269,7 +346,13 @@ class _MouRequestsList extends ConsumerWidget {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => ref.read(mouRequestProvider.notifier).reject(req.id),
-                            child: const Text('Reject'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: isDark ? AppColors.red500 : AppColors.red600,
+                              side: BorderSide(color: isDark ? AppColors.red500.withValues(alpha: 0.5) : AppColors.red100),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: const Text('Reject Case'),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -279,8 +362,14 @@ class _MouRequestsList extends ConsumerWidget {
                               final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
                               ref.read(mouRequestProvider.notifier).approve(req.id, approvedBy: adminName);
                             },
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
-                            child: const Text('Approve'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.brand, 
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                            child: const Text('Approve MOU'),
                           ),
                         ),
                       ],
@@ -297,27 +386,27 @@ class _MouRequestsList extends ConsumerWidget {
 }
 
 class _MouInfoRow extends StatelessWidget {
-  const _MouInfoRow({required this.label, required this.value});
+  const _MouInfoRow({required this.label, required this.value, required this.icon});
   final String label;
   final String value;
+  final IconData icon;
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('$label: ', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
-          Expanded(
-            child: Text(value, style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: isDark ? AppColors.slate200 : AppColors.slate800,
-            )),
-          ),
-        ],
-      ),
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.brand),
+        const SizedBox(width: 8),
+        Text('$label: ', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+        Expanded(
+          child: Text(value, style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isDark ? AppColors.slate200 : AppColors.slate800,
+          )),
+        ),
+      ],
     );
   }
 }
@@ -328,13 +417,45 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
-      RequestStatus.pending      => AppColors.amber500,
-      RequestStatus.waitingAdmin => AppColors.brand,
-      RequestStatus.approved     => AppColors.emerald500,
-      RequestStatus.rejected      => AppColors.red500,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final (color, bgColor) = switch (status) {
+      RequestStatus.pending      => (AppColors.amber600, AppColors.amber100),
+      RequestStatus.waitingAdmin => (AppColors.brand, AppColors.blue100),
+      RequestStatus.approved     => (AppColors.emerald600, AppColors.emerald100),
+      RequestStatus.rejected      => (AppColors.red600, AppColors.red100),
     };
-    return AppBadge(label: status.displayName.toUpperCase(), color: color);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? color.withValues(alpha: 0.15) : bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? color.withValues(alpha: 1.5) : color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            status.displayName.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: isDark ? color : color.withValues(alpha: 0.8),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -402,12 +523,13 @@ class _HospitalManagementList extends ConsumerWidget {
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
-                          color: AppColors.rose500.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          color: AppColors.rose500.withValues(alpha: isDark ? 0.2 : 0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.local_hospital_rounded, color: AppColors.rose500),
+                        child: const Icon(Icons.local_hospital_rounded, color: AppColors.rose500, size: 24),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -416,19 +538,35 @@ class _HospitalManagementList extends ConsumerWidget {
                           children: [
                             Text(h.name, style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              fontSize: 15,
                               color: isDark ? AppColors.white : AppColors.slate900,
                             )),
-                            Text('${h.address}, ${h.city}', style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? AppColors.slate400 : AppColors.slate500,
-                            )),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Icon(Icons.location_on_rounded, size: 12, color: isDark ? AppColors.slate500 : AppColors.slate400),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text('${h.address}, ${h.city}', style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? AppColors.slate400 : AppColors.slate500,
+                                  )),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
                       IconButton(
                         onPressed: () => ref.read(hospitalProvider.notifier).delete(h.id),
-                        icon: const Icon(Icons.delete_outline_rounded, color: AppColors.red500),
+                        icon: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.red500.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.delete_outline_rounded, color: AppColors.red500, size: 18),
+                        ),
                         tooltip: 'Remove Hospital',
                       ),
                     ],

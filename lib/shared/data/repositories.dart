@@ -103,6 +103,7 @@ abstract interface class IMeetingRepository {
     String meetingId, {
     required String summary,
     required String addedBy,
+    List<String>? attendees,
   });
 
   Future<MeetingEntity>       markCompleted(String meetingId, {required String summaryAssignedTo});

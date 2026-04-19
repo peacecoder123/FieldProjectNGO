@@ -128,12 +128,13 @@ class RazorpayService {
       });
 
       final orderId = result.data['orderId'] as String;
-      debugPrint('✅ Got order_id: $orderId');
+      final orderAmount = result.data['amount'] as int; // already in paise from server
+      debugPrint('✅ Got order_id: $orderId, amount (paise): $orderAmount');
 
       // ── Step 2: Build checkout options with the server order_id ─────────
       final options = <String, dynamic>{
         'key': RazorpayConfig.keyId,
-        'amount': amount * 100, // paise
+        'amount': orderAmount, // already in paise — do NOT multiply again
         'name': RazorpayConfig.companyName,
         'description': description,
         'currency': RazorpayConfig.currency,
@@ -151,8 +152,8 @@ class RazorpayService {
 
       // ── Step 3: Open Razorpay checkout ─────────────────────────────────
       _razorpay.open(options);
-    } catch (e) {
-      debugPrint('Razorpay open error: $e');
+    } catch (e, st) {
+      debugPrint('Razorpay open error: $e\n$st');
       if (!_completer!.isCompleted) {
         _completer!.complete(PaymentOutcome(
           result: PaymentResult.failure,

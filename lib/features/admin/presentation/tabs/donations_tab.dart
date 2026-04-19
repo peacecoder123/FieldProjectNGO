@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+import 'package:printing/printing.dart';
 
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
@@ -263,12 +264,11 @@ class _DonationItem extends ConsumerWidget {
         date: DateTime.parse(d.date),
         donorName: d.donorName,
         amount: d.amount.toDouble(),
-        paymentMode: d.type.name,
+        paymentMode: d.type.name.toUpperCase(),
         purpose: d.purpose,
         is80G: d.is80G,
-        // Optional fields if you have them in the entity
-        // contactNo: d.contactNo,
-        // panNo: d.panNo,
+        email: d.donorEmail,
+        contactNo: d.donorPhone,
       );
 
       // Show the interactive UI Dialog with Print/Share support
@@ -396,54 +396,56 @@ class _DonationItem extends ConsumerWidget {
             ],
           ),
           if (!donation.receiptGenerated) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    // 1. Generate Receipt in DB
-                    await ref.read(donationProvider.notifier).generateReceipt(donation.id);
-                    
-                    // 2. Fire Audit Log
-                    await AuditLogger.logDocumentGeneration(
-                      documentType: donation.is80G ? '80G Certificate' : 'Donation Receipt',
-                      targetId: donation.id.toString(),
-                      generatedBy: 'System Admin', 
-                      additionalMetadata: {
-                        'donorName': donation.donorName,
-                        'amount': donation.amount,
-                      },
-                    );
- 
-                    // Fetch latest donation from state to ensure receiptNumber is present
-                    final updatedDonations = ref.read(donationProvider).value ?? [];
-                    final latest = updatedDonations.firstWhere(
-                      (d) => d.id == donation.id, 
-                      orElse: () => donation,
-                    );
-
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Receipt generated successfully!'),
-                          backgroundColor: AppColors.emerald600,
-                          behavior: SnackBarBehavior.floating,
-                        ),
+            // Only show Generate button if payment is successful (for online) or if it's manual (Cash/Cheque)
+            if (donation.type != DonationType.online || donation.paymentStatus == PaymentStatus.success)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      // 1. Generate Receipt in DB
+                      await ref.read(donationProvider.notifier).generateReceipt(donation.id);
+                      
+                      // 2. Fire Audit Log
+                      await AuditLogger.logDocumentGeneration(
+                        documentType: donation.is80G ? '80G Certificate' : 'Donation Receipt',
+                        targetId: donation.id.toString(),
+                        generatedBy: 'System Admin', 
+                        additionalMetadata: {
+                          'donorName': donation.donorName,
+                          'amount': donation.amount,
+                        },
                       );
-                    }
-                  },
-                  icon: const Icon(Icons.receipt_long_rounded, size: 16),
-                  label: const Text('Generate Receipt'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? AppColors.blue400 : AppColors.blue600,
-                    side: BorderSide(color: isDark ? AppColors.blue400.withValues(alpha: 0.5) : AppColors.blue200),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+   
+                      // Fetch latest donation from state to ensure receiptNumber is present
+                      final updatedDonations = ref.read(donationProvider).value ?? [];
+                      final latest = updatedDonations.firstWhere(
+                        (d) => d.id == donation.id, 
+                        orElse: () => donation,
+                      );
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Receipt generated successfully!'),
+                            backgroundColor: AppColors.emerald600,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                    label: const Text('Generate Receipt'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: isDark ? AppColors.blue400 : AppColors.blue600,
+                      side: BorderSide(color: isDark ? AppColors.blue400.withValues(alpha: 0.5) : AppColors.blue200),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ] else if (donation.receiptGenerated && (donation.receiptNumber?.isNotEmpty ?? false)) ... [
+          ] else if (donation.receiptGenerated && (donation.receiptNumber?.isNotEmpty ?? false) && (donation.type != DonationType.online || donation.paymentStatus == PaymentStatus.success)) ... [
             Padding(
                padding: const EdgeInsets.only(top: 12),
                child: Material(
@@ -513,7 +515,7 @@ class _AddDonationFormState extends State<_AddDonationForm> {
   final _formKey = GlobalKey<FormState>();
   String donorName = '';
   int amount = 0;
-  DonationType selectedType = DonationType.online;
+  DonationType selectedType = DonationType.cash;
   bool is80G = false;
 
   @override
@@ -540,7 +542,10 @@ class _AddDonationFormState extends State<_AddDonationForm> {
           DropdownButtonFormField<DonationType>(
             value: selectedType,
             decoration: const InputDecoration(labelText: 'Payment Mode'),
-            items: DonationType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.name.toUpperCase()))).toList(),
+            items: DonationType.values
+                .where((t) => t != DonationType.online)
+                .map((t) => DropdownMenuItem(value: t, child: Text(t.name.toUpperCase())))
+                .toList(),
             onChanged: (val) => setState(() => selectedType = val!),
           ),
           CheckboxListTile(
@@ -563,6 +568,7 @@ class _AddDonationFormState extends State<_AddDonationForm> {
                   receiptGenerated: false,
                   purpose: 'General Donation',
                   is80G: is80G,
+                  paymentStatus: PaymentStatus.success, // Manual donations are success by default
                 ));
               }
             },

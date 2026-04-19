@@ -22,6 +22,7 @@ class DocumentApprovalsList extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return requestsAsync.when(
+      skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (requests) {
@@ -32,7 +33,13 @@ class DocumentApprovalsList extends ConsumerWidget {
           return Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 48),
-              child: Text('No certificate requests', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500)),
+              child: Column(
+                children: [
+                  Icon(Icons.workspace_premium_outlined, size: 48, color: isDark ? AppColors.slate700 : AppColors.slate300),
+                  const SizedBox(height: 16),
+                  Text('No certificate requests yet', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                ],
+              ),
             ),
           );
         }
@@ -41,16 +48,34 @@ class DocumentApprovalsList extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (pending.isNotEmpty) ...[
-              const Text('Pending Approvals', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.slate700)),
-              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16, left: 4),
+                child: Row(
+                  children: [
+                    const Text('PENDING APPROVALS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 1, color: AppColors.brand)),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.brand.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text('${pending.length}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brand)),
+                    ),
+                  ],
+                ),
+              ),
               ...pending.map((req) => _RequestCard(req: req, isDark: isDark, currentUser: currentUser)),
               const SizedBox(height: 24),
             ],
             
-            const Text('Past Requests', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.slate700)),
-            const SizedBox(height: 12),
-            if (past.isEmpty) const Text('No past requests.', style: TextStyle(color: AppColors.slate500)),
-            ...past.map((req) => _RequestCard(req: req, isDark: isDark, currentUser: currentUser)),
+            if (past.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16, left: 4, top: 8),
+                child: Text('HISTORY', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1, color: isDark ? AppColors.slate500 : AppColors.slate400)),
+              ),
+              ...past.map((req) => _RequestCard(req: req, isDark: isDark, currentUser: currentUser)),
+            ],
           ],
         );
       },
@@ -67,164 +92,227 @@ class _RequestCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Color statusColor;
-    IconData statusIcon;
-    
-    switch (req.status) {
-      case DocumentRequestStatus.pending:
-        statusColor = AppColors.amber500;
-        statusIcon = Icons.pending_actions_rounded;
-        break;
-      case DocumentRequestStatus.approved:
-        statusColor = AppColors.emerald500;
-        statusIcon = Icons.check_circle_rounded;
-        break;
-      case DocumentRequestStatus.rejected:
-        statusColor = AppColors.red500;
-        statusIcon = Icons.cancel_rounded;
-        break;
-    }
+    final (statusLabel, statusColor) = switch (req.status) {
+      DocumentRequestStatus.pending  => ('Pending', AppColors.amber500),
+      DocumentRequestStatus.approved => ('Approved', AppColors.emerald500),
+      DocumentRequestStatus.rejected => ('Rejected', AppColors.red500),
+    };
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: AppCard(
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+        // Use a uniform border for the AppCard to avoid the BorderRadius compatibility crash
+        border: Border.all(
+          color: isDark ? AppColors.slate700 : AppColors.slate200, 
+          width: 0.8
+        ),
+        padding: EdgeInsets.zero, // Remove padding so we can add the accent strip
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // The status-colored left accent strip
+              Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    bottomLeft: Radius.circular(12),
                   ),
-                  child: Icon(statusIcon, color: statusColor, size: 24),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${req.documentType.displayLabel} Request', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Requested by ${req.userName} • ${AppFormatters.displayDate(req.requestedAt.toIso8601String())}',
-                        style: const TextStyle(color: AppColors.slate500, fontSize: 12),
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(isDark ? 0.2 : 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              req.status == DocumentRequestStatus.approved ? Icons.workspace_premium_rounded : Icons.card_membership_rounded, 
+                              color: statusColor, 
+                              size: 22
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${req.documentType.displayLabel} Request', 
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold, 
+                                    fontSize: 15,
+                                    color: isDark ? AppColors.white : AppColors.slate900,
+                                  )
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Requested by ${req.userName}',
+                                  style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate600, fontSize: 12, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _StatusBadge(label: statusLabel, color: statusColor, isDark: isDark),
+                        ],
                       ),
+            
+                      if (req.status == DocumentRequestStatus.pending && (currentUser?.role == UserRole.admin || currentUser?.role == UserRole.superAdmin)) ...[
+                        const SizedBox(height: 16),
+                        const Divider(height: 1),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => ref.read(documentRequestProvider.notifier).reject(req.id),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: isDark ? AppColors.red500 : AppColors.red600,
+                                  side: BorderSide(color: isDark ? AppColors.red500.withValues(alpha: 0.5) : AppColors.red100),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const Text('Reject'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => _CertificateDetailsModal(
+                                      initialName: req.userName,
+                                      initialCertNo: req.certificateNo ?? 'JF/CERT/${DateTime.now().year}/${req.id.substring(0, 6).toUpperCase()}',
+                                      initialDate: DateTime.now(),
+                                      userId: req.userId,
+                                      reqId: req.id,
+                                      approverName: currentUser?.name ?? 'Admin',
+                                      isApprovalFlow: true,
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.brand, 
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  elevation: 0,
+                                ),
+                                child: const Text('Process'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+            
+                      if (req.status == DocumentRequestStatus.approved) ...[
+                        const SizedBox(height: 16),
+                        const Divider(height: 1),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                             Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('CERTIFICATE NO.', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1, color: isDark ? AppColors.slate500 : AppColors.slate400)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    req.certificateNo ?? 'PENDING',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontFamily: 'Courier',
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? AppColors.emerald400 : AppColors.emerald700,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            IconButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => _CertificateDetailsModal(
+                                    initialName: req.userName,
+                                    initialCertNo: req.certificateNo ?? '',
+                                    initialDate: req.approvedAt ?? DateTime.now(),
+                                    userId: req.userId,
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.download_rounded, color: Colors.white, size: 20),
+                              tooltip: 'Download / Print',
+                              style: IconButton.styleFrom(
+                                backgroundColor: AppColors.brand,
+                                padding: const EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    req.status.name.toUpperCase(),
-                    style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            
-            if (req.status == DocumentRequestStatus.pending && (currentUser?.role == UserRole.admin || currentUser?.role == UserRole.superAdmin)) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      ref.read(documentRequestProvider.notifier).reject(req.id);
-                    },
-                    style: TextButton.styleFrom(foregroundColor: AppColors.red600),
-                    child: const Text('Reject'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (_) => _CertificateDetailsModal(
-                          initialName: req.userName,
-                          initialCertNo: req.certificateNo ?? 'JF/CERT/${DateTime.now().year}/${req.id.substring(0, 6).toUpperCase()}',
-                          initialDate: DateTime.now(),
-                          userId: req.userId,
-                          reqId: req.id,
-                          approverName: currentUser?.name ?? 'Admin',
-                          isApprovalFlow: true,
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand),
-                    child: const Text('Approve & Generate'),
-                  ),
-                ],
-              )
+              ),
             ],
-            
-            if (req.status == DocumentRequestStatus.approved) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('CERTIFICATE NUMBER', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1, color: AppColors.slate400)),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.slate700 : AppColors.slate50,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            req.certificateNo ?? 'PENDING',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontFamily: 'Courier',
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? AppColors.slate300 : AppColors.slate600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  IconButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => _CertificateDetailsModal(
-                          initialName: req.userName,
-                          initialCertNo: req.certificateNo ?? '',
-                          initialDate: req.approvedAt ?? DateTime.now(),
-                          userId: req.userId,
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.download_for_offline_rounded, color: isDark ? AppColors.blue400 : AppColors.blue600),
-                    tooltip: 'Download / Print',
-                    style: IconButton.styleFrom(
-                      backgroundColor: isDark ? AppColors.blue600.withValues(alpha: 0.1) : AppColors.blue50,
-                      padding: const EdgeInsets.all(10),
-                    ),
-                  ),
-                ],
-              )
-            ]
-          ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.label, required this.color, required this.isDark});
+  final String label;
+  final Color color;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(isDark ? 0.2 : 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(isDark ? 0.4 : 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: color,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     );
   }

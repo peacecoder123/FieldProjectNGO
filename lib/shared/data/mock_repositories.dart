@@ -353,7 +353,7 @@ class MockMeetingRepository implements IMeetingRepository {
   }
 
   @override
-  Future<MeetingEntity> addSummary(String meetingId, {required String summary, required String addedBy}) async {
+  Future<MeetingEntity> addSummary(String meetingId, {required String summary, required String addedBy, List<String>? attendees}) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((m) => m.id == meetingId);
     if (idx != -1) {
@@ -361,6 +361,7 @@ class MockMeetingRepository implements IMeetingRepository {
         summary: summary,
         addedBy: addedBy,
         status: MeetingStatus.completed,
+        attendees: attendees ?? _data[idx].attendees,
       );
       return _data[idx];
     }
@@ -378,6 +379,7 @@ class MockMeetingRepository implements IMeetingRepository {
     throw Exception('Not found');
   }
 }
+
 // -- Hospitals ----------------------------------------------------------------
 class MockHospitalRepository implements IHospitalRepository {
   final List<HospitalEntity> _data = [

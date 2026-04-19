@@ -207,8 +207,32 @@ class _MeetingItem extends ConsumerWidget {
                   Text('${AppFormatters.displayDate(meeting.date)} at ${meeting.time}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
                 ],
               ),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.people_rounded, size: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total Members Attended: ${meeting.attendees.length}',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? AppColors.slate300 : AppColors.slate700),
+                        ),
+                        const SizedBox(height: 4),
+                        ...meeting.attendees.map((attendee) => Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text('• $attendee', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                        )),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               if (meeting.addedBy != null) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text('Added by ${meeting.addedBy}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
               ],
               const SizedBox(height: 16),
@@ -250,8 +274,13 @@ class _MeetingItem extends ConsumerWidget {
       context: context,
       title: 'Add Meeting Summary',
       child: _AddSummaryForm(
-        onSubmit: (summary) {
-          ref.read(meetingProvider.notifier).addSummary(meeting.id, summary: summary);
+        meeting: meeting,
+        onSubmit: (summary, attendedList) {
+          ref.read(meetingProvider.notifier).addSummary(
+            meeting.id, 
+            summary: summary,
+            attendees: attendedList,
+          );
           Navigator.pop(context);
         },
       ),
@@ -260,33 +289,116 @@ class _MeetingItem extends ConsumerWidget {
 }
 
 class _AddSummaryForm extends StatefulWidget {
-  const _AddSummaryForm({required this.onSubmit});
-  final Function(String) onSubmit;
+  const _AddSummaryForm({required this.meeting, required this.onSubmit});
+  final MeetingEntity meeting;
+  final Function(String, List<String>) onSubmit;
 
   @override
   State<_AddSummaryForm> createState() => _AddSummaryFormState();
 }
 
 class _AddSummaryFormState extends State<_AddSummaryForm> {
-  final _controller = TextEditingController();
+  final _summaryCtrl = TextEditingController();
+  late TextEditingController _namesCtrl;
+  late TextEditingController _countCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _namesCtrl = TextEditingController(text: widget.meeting.attendees.join(', '));
+    _countCtrl = TextEditingController(text: widget.meeting.attendees.length.toString());
+  }
+
+  @override
+  void dispose() {
+    _summaryCtrl.dispose();
+    _namesCtrl.dispose();
+    _countCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
+        Text('Meeting Details', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: isDark ? AppColors.slate300 : AppColors.slate700)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Icon(Icons.calendar_today_rounded, size: 13, color: isDark ? AppColors.slate400 : AppColors.slate500),
+            const SizedBox(width: 6),
+            Text('${AppFormatters.displayDate(widget.meeting.date)} at ${widget.meeting.time}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // Manual Attendees Input
+        Text('Who Attended?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? AppColors.slate300 : AppColors.slate700)),
+        const SizedBox(height: 8),
         TextField(
-          controller: _controller,
+          controller: _namesCtrl,
+          decoration: InputDecoration(
+            hintText: 'Enter names separated by commas...',
+            hintStyle: TextStyle(fontSize: 13, color: isDark ? AppColors.slate500 : AppColors.slate400),
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          style: TextStyle(fontSize: 13, color: isDark ? Colors.white : AppColors.slate900),
+          maxLines: 2,
+        ),
+        const SizedBox(height: 16),
+        
+        Text('Total Attended Count', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? AppColors.slate300 : AppColors.slate700)),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 120,
+          child: TextField(
+            controller: _countCtrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              hintText: 'e.g. 5',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            style: TextStyle(fontSize: 13, color: isDark ? Colors.white : AppColors.slate900),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+        const Divider(),
+        const SizedBox(height: 12),
+        Text('Meeting Summary', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: isDark ? AppColors.slate300 : AppColors.slate700)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _summaryCtrl,
           maxLines: 5,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Enter a brief summary of the meeting outcomes...',
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
+            hintStyle: TextStyle(color: isDark ? AppColors.slate500 : AppColors.slate400),
           ),
         ),
         const SizedBox(height: 20),
         ElevatedButton(
-          onPressed: () => widget.onSubmit(_controller.text),
+          onPressed: () {
+            if (_summaryCtrl.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please enter a summary'))
+              );
+              return;
+            }
+
+            final List<String> finalAttendees = _namesCtrl.text
+                .split(',')
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList();
+
+            widget.onSubmit(_summaryCtrl.text.trim(), finalAttendees);
+          },
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
           child: const Text('Save Summary'),
         ),

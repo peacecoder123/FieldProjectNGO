@@ -1,15 +1,21 @@
-import 'dart:io';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 
+// Note: For mobile, we use specific logic to avoid dart:io on web.
+// We import it conditionally or use absolute byte data where possible.
+
 class FirebaseDocumentStorageRepository {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  
+  // Use the default instance to ensure it picks up the login session automatically
+  FirebaseStorage get _storage => FirebaseStorage.instance;
+  
   static const String _collection = 'documents';
 
   /// Stream of all documents ordered by upload date descending
@@ -29,41 +35,57 @@ class FirebaseDocumentStorageRepository {
     return snap.docs.map((d) => _fromDoc(d)).toList();
   }
 
-  /// Pick a file and upload it to Firebase Storage + save metadata to Firestore.
-  /// Returns the created [DocumentEntity] on success.
+  /// Pick and upload a file to Firebase Storage & Firestore.
   Future<DocumentEntity?> pickAndUpload({required String uploadedBy}) async {
+    debugPrint('Step 1: Opening File Picker...');
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'xlsx', 'xls', 'png', 'jpg'],
+      allowedExtensions: ['pdf', 'doc', 'docx', 'xlsx', 'xls', 'png', 'jpg', 'jpeg'],
+      withData: true,
     );
 
-    if (result == null || result.files.isEmpty) return null;
+    if (result == null || result.files.isEmpty) {
+      debugPrint('File Picker: User cancelled');
+      return null;
+    }
     final file = result.files.first;
+    debugPrint('Step 2: File selected: ${file.name} (${file.size} bytes)');
+    
+    if (file.bytes == null) {
+      debugPrint('Error: File bytes are null on Web!');
+      throw Exception('Could not read file data. Please try again.');
+    }
+    
+    final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+    final storageRef = _storage.ref().child('documents/$fileName');
+    
+    debugPrint('Step 3: Starting upload to Firebase Storage: documents/$fileName');
+    try {
+      // We use a timeout because CORS issues on Web cause putData to hang indefinitely.
+      // 30 seconds is generous for a 1-5MB file.
+      final uploadTask = await storageRef.putData(
+        file.bytes!, 
+        SettableMetadata(contentType: _getMimeType(file.extension))
+      ).timeout(const Duration(seconds: 30), onTimeout: () {
+        debugPrint('Error: Upload timed out. This is almost always a CORS configuration issue on Web.');
+        throw TimeoutException('Upload timed out. Please ensure your Firebase Storage bucket has CORS enabled for localhost.');
+      });
+      
+      debugPrint('Step 4: Storage upload complete. Status: ${uploadTask.state}');
+    } catch (e) {
+      if (e is TimeoutException) {
+        debugPrint('CORS/Timeout detected: $e');
+      } else {
+        debugPrint('Error during Storage upload: $e');
+      }
+      rethrow;
+    }
+    
+    final downloadUrl = await storageRef.getDownloadURL();
+    debugPrint('Step 5: Download URL retrieved: $downloadUrl');
 
     final ext = file.extension?.toLowerCase() ?? 'pdf';
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-    final storageRef = _storage.ref().child('documents/$fileName');
-
-    UploadTask uploadTask;
-    if (kIsWeb) {
-      // Web: use bytes
-      uploadTask = storageRef.putData(
-        file.bytes!,
-        SettableMetadata(contentType: _mimeType(ext)),
-      );
-    } else {
-      // Mobile: use File
-      uploadTask = storageRef.putFile(
-        File(file.path!),
-        SettableMetadata(contentType: _mimeType(ext)),
-      );
-    }
-
-    final snap = await uploadTask;
-    final downloadUrl = await snap.ref.getDownloadURL();
     final sizeLabel = _formatBytes(file.size);
-
-    // Determine category from extension
     final category = _categoryFromExt(ext);
     final fileType = _fileTypeFromExt(ext);
 
@@ -73,12 +95,14 @@ class FirebaseDocumentStorageRepository {
       'fileType': fileType.name,
       'size': sizeLabel,
       'uploadDate': AppFormatters.today(),
-      'downloadUrl': downloadUrl,
       'uploadedBy': uploadedBy,
+      'downloadUrl': downloadUrl,
       'storagePath': 'documents/$fileName',
     };
 
+    debugPrint('Step 6: Saving metadata to Firestore collection: $_collection');
     final docRef = await _db.collection(_collection).add(docData);
+    debugPrint('Step 7: Firestore record created with ID: ${docRef.id}');
 
     return DocumentEntity(
       id: docRef.id,
@@ -91,77 +115,58 @@ class FirebaseDocumentStorageRepository {
     );
   }
 
+
   /// Replace an existing document
   Future<void> replaceDocument({
     required DocumentEntity existing,
     required String uploadedBy,
   }) async {
-    // Delete old storage file
-    if (existing.downloadUrl != null && existing.downloadUrl!.isNotEmpty) {
-      try {
-        final ref = _storage.refFromURL(existing.downloadUrl!);
-        await ref.delete();
-      } catch (_) {}
-    }
-
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'xlsx', 'xls', 'png', 'jpg'],
+      allowedExtensions: ['pdf', 'doc', 'docx', 'xlsx', 'xls', 'png', 'jpg', 'jpeg'],
+      withData: true,
     );
     if (result == null || result.files.isEmpty) return;
+    
+    // Delete old file if exists
+    try {
+      final snap = await _db.collection(_collection).doc(existing.id).get();
+      final oldPath = (snap.data() as Map<String, dynamic>?)?['storagePath'] as String?;
+      if (oldPath != null) await _storage.ref().child(oldPath).delete();
+    } catch (_) {}
 
     final file = result.files.first;
-    final ext = file.extension?.toLowerCase() ?? 'pdf';
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+    final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
     final storageRef = _storage.ref().child('documents/$fileName');
+    
+    if (file.bytes == null) throw Exception('File data missing');
+    
+    await storageRef.putData(
+      file.bytes!,
+      SettableMetadata(contentType: _getMimeType(file.extension))
+    );
+    
+    final downloadUrl = await storageRef.getDownloadURL();
 
-    UploadTask uploadTask;
-    if (kIsWeb) {
-      uploadTask = storageRef.putData(file.bytes!, SettableMetadata(contentType: _mimeType(ext)));
-    } else {
-      uploadTask = storageRef.putFile(File(file.path!), SettableMetadata(contentType: _mimeType(ext)));
-    }
-
-    final snap = await uploadTask;
-    final downloadUrl = await snap.ref.getDownloadURL();
-
-    // Update Firestore record
-    final querySnap = await _db
-        .collection(_collection)
-        .where('downloadUrl', isEqualTo: existing.downloadUrl)
-        .limit(1)
-        .get();
-
-    if (querySnap.docs.isNotEmpty) {
-      await querySnap.docs.first.reference.update({
-        'title': file.name,
-        'downloadUrl': downloadUrl,
-        'size': _formatBytes(file.size),
-        'uploadDate': AppFormatters.today(),
-        'uploadedBy': uploadedBy,
-        'storagePath': 'documents/$fileName',
-        'fileType': _fileTypeFromExt(ext).name,
-      });
-    }
+    await _db.collection(_collection).doc(existing.id).update({
+      'title': file.name,
+      'size': _formatBytes(file.size),
+      'uploadDate': AppFormatters.today(),
+      'uploadedBy': uploadedBy,
+      'fileType': _fileTypeFromExt(file.extension?.toLowerCase() ?? '').name,
+      'downloadUrl': downloadUrl,
+      'storagePath': 'documents/$fileName',
+    });
   }
 
   Future<void> deleteDocument(DocumentEntity doc) async {
-    if (doc.downloadUrl != null && doc.downloadUrl!.isNotEmpty) {
-      try {
-        final ref = _storage.refFromURL(doc.downloadUrl!);
-        await ref.delete();
-      } catch (_) {}
-    }
-
-    final querySnap = await _db
-        .collection(_collection)
-        .where('downloadUrl', isEqualTo: doc.downloadUrl)
-        .limit(1)
-        .get();
-
-    for (final d in querySnap.docs) {
-      await d.reference.delete();
-    }
+    try {
+      final snap = await _db.collection(_collection).doc(doc.id).get();
+      final path = (snap.data() as Map<String, dynamic>?)?['storagePath'] as String?;
+      if (path != null) await _storage.ref().child(path).delete();
+    } catch (_) {}
+    
+    await _db.collection(_collection).doc(doc.id).delete();
   }
 
   DocumentEntity _fromDoc(DocumentSnapshot doc) {
@@ -180,19 +185,6 @@ class FirebaseDocumentStorageRepository {
     );
   }
 
-  String _mimeType(String ext) {
-    return switch (ext) {
-      'pdf'  => 'application/pdf',
-      'doc'  => 'application/msword',
-      'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'xls'  => 'application/vnd.ms-excel',
-      'png'  => 'image/png',
-      'jpg'  => 'image/jpeg',
-      _      => 'application/octet-stream',
-    };
-  }
-
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -203,7 +195,7 @@ class FirebaseDocumentStorageRepository {
     return switch (ext) {
       'pdf' || 'doc' || 'docx' => 'Documents',
       'xlsx' || 'xls'          => 'Reports',
-      'png' || 'jpg'           => 'Images',
+      'png' || 'jpg' || 'jpeg' => 'Images',
       _                        => 'General',
     };
   }
@@ -217,4 +209,18 @@ class FirebaseDocumentStorageRepository {
       _               => DocumentFileType.doc,
     };
   }
+
+  String? _getMimeType(String? ext) {
+    return switch (ext?.toLowerCase()) {
+      'pdf'        => 'application/pdf',
+      'docx'       => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'doc'        => 'application/msword',
+      'xlsx'       => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'xls'        => 'application/vnd.ms-excel',
+      'png'        => 'image/png',
+      'jpg' || 'jpeg' => 'image/jpeg',
+      _            => 'application/octet-stream',
+    };
+  }
 }
+

@@ -97,10 +97,12 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48),
-        child: Column(
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 48),
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
@@ -132,7 +134,7 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildVolunteerList(List<VolunteerEntity> volunteers) {
@@ -142,8 +144,8 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
 
         if (isWide) {
           return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 32),
+            physics: const AlwaysScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               childAspectRatio: 2.2,
@@ -161,16 +163,20 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
           );
         }
 
-        return Column(
-          children: volunteers
-              .map((v) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _VolunteerCard(
-                      volunteer: v,
-                      onTap: () => _showVolunteerDetails(context, v),
-                    ),
-                  ))
-              .toList(),
+        return ListView.builder(
+          padding: const EdgeInsets.only(bottom: 32),
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: volunteers.length,
+          itemBuilder: (context, index) {
+            final v = volunteers[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _VolunteerCard(
+                volunteer: v,
+                onTap: () => _showVolunteerDetails(context, v),
+              ),
+            );
+          },
         );
       },
     );
@@ -1595,6 +1601,7 @@ class _EditVolunteerFormState extends State<_EditVolunteerForm> {
       );
     }
   }
+}
 // GLOBAL DELETE VOLUNTEER LIST MODAL
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -12,6 +12,7 @@ class AppCard extends StatelessWidget {
     this.onTap,
     this.elevation = 0,
     this.borderRadius = 12,
+    this.border,
   });
 
   final Widget  child;
@@ -19,6 +20,7 @@ class AppCard extends StatelessWidget {
   final VoidCallback?      onTap;
   final double             elevation;
   final double             borderRadius;
+  final BoxBorder?         border;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,7 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.slate800 : AppColors.white,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
+        border: border ?? Border.all(
           color: isDark
               ? AppColors.slate700
               : AppColors.slate200,

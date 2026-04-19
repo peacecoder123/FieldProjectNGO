@@ -146,15 +146,6 @@ class AdminOverviewTab extends ConsumerWidget {
                     builder: (context, constraints) {
                       final isWide = constraints.maxWidth > 700;
                       
-                      final Map<String, int> monthlyTotals = {};
-                      for (final d in donations) {
-                        final month = AppFormatters.displayDate(d.date).split(' ')[1];
-                        monthlyTotals[month] = (monthlyTotals[month] ?? 0) + d.amount;
-                      }
-                      final List<MonthlyDonationPoint> chartData = monthlyTotals.entries
-                          .map((e) => MonthlyDonationPoint(month: e.key, amount: e.value))
-                          .toList();
-
                       if (isWide) {
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,

@@ -6,10 +6,22 @@ admin.initializeApp();
 
 /**
  * Razorpay Order Creator (V1)
+ * 
+ * Keys are loaded from functions/.env file automatically by Firebase.
  */
-exports.createRazorpayOrder = functions.runWith({ 
-  secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"] 
-}).https.onCall(async (data, context) => {
+exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+  // ── Validate API keys exist ──────────────────────────────────────────────
+  if (!keyId || !keySecret) {
+    console.error("RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set in .env");
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "Payment service is not configured. Please contact support."
+    );
+  }
+
   const amount = data.amount;
   const currency = data.currency || "INR";
 
@@ -18,8 +30,8 @@ exports.createRazorpayOrder = functions.runWith({
   }
 
   const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
+    key_id: keyId,
+    key_secret: keySecret,
   });
 
   try {
@@ -30,6 +42,7 @@ exports.createRazorpayOrder = functions.runWith({
     });
     return { orderId: order.id, amount: order.amount, currency: order.currency };
   } catch (error) {
+    console.error("Razorpay order creation failed:", error);
     throw new functions.https.HttpsError("internal", error.message || "Razorpay error");
   }
 });

@@ -47,3 +47,6 @@ android/app/build/
 build/
 build_log.txt
 .vercel
+.env
+**/ .env
+**/node_modules/

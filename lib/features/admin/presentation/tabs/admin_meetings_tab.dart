@@ -100,118 +100,190 @@ class AdminMeetingsTab extends ConsumerWidget {
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
 
+    // Fetch real member and volunteer names
+    final memberNames = ref.read(memberProvider).value?.map((m) => m.name).toList() ?? [];
+    final volunteerNames = ref.read(volunteerProvider).value?.map((v) => v.name).toList() ?? [];
+    final allPeople = [...memberNames, ...volunteerNames];
+    final selectedAttendees = Set<String>.from(allPeople); // all checked by default
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => AlertDialog(
-          title: const Text('Schedule New Meeting'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Meeting Title',
-                    prefixIcon: Icon(Icons.title_rounded),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: linkCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Meeting Link (Zoom, Meet, etc.)',
-                    prefixIcon: Icon(Icons.link_rounded),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Date Picker
-                TextFormField(
-                  readOnly: true,
-                  controller: TextEditingController(
-                    text: selectedDate == null
-                        ? ''
-                        : AppFormatters.displayDate(AppFormatters.toIso(selectedDate!)),
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Date',
-                    hintText: 'Select date',
-                    prefixIcon: Icon(Icons.calendar_today_rounded),
-                  ),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: ctx,
-                      initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 1)),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (picked != null) setModalState(() => selectedDate = picked);
-                  },
-                ),
-                const SizedBox(height: 16),
-                // Time Picker
-                InkWell(
-                  onTap: () async {
-                    final picked = await showTimePicker(
-                      context: ctx,
-                      initialTime: selectedTime ?? TimeOfDay.now(),
-                    );
-                    if (picked != null) setModalState(() => selectedTime = picked);
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Time',
-                      prefixIcon: Icon(Icons.schedule_rounded),
-                    ),
-                    child: Text(
-                      selectedTime == null
-                          ? 'Tap to select time'
-                          : selectedTime!.format(ctx),
-                      style: TextStyle(
-                        color: selectedTime == null ? Colors.grey : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
-                        fontSize: 15,
+        builder: (ctx, setModalState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return AlertDialog(
+            title: const Text('Schedule New Meeting'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: titleCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Meeting Title',
+                        prefixIcon: Icon(Icons.title_rounded),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: linkCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Meeting Link (Zoom, Meet, etc.)',
+                        prefixIcon: Icon(Icons.link_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Date Picker
+                    TextFormField(
+                      readOnly: true,
+                      controller: TextEditingController(
+                        text: selectedDate == null
+                            ? ''
+                            : AppFormatters.displayDate(AppFormatters.toIso(selectedDate!)),
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Date',
+                        hintText: 'Select date',
+                        prefixIcon: Icon(Icons.calendar_today_rounded),
+                      ),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) setModalState(() => selectedDate = picked);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Time Picker
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: ctx,
+                          initialTime: selectedTime ?? TimeOfDay.now(),
+                        );
+                        if (picked != null) setModalState(() => selectedTime = picked);
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Time',
+                          prefixIcon: Icon(Icons.schedule_rounded),
+                        ),
+                        child: Text(
+                          selectedTime == null
+                              ? 'Tap to select time'
+                              : selectedTime!.format(ctx),
+                          style: TextStyle(
+                            color: selectedTime == null ? Colors.grey : (isDark ? Colors.white : Colors.black87),
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Attendees section
+                    Text('Attendees (${selectedAttendees.length}/${allPeople.length})',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? AppColors.slate200 : AppColors.slate800),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => setModalState(() => selectedAttendees.addAll(allPeople)),
+                          icon: const Icon(Icons.select_all_rounded, size: 16),
+                          label: const Text('All', style: TextStyle(fontSize: 12)),
+                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          onPressed: () => setModalState(() => selectedAttendees.clear()),
+                          icon: const Icon(Icons.deselect_rounded, size: 16),
+                          label: const Text('None', style: TextStyle(fontSize: 12)),
+                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        ),
+                      ],
+                    ),
+                    if (memberNames.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text('Members', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.blue600)),
+                      ...memberNames.map((name) => CheckboxListTile(
+                        title: Text(name, style: const TextStyle(fontSize: 13)),
+                        value: selectedAttendees.contains(name),
+                        onChanged: (val) => setModalState(() {
+                          if (val == true) selectedAttendees.add(name); else selectedAttendees.remove(name);
+                        }),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        visualDensity: VisualDensity.compact,
+                      )),
+                    ],
+                    if (volunteerNames.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text('Volunteers', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.emerald600)),
+                      ...volunteerNames.map((name) => CheckboxListTile(
+                        title: Text(name, style: const TextStyle(fontSize: 13)),
+                        value: selectedAttendees.contains(name),
+                        onChanged: (val) => setModalState(() {
+                          if (val == true) selectedAttendees.add(name); else selectedAttendees.remove(name);
+                        }),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        visualDensity: VisualDensity.compact,
+                      )),
+                    ],
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (titleCtrl.text.trim().isEmpty || selectedDate == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter title and date')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (titleCtrl.text.trim().isEmpty || selectedDate == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter title and date')),
+                    );
+                    return;
+                  }
+                  if (selectedAttendees.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please select at least one attendee')),
+                    );
+                    return;
+                  }
+
+                  final meeting = MeetingEntity(
+                    id: '',
+                    title: titleCtrl.text.trim(),
+                    date: AppFormatters.toIso(selectedDate!),
+                    time: selectedTime?.format(ctx) ?? '10:00 AM',
+                    attendees: selectedAttendees.toList(),
+                    status: MeetingStatus.upcoming,
+                    link: linkCtrl.text.trim(),
                   );
-                  return;
-                }
 
-                final meeting = MeetingEntity(
-                  id: '',
-                  title: titleCtrl.text.trim(),
-                  date: AppFormatters.toIso(selectedDate!),
-                  time: selectedTime?.format(ctx) ?? '10:00 AM',
-                  attendees: const ['All Members', 'All Volunteers'],
-                  status: MeetingStatus.upcoming,
-                  link: linkCtrl.text.trim(),
-                );
-
-                ref.read(meetingProvider.notifier).add(meeting);
-                Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Meeting scheduled successfully'), backgroundColor: AppColors.brand),
-                );
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
-              child: const Text('Schedule'),
-            ),
-          ],
-        ),
+                  ref.read(meetingProvider.notifier).add(meeting);
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Meeting scheduled successfully'), backgroundColor: AppColors.brand),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
+                child: const Text('Schedule'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -357,7 +429,7 @@ class _MeetingCard extends ConsumerWidget {
               )
             else if (meeting.summaryAssignedTo == null || meeting.summaryAssignedTo == 'Admin')
               ElevatedButton.icon(
-                onPressed: () => _showAddSummaryModal(context, ref),
+                onPressed: () => _showAddSummaryModal(context, ref, meeting),
                 icon: const Icon(Icons.edit_note_rounded, size: 18),
                 label: const Text('Add Meeting Summary'),
                 style: ElevatedButton.styleFrom(
@@ -466,13 +538,27 @@ class _MeetingCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.people_rounded, size: 14, color: isDark ? AppColors.slate400 : AppColors.slate500),
                   const SizedBox(width: 6),
-                  Text(
-                    meeting.attendees.join(', '),
-                    style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total Members Attended: ${meeting.attendees.length}',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? AppColors.slate300 : AppColors.slate700),
+                        ),
+                        const SizedBox(height: 4),
+                        ...meeting.attendees.map((attendee) => Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text('• $attendee', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                        )),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -503,22 +589,109 @@ class _MeetingCard extends ConsumerWidget {
     );
   }
 
-  void _showAddSummaryModal(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
+  void _showAddSummaryModal(BuildContext context, WidgetRef ref, MeetingEntity meeting) {
+    final summaryCtrl = TextEditingController();
+    final namesCtrl = TextEditingController(text: meeting.attendees.join(', '));
+    final countCtrl = TextEditingController(text: meeting.attendees.length.toString());
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: isDark ? AppColors.slate800 : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Add Meeting Summary', style: TextStyle(color: isDark ? Colors.white : AppColors.slate900)),
-        content: TextField(controller: controller, maxLines: 5, decoration: InputDecoration(hintText: 'Enter a brief summary of the meeting outcomes...', border: const OutlineInputBorder(), hintStyle: TextStyle(color: isDark ? AppColors.slate500 : AppColors.slate400))),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Meeting Details', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: isDark ? AppColors.slate300 : AppColors.slate700)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 13, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                    const SizedBox(width: 6),
+                    Text('${AppFormatters.displayDate(meeting.date)} at ${meeting.time}', style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                
+                // Manual Attendees Input
+                Text('Who Attended?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? AppColors.slate300 : AppColors.slate700)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: namesCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'Enter names separated by commas...',
+                    hintStyle: TextStyle(fontSize: 13, color: isDark ? AppColors.slate500 : AppColors.slate400),
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  style: TextStyle(fontSize: 13, color: isDark ? Colors.white : AppColors.slate900),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 16),
+                
+                Text('Total Attended Count', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? AppColors.slate300 : AppColors.slate700)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: 120,
+                  child: TextField(
+                    controller: countCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. 5',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    style: TextStyle(fontSize: 13, color: isDark ? Colors.white : AppColors.slate900),
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 12),
+                Text('Meeting Summary', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: isDark ? AppColors.slate300 : AppColors.slate700)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: summaryCtrl, 
+                  maxLines: 4, 
+                  decoration: InputDecoration(
+                    hintText: 'Enter a brief summary of the meeting outcomes...', 
+                    border: const OutlineInputBorder(), 
+                    hintStyle: TextStyle(color: isDark ? AppColors.slate500 : AppColors.slate400)
+                  )
+                ),
+              ],
+            ),
+          ),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
-              if (controller.text.trim().isEmpty) return;
-              ref.read(meetingProvider.notifier).addSummary(meeting.id, summary: controller.text.trim());
+              if (summaryCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a summary'))
+                );
+                return;
+              }
+              
+              // Split names by comma and clean up whitespace
+              final List<String> finalAttendees = namesCtrl.text
+                  .split(',')
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty)
+                  .toList();
+              
+              ref.read(meetingProvider.notifier).addSummary(
+                meeting.id, 
+                summary: summaryCtrl.text.trim(),
+                attendees: finalAttendees,
+              );
               Navigator.of(ctx).pop();
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.blue600, foregroundColor: Colors.white),
@@ -528,4 +701,5 @@ class _MeetingCard extends ConsumerWidget {
       ),
     );
   }
+
 }

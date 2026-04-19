@@ -108,10 +108,17 @@ class _DonationDialogState extends ConsumerState<DonationDialog> {
         setState(() => _isProcessing = false);
         _showSnackBar(outcome.errorMessage ?? 'Payment failed. Please try again.');
       }
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
       setState(() => _isProcessing = false);
-      _showSnackBar('Error: $e');
+      
+      // Truncate stack trace if present in error message
+      String errMsg = e.toString();
+      if (errMsg.length > 100) {
+        errMsg = errMsg.substring(0, 100) + '...';
+      }
+      debugPrint('Donation processing error: $e\n$st');
+      _showSnackBar('Error processing payment: $errMsg');
     }
   }
 

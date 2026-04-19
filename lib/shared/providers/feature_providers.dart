@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ngo_volunteer_management/domain/entities/donation.entity.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
@@ -23,7 +24,6 @@ import '../../features/documents/repositories/firebase_document_request_reposito
 import '../../features/documents/repositories/firebase_document_storage_repository.dart';
 import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
 import '../../features/auth/repositories/firebase_auth_repository.dart';
-import '../../features/requests/repositories/firebase_hospital_repository.dart';
 import '../../features/admin/data/user_repository.dart';
 import '../../features/auth/domain/entities/user_entity.dart';
 
@@ -285,33 +285,56 @@ final donationProvider =
 final monthlyDonationAggregationProvider = Provider<List<MonthlyDonationPoint>>((ref) {
   final donationsState = ref.watch(donationProvider);
   final donations = donationsState.value ?? [];
-  
-  // Filter for success/pending payments (mostly ignore failed, but let's just include success or all for a real app. For MVP, we'll do all except failed)
   final validDonations = donations.where((d) => d.paymentStatus != PaymentStatus.failed).toList();
   
-  if (validDonations.isEmpty) return [];
+  if (validDonations.isEmpty) {
+    return [];
+  }
 
-  // Group by month-year
   final grouped = <String, int>{};
+  final monthFormat = DateFormat('MMM yyyy');
+  
   for (final d in validDonations) {
     if (d.date.isEmpty) continue;
-    // Assume date format: "dd MMM yyyy" or "dd/MM/yyyy"
-    // Just a basic parsing for "MMM yyyy" or default to month if it's simpler
-    // Real parsing:
     try {
-      // Very naive splitting, assume "26 Mar 2026"  -> month="Mar"
-      final parts = d.date.split(' ');
-      if (parts.length >= 2) {
-        final monthStr = parts[1]; // 'Mar'
-        grouped[monthStr] = (grouped[monthStr] ?? 0) + d.amount;
+      DateTime? dt;
+      // Try parsing ISO format first
+      if (d.date.contains('-')) {
+        dt = DateTime.tryParse(d.date);
+      } else {
+        // Fallback for "26 Mar 2026"
+        final parts = d.date.split(' ');
+        if (parts.length >= 3) {
+          final day = int.tryParse(parts[0]);
+          final month = _monthMap[parts[1].toLowerCase()];
+          final year = int.tryParse(parts[2]);
+          if (day != null && month != null && year != null) {
+            dt = DateTime(year, month, day);
+          }
+        }
+      }
+
+      if (dt != null) {
+        final key = monthFormat.format(dt);
+        grouped[key] = (grouped[key] ?? 0) + d.amount;
       }
     } catch (_) {}
   }
   
-  final result = grouped.entries.map((e) => MonthlyDonationPoint(month: e.key, amount: e.value)).toList();
-  // We can sort them if needed, but for MVP it's OK.
-  return result.isEmpty ? [const MonthlyDonationPoint(month: 'Mar', amount: 0)] : result;
+  // Convert to points and sort chronologically
+  final sortedKeys = grouped.keys.toList()..sort((a, b) {
+    final da = monthFormat.parse(a);
+    final db = monthFormat.parse(b);
+    return da.compareTo(db);
+  });
+
+  return sortedKeys.map((k) => MonthlyDonationPoint(month: k.split(' ')[0], amount: grouped[k]!)).toList();
 });
+
+const _monthMap = {
+  'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+  'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GENERAL REQUEST STATE
@@ -531,10 +554,12 @@ class MeetingNotifier extends StateNotifier<AsyncValue<List<MeetingEntity>>> {
     String meetingId, {
     required String summary,
     String? addedBy,
+    List<String>? attendees,
   }) => _repo.addSummary(
       meetingId,
       summary:  summary,
       addedBy:  addedBy ?? 'Member',
+      attendees: attendees,
     );
 
   // Re-added markCompleted from merged3, but updated with String ID and removed manual state refresh
