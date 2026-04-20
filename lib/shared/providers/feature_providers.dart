@@ -23,6 +23,7 @@ import '../../features/documents/repositories/document_request_repository.dart';
 import '../../features/documents/repositories/firebase_document_request_repository.dart';
 import '../../features/documents/repositories/firebase_document_storage_repository.dart';
 import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
+import 'app_providers.dart';
 import '../../features/auth/repositories/firebase_auth_repository.dart';
 import '../../features/admin/data/user_repository.dart';
 import '../../features/auth/domain/entities/user_entity.dart';
@@ -106,7 +107,7 @@ class VolunteerNotifier extends StateNotifier<AsyncValue<List<VolunteerEntity>>>
   Future<void> delete(String id) => _repo.delete(id);
 }
 
-final volunteerProvider = StateNotifierProvider<
+final volunteerProvider = StateNotifierProvider.autoDispose<
     VolunteerNotifier, AsyncValue<List<VolunteerEntity>>>(
   (ref) => VolunteerNotifier(ref.watch(volunteerRepositoryProvider)),
 );
@@ -142,7 +143,7 @@ class MemberNotifier extends StateNotifier<AsyncValue<List<MemberEntity>>> {
 }
 
 final memberProvider =
-    StateNotifierProvider<MemberNotifier, AsyncValue<List<MemberEntity>>>(
+    StateNotifierProvider.autoDispose<MemberNotifier, AsyncValue<List<MemberEntity>>>(
   (ref) => MemberNotifier(ref.watch(memberRepositoryProvider)),
 );
 
@@ -210,7 +211,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<TaskEntity>>> {
 }
 
 final taskProvider =
-    StateNotifierProvider<TaskNotifier, AsyncValue<List<TaskEntity>>>(
+    StateNotifierProvider.autoDispose<TaskNotifier, AsyncValue<List<TaskEntity>>>(
   (ref) => TaskNotifier(ref.watch(taskRepositoryProvider)),
 );
 
@@ -277,7 +278,7 @@ class DonationNotifier extends StateNotifier<AsyncValue<List<DonationEntity>>> {
 }
 
 final donationProvider =
-    StateNotifierProvider<DonationNotifier, AsyncValue<List<DonationEntity>>>(
+    StateNotifierProvider.autoDispose<DonationNotifier, AsyncValue<List<DonationEntity>>>(
   (ref) => DonationNotifier(ref.watch(donationRepositoryProvider)),
 );
 
@@ -343,9 +344,10 @@ const _monthMap = {
 class GeneralRequestNotifier
     extends StateNotifier<AsyncValue<List<GeneralRequestEntity>>> {
   final IGeneralRequestRepository _repo;
+  final String? _currentUserId;
   StreamSubscription<List<GeneralRequestEntity>>? _subscription;
 
-  GeneralRequestNotifier(this._repo) : super(const AsyncValue.loading()) {
+  GeneralRequestNotifier(this._repo, [this._currentUserId]) : super(const AsyncValue.loading()) {
     _listen();
   }
 
@@ -363,7 +365,10 @@ class GeneralRequestNotifier
   }
 
   Future<void> add(GeneralRequestEntity r) async {
-    await _repo.add(r);
+    final entity = (_currentUserId != null && (r.requesterId == null || r.requesterId!.isEmpty))
+        ? r.copyWith(requesterId: _currentUserId)
+        : r;
+    await _repo.add(entity);
     _notify('Request Submitted', 'Your general request has been sent for review.');
   }
 
@@ -387,10 +392,13 @@ class GeneralRequestNotifier
   }
 }
 
-final generalRequestProvider = StateNotifierProvider<GeneralRequestNotifier,
+final generalRequestProvider = StateNotifierProvider.autoDispose<GeneralRequestNotifier,
     AsyncValue<List<GeneralRequestEntity>>>(
-  (ref) =>
-      GeneralRequestNotifier(ref.watch(generalRequestRepositoryProvider)),
+  (ref) {
+    final repo = ref.watch(generalRequestRepositoryProvider);
+    final user = ref.watch(currentUserProvider);
+    return GeneralRequestNotifier(repo, user?.id);
+  },
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -400,9 +408,10 @@ final generalRequestProvider = StateNotifierProvider<GeneralRequestNotifier,
 class MouRequestNotifier
     extends StateNotifier<AsyncValue<List<MouRequestEntity>>> {
   final IMouRequestRepository _repo;
+  final String? _currentUserId;
   StreamSubscription<List<MouRequestEntity>>? _subscription;
 
-  MouRequestNotifier(this._repo) : super(const AsyncValue.loading()) {
+  MouRequestNotifier(this._repo, [this._currentUserId]) : super(const AsyncValue.loading()) {
     _listen();
   }
 
@@ -420,7 +429,10 @@ class MouRequestNotifier
   }
 
   Future<void> add(MouRequestEntity r) async {
-    await _repo.add(r);
+    final entity = (_currentUserId != null && (r.requesterId == null || r.requesterId!.isEmpty))
+        ? r.copyWith(requesterId: _currentUserId)
+        : r;
+    await _repo.add(entity);
     _notify('MOU Request Submitted', 'New MOU request for ${r.patientName}.');
   }
 
@@ -444,9 +456,13 @@ class MouRequestNotifier
   }
 }
 
-final mouRequestProvider = StateNotifierProvider<MouRequestNotifier,
+final mouRequestProvider = StateNotifierProvider.autoDispose<MouRequestNotifier,
     AsyncValue<List<MouRequestEntity>>>(
-  (ref) => MouRequestNotifier(ref.watch(mouRequestRepositoryProvider)),
+  (ref) {
+    final repo = ref.watch(mouRequestRepositoryProvider);
+    final user = ref.watch(currentUserProvider);
+    return MouRequestNotifier(repo, user?.id);
+  },
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -456,9 +472,10 @@ final mouRequestProvider = StateNotifierProvider<MouRequestNotifier,
 class JoiningLetterNotifier
     extends StateNotifier<AsyncValue<List<JoiningLetterRequestEntity>>> {
   final IJoiningLetterRepository _repo;
+  final String? _currentUserId;
   StreamSubscription<List<JoiningLetterRequestEntity>>? _subscription;
 
-  JoiningLetterNotifier(this._repo) : super(const AsyncValue.loading()) {
+  JoiningLetterNotifier(this._repo, [this._currentUserId]) : super(const AsyncValue.loading()) {
     _listen();
   }
 
@@ -476,7 +493,10 @@ class JoiningLetterNotifier
   }
 
   Future<void> add(JoiningLetterRequestEntity r) async {
-    await _repo.add(r);
+    final entity = (_currentUserId != null && (r.requesterId == null || r.requesterId!.isEmpty))
+        ? r.copyWith(requesterId: _currentUserId)
+        : r;
+    await _repo.add(entity);
     _notify('Letter Request Submitted', 'New joining letter request from ${r.name}.');
   }
 
@@ -508,9 +528,13 @@ class JoiningLetterNotifier
   }
 }
 
-final joiningLetterProvider = StateNotifierProvider<JoiningLetterNotifier,
+final joiningLetterProvider = StateNotifierProvider.autoDispose<JoiningLetterNotifier,
     AsyncValue<List<JoiningLetterRequestEntity>>>(
-  (ref) => JoiningLetterNotifier(ref.watch(joiningLetterRepositoryProvider)),
+  (ref) {
+    final repo = ref.watch(joiningLetterRepositoryProvider);
+    final user = ref.watch(currentUserProvider);
+    return JoiningLetterNotifier(repo, user?.id);
+  },
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -518,7 +542,7 @@ final joiningLetterProvider = StateNotifierProvider<JoiningLetterNotifier,
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Live stream of all documents from Firestore (metadata) + Firebase Storage (files)
-final documentStorageProvider = StreamProvider<List<DocumentEntity>>((ref) {
+final documentStorageProvider = StreamProvider.autoDispose<List<DocumentEntity>>((ref) {
   final repo = ref.watch(documentStorageRepoProvider);
   return repo.watchAll();
 });
@@ -569,7 +593,7 @@ class MeetingNotifier extends StateNotifier<AsyncValue<List<MeetingEntity>>> {
 }
 
 final meetingProvider =
-    StateNotifierProvider<MeetingNotifier, AsyncValue<List<MeetingEntity>>>(
+    StateNotifierProvider.autoDispose<MeetingNotifier, AsyncValue<List<MeetingEntity>>>(
   (ref) => MeetingNotifier(ref.watch(meetingRepositoryProvider)),
 );
 
@@ -579,12 +603,13 @@ final meetingProvider =
 
 class DocumentRequestNotifier
     extends StateNotifier<AsyncValue<List<DocumentRequestEntity>>> {
-  DocumentRequestNotifier(this._repository) : super(const AsyncValue.loading()) {
+  final IDocumentRequestRepository _repository;
+  final String? _currentUserId;
+  StreamSubscription<List<DocumentRequestEntity>>? _subscription;
+
+  DocumentRequestNotifier(this._repository, [this._currentUserId]) : super(const AsyncValue.loading()) {
     _listenToFirebase();
   }
-
-  final IDocumentRequestRepository _repository;
-  StreamSubscription<List<DocumentRequestEntity>>? _subscription;
 
   void _listenToFirebase() {
     _subscription = _repository.watchAll().listen(
@@ -605,7 +630,10 @@ class DocumentRequestNotifier
   }
 
   Future<void> add(DocumentRequestEntity r) async {
-    await _repository.add(r);
+    final entity = (_currentUserId != null && (r.userId == null || r.userId.isEmpty))
+        ? r.copyWith(userId: _currentUserId)
+        : r;
+    await _repository.add(entity);
   }
 
   Future<void> approve(String id, {
@@ -629,9 +657,13 @@ class DocumentRequestNotifier
   }
 }
 
-final documentRequestProvider = StateNotifierProvider<DocumentRequestNotifier,
+final documentRequestProvider = StateNotifierProvider.autoDispose<DocumentRequestNotifier,
     AsyncValue<List<DocumentRequestEntity>>>(
-  (ref) => DocumentRequestNotifier(ref.watch(documentRequestRepositoryProvider)),
+  (ref) {
+    final repo = ref.watch(documentRequestRepositoryProvider);
+    final user = ref.watch(currentUserProvider);
+    return DocumentRequestNotifier(repo, user?.id);
+  },
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -696,10 +728,10 @@ class HospitalNotifier extends StateNotifier<AsyncValue<List<HospitalEntity>>> {
 }
 
 final hospitalProvider =
-    StateNotifierProvider<HospitalNotifier, AsyncValue<List<HospitalEntity>>>(
+    StateNotifierProvider.autoDispose<HospitalNotifier, AsyncValue<List<HospitalEntity>>>(
   (ref) => HospitalNotifier(ref.watch(hospitalRepositoryProvider)),
 );
 
-final usersManagementProvider = StateNotifierProvider<UserManagementNotifier, AsyncValue<List<UserEntity>>>(
+final usersManagementProvider = StateNotifierProvider.autoDispose<UserManagementNotifier, AsyncValue<List<UserEntity>>>(
   (ref) => UserManagementNotifier(ref.watch(userRepositoryProvider)),
 );

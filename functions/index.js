@@ -48,6 +48,69 @@ exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
 });
 
 /**
+ * Helper to get all Admin/SuperAdmin tokens
+ */
+async function getAdminTokens() {
+  const adminSnap = await admin.firestore()
+    .collection("users")
+    .where("role", "in", ["admin", "superAdmin"])
+    .get();
+
+  const tokens = [];
+  adminSnap.forEach(doc => {
+    const userData = doc.data();
+    if (userData.fcmToken) tokens.push(userData.fcmToken);
+  });
+  return tokens;
+}
+
+/**
+ * Helper to send multicast notification to multiple tokens
+ */
+async function sendToTokens(tokens, title, body, data = {}) {
+  if (!tokens || tokens.length === 0) {
+    console.log("No tokens provided for notification.");
+    return;
+  }
+  const message = {
+    notification: { title, body },
+    data: { ...data, click_action: "FLUTTER_NOTIFICATION_CLICK" },
+    tokens: tokens
+  };
+  try {
+    const response = await admin.messaging().sendEachForMulticast(message);
+    console.log(`Sent ${response.successCount} notifications successfully.`);
+  } catch (err) {
+    console.error("FCM Multicast Error:", err);
+  }
+}
+
+/**
+ * Helper to send notification to a single token
+ */
+async function sendToToken(token, title, body, data = {}) {
+  if (!token) return;
+  const message = {
+    token: token,
+    notification: { title, body },
+    android: {
+      priority: "high",
+      notification: {
+        channelId: "high_importance_channel",
+        clickAction: "FLUTTER_NOTIFICATION_CLICK"
+      }
+    },
+    data: { ...data, click_action: "FLUTTER_NOTIFICATION_CLICK" }
+  };
+  try {
+    await admin.messaging().send(message);
+    console.log(`Notification sent to single token.`);
+  } catch (err) {
+    console.error("FCM Single Error:", err);
+  }
+}
+
+/**
  * Notify Admins of New Donation (V1)
  */
 exports.notifyAdminsOnDonation = functions.firestore
@@ -58,125 +121,142 @@ exports.notifyAdminsOnDonation = functions.firestore
     const amount = data.amount || 0;
 
     console.log(`Donation: ₹${amount} from ${donorName}`);
-
-    const adminSnap = await admin.firestore()
-      .collection("users")
-      .where("role", "==", "admin")
-      .get();
-
-    const tokens = [];
-    adminSnap.forEach(doc => {
-      const userData = doc.data();
-      if (userData.fcmToken) tokens.push(userData.fcmToken);
-    });
-
-    if (tokens.length === 0) {
-      console.log("No admin tokens found. Skipping notification.");
-      return null;
-    }
-
-    const message = {
-      notification: {
-        title: "New Donation Received! 🎉",
-        body: `${donorName} just donated ₹${amount}.`,
-      },
-      data: {
-        type: "donation",
-        donationId: context.params.donationId,
-        click_action: "FLUTTER_NOTIFICATION_CLICK"
-      },
-      tokens: tokens
-    };
-
-    try {
-      const response = await admin.messaging().sendEachForMulticast(message);
-      console.log(`Successfully sent ${response.successCount} notifications. Total attempted: ${tokens.length}`);
-    } catch (err) {
-      console.error("FCM Error:", err);
-    }
+    const tokens = await getAdminTokens();
+    await sendToTokens(
+      tokens,
+      "New Donation Received! 🎉",
+      `${donorName} just donated ₹${amount}.`,
+      { type: "donation", donationId: context.params.donationId }
+    );
     return null;
   });
 
 /**
- * Notify Volunteer of New Task (V1)
+ * Task Notification Logic (V1)
  */
-exports.notifyVolunteerOnTask = functions.firestore
+exports.notifyTaskEvents = functions.firestore
   .document("tasks/{taskId}")
   .onWrite(async (change, context) => {
     const after = change.after;
     const before = change.before;
 
-    if (!after.exists) return null;
+    if (!after.exists) return null; // Deletion
+
     const newData = after.data();
     const oldData = before.exists ? before.data() : null;
+    const taskId = context.params.taskId;
 
-    if (oldData && oldData.assignedToId === newData.assignedToId) return null;
+    // --- Scenario 1: New Task Assigned OR Assignee Changed ---
+    if (!oldData || (oldData.assignedToId !== newData.assignedToId)) {
+        const assigneeId = newData.assignedToId;
+        const assigneeEmail = newData.assignedToEmail;
+        const title = newData.title || "New Task";
 
-    const assigneeId = newData.assignedToId;
-    const assigneeEmail = newData.assignedToEmail;
-    const title = newData.title || "New Task";
-
-    let token = null;
-
-    // First try: Document ID (for legacy/consistent IDs)
-    const userDoc = await admin.firestore().collection("users").doc(assigneeId.toString()).get();
-    if (userDoc.exists && userDoc.data().fcmToken) {
-      token = userDoc.data().fcmToken;
-    } else if (assigneeEmail) {
-      // Second try: Email lookup (Highly reliable as email is unique)
-      console.log(`ID lookup failed for ${assigneeId}. Trying email lookup: ${assigneeEmail}`);
-      const userSnap = await admin.firestore()
-        .collection("users")
-        .where("email", "==", assigneeEmail.toLowerCase().trim())
-        .limit(1)
-        .get();
-      
-      if (!userSnap.empty) {
-        token = userSnap.docs[0].data().fcmToken;
-      }
-    }
-
-    if (!token) {
-      console.log(`No token found for user ${assigneeId} / ${assigneeEmail}. Skipping notification.`);
-      return null;
-    }
-
-    const message = {
-      token: token,
-      notification: {
-        title: "New Task Assigned 📋",
-        body: `You have been assigned: ${title}`,
-      },
-      android: {
-        priority: "high",
-        notification: {
-          channelId: "high_importance_channel",
-          clickAction: "FLUTTER_NOTIFICATION_CLICK"
+        let token = null;
+        const userDoc = await admin.firestore().collection("users").doc(assigneeId.toString()).get();
+        if (userDoc.exists && userDoc.data().fcmToken) {
+            token = userDoc.data().fcmToken;
+        } else if (assigneeEmail) {
+            const userSnap = await admin.firestore().collection("users").where("email", "==", assigneeEmail.toLowerCase().trim()).limit(1).get();
+            if (!userSnap.empty) token = userSnap.docs[0].data().fcmToken;
         }
-      },
-      apns: {
-        payload: {
-          aps: {
-            contentAvailable: true,
-            sound: "default"
-          }
-        }
-      },
-      data: {
-        type: "task",
-        taskId: context.params.taskId,
-        click_action: "FLUTTER_NOTIFICATION_CLICK"
-      }
-    };
 
-    try {
-      await admin.messaging().send(message);
-      console.log(`Notification sent to ${assigneeEmail || assigneeId}`);
-    } catch (err) {
-      console.error("FCM Error:", err);
+        if (token) {
+            await sendToToken(token, "New Task Assigned 📋", `You have been assigned: ${title}`, { type: "task", taskId });
+        }
     }
+
+    // --- Scenario 2: Task Submitted (Notify Admins) ---
+    if (oldData && oldData.status !== "submitted" && newData.status === "submitted") {
+        const tokens = await getAdminTokens();
+        await sendToTokens(tokens, "Task Submitted 📤", `${newData.assignedToName} has submitted task: ${newData.title}`, { type: "task", taskId });
+    }
+
+    // --- Scenario 3: Task Approved/Rejected (Notify Volunteer) ---
+    if (oldData && oldData.status !== newData.status && (newData.status === "approved" || newData.status === "rejected")) {
+        const assigneeId = newData.assignedToId;
+        const userDoc = await admin.firestore().collection("users").doc(assigneeId.toString()).get();
+        if (userDoc.exists && userDoc.data().fcmToken) {
+            const title = newData.status === "approved" ? "Task Approved ✅" : "Task Rejected ❌";
+            const body = newData.status === "approved" 
+                ? `Your submission for "${newData.title}" has been approved!`
+                : `Your submission for "${newData.title}" was rejected. Please check details.`;
+            await sendToToken(userDoc.data().fcmToken, title, body, { type: "task", taskId });
+        }
+    }
+
     return null;
   });
+
+/**
+ * Helper to notify Admins about new Requests
+ */
+async function notifyAdminsOnNewRequest(type, title, requesterName, id) {
+  const tokens = await getAdminTokens();
+  await sendToTokens(tokens, `New ${type} Request 📄`, `${requesterName} submitted a new ${type} request: ${title}`, { type: type.toLowerCase(), requestId: id });
+}
+
+/**
+ * Helper to notify User about Request Status Change
+ */
+async function notifyUserOnRequestUpdate(requesterId, type, title, status, id) {
+    if (!requesterId) return;
+    const userDoc = await admin.firestore().collection("users").doc(requesterId).get();
+    if (userDoc.exists && userDoc.data().fcmToken) {
+        const mainTitle = status === "approved" ? "Request Approved ✅" : (status === "rejected" ? "Request Rejected ❌" : "Request Update 📄");
+        const body = `Your ${type} request "${title}" is now ${status}.`;
+        await sendToToken(userDoc.data().fcmToken, mainTitle, body, { type: type.toLowerCase(), requestId: id });
+    }
+}
+
+// triggers for Requests
+exports.onGeneralRequestWrite = functions.firestore.document("general_requests/{id}").onWrite(async (change, context) => {
+    const after = change.after.exists ? change.after.data() : null;
+    const before = change.before.exists ? change.before.data() : null;
+    if (!after) return null;
+    if (!before) {
+        await notifyAdminsOnNewRequest("General", after.requestType, after.requesterName, context.params.id);
+    } else if (before.status !== after.status) {
+        await notifyUserOnRequestUpdate(after.requesterId, "General", after.requestType, after.status, context.params.id);
+    }
+    return null;
+});
+
+exports.onMouRequestWrite = functions.firestore.document("mou_requests/{id}").onWrite(async (change, context) => {
+    const after = change.after.exists ? change.after.data() : null;
+    const before = change.before.exists ? change.before.data() : null;
+    if (!after) return null;
+    if (!before) {
+        await notifyAdminsOnNewRequest("MOU", after.patientName, after.requesterName, context.params.id);
+    } else if (before.status !== after.status) {
+        await notifyUserOnRequestUpdate(after.requesterId, "MOU", after.patientName, after.status, context.params.id);
+    }
+    return null;
+});
+
+exports.onJoiningLetterWrite = functions.firestore.document("joining_letter_requests/{id}").onWrite(async (change, context) => {
+    const after = change.after.exists ? change.after.data() : null;
+    const before = change.before.exists ? change.before.data() : null;
+    if (!after) return null;
+    if (!before) {
+        await notifyAdminsOnNewRequest("Joining Letter", after.name, after.name, context.params.id);
+    } else if (before.status !== after.status) {
+        await notifyUserOnRequestUpdate(after.requesterId, "Joining Letter", "Request", after.status, context.params.id);
+    }
+    return null;
+});
+
+exports.onDocumentRequestWrite = functions.firestore.document("document_requests/{id}").onWrite(async (change, context) => {
+    const after = change.after.exists ? change.after.data() : null;
+    const before = change.before.exists ? change.before.data() : null;
+    if (!after) return null;
+    if (!before) {
+        await notifyAdminsOnNewRequest("Document", after.documentType, after.userName, context.params.id);
+    } else if (before.status !== after.status) {
+        await notifyUserOnRequestUpdate(after.userId, "Document", after.documentType, after.status, context.params.id);
+    }
+    return null;
+});
 
 /**
  * Invite Notification & Account Setup Logic

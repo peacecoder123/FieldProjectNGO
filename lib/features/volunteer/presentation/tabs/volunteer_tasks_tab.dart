@@ -239,7 +239,8 @@ class _VolunteerTasksTabState extends ConsumerState<VolunteerTasksTab> {
         final myTasks = tasks
             .where((t) =>
                 t.assignedToType == AssigneeType.volunteer &&
-                t.assignedToId == currentUser?.id)
+                (t.assignedToId == currentUser?.id || 
+                 (currentUser?.email != null && t.assignedToEmail == currentUser?.email)))
             .toList();
 
         final pendingCount = myTasks.where((t) => t.status == TaskStatus.pending).length;

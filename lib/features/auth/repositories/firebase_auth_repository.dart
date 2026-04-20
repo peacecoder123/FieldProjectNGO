@@ -20,6 +20,8 @@ class FirebaseAuthRepository implements IAuthRepository {
     _firebaseAuth = auth.FirebaseAuth.instance;
     _googleSignIn = GoogleSignIn(
       clientId: kIsWeb ? '1093449762008-vau99kj7q90uou7aau2esvidn9unl2ak.apps.googleusercontent.com' : null,
+      // Forcing account selection on web via prompt parameter
+      forceCodeForRefreshToken: true,
     );
     if (Firebase.apps.isNotEmpty) {
       _firestore = FirebaseFirestore.instance;
@@ -116,7 +118,12 @@ class FirebaseAuthRepository implements IAuthRepository {
   @override
   Future<void> logout() async {
     await _firebaseAuth.signOut();
-    await _googleSignIn.signOut();
+    try {
+      await _googleSignIn.disconnect();
+    } catch (_) {
+      // If disconnect fails (e.g. no active session), fallback to signOut
+      await _googleSignIn.signOut();
+    }
   }
 
   @override

@@ -30,7 +30,8 @@ class MemberTasksTab extends ConsumerWidget {
         final myTasks = tasks
             .where((t) =>
                 t.assignedToType == AssigneeType.member &&
-                t.assignedToId == currentUser.id)
+                (t.assignedToId == currentUser.id || 
+                 (currentUser.email.isNotEmpty && t.assignedToEmail == currentUser.email)))
             .toList();
 
         return ListView(

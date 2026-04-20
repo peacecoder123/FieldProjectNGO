@@ -115,6 +115,6 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
 }
 
 final paymentStateProvider =
-    StateNotifierProvider<PaymentNotifier, PaymentState>(
+    StateNotifierProvider.autoDispose<PaymentNotifier, PaymentState>(
   (ref) => PaymentNotifier(ref.watch(razorpayServiceProvider)),
 );

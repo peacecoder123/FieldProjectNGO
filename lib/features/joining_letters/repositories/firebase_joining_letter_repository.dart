@@ -78,7 +78,6 @@ class FirebaseJoiningLetterRepository implements IJoiningLetterRepository {
     final doc = await _db.collection(_collectionPath).doc(id).get();
     return _fromMap(doc.id, doc.data()!);
   }
-
   Map<String, dynamic> _toMap(JoiningLetterRequestEntity r) => {
         'name': r.name,
         'type': r.type.name,
@@ -87,6 +86,7 @@ class FirebaseJoiningLetterRepository implements IJoiningLetterRepository {
         'tenure': r.tenure,
         'isNewMember': r.isNewMember,
         if (r.generatedBy != null) 'generatedBy': r.generatedBy,
+        if (r.requesterId != null) 'requesterId': r.requesterId,
       };
 
   JoiningLetterRequestEntity _fromMap(String id, Map<String, dynamic> map) => JoiningLetterRequestEntity(
@@ -106,6 +106,7 @@ class FirebaseJoiningLetterRepository implements IJoiningLetterRepository {
         tenure: map['tenure'] as String? ?? '',
         isNewMember: map['isNewMember'] as bool? ?? false,
         generatedBy: map['generatedBy'] as String?,
+        requesterId: map['requesterId'] as String?,
       );
 
   T enumValueOr<T extends Enum>(List<T> values, String name, T fallback) {

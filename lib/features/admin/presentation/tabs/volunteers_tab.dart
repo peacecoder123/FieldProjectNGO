@@ -1092,6 +1092,24 @@ class _TaskItem extends ConsumerWidget {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 12),
+          if (task.geotag != null && task.geotag!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.location_on_rounded, size: 14, color: AppColors.red500),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'Geotag: ${task.geotag}',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.slate600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1110,7 +1128,7 @@ class _TaskItem extends ConsumerWidget {
                       color: AppColors.slate500,
                     ),
                   ),
-                  if (task.requiresUpload) ...[
+                  if (task.requiresUpload && task.status == TaskStatus.pending) ...[
                     const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -1140,7 +1158,7 @@ class _TaskItem extends ConsumerWidget {
                       TextButton.icon(
                         onPressed: () => _showImagePreview(context, task),
                         icon: const Icon(Icons.image_rounded, size: 16),
-                        label: const Text('View'),
+                        label: const Text('View Evidence'),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.blue600,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1176,6 +1194,18 @@ class _TaskItem extends ConsumerWidget {
                       tooltip: 'Reject',
                     ),
                   ],
+                )
+              else if (task.status == TaskStatus.approved && task.uploadedImage != null)
+                TextButton.icon(
+                  onPressed: () => _showImagePreview(context, task),
+                  icon: const Icon(Icons.image_rounded, size: 16),
+                  label: const Text('View Evidence'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.emerald600,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 ),
             ],
           ),

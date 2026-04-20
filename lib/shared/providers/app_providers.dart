@@ -198,4 +198,4 @@ final fcmTokenSyncProvider = Provider<void>((ref) {
 
 /// Global provider for the active dashboard tab ID.
 /// Initial value is 'overview'.
-final dashboardTabProvider = StateProvider<String>((ref) => 'overview');
+final dashboardTabProvider = StateProvider.autoDispose<String>((ref) => 'overview');

@@ -953,7 +953,22 @@ class _TaskItem extends ConsumerWidget {
                 style: const TextStyle(fontSize: 12, color: AppColors.slate500),
               ),
             ],
-            if (task.status == TaskStatus.submitted) ...[
+            if (task.geotag != null && task.geotag!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.location_on_rounded, size: 14, color: AppColors.red500),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Geotag: ${task.geotag}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.slate700),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (task.status == TaskStatus.submitted || (task.status == TaskStatus.approved && task.uploadedImage != null)) ...[
               const Divider(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -963,26 +978,27 @@ class _TaskItem extends ConsumerWidget {
                     icon: const Icon(Icons.visibility_rounded, size: 14),
                     label: const Text('View Evidence'),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.brand,
+                      foregroundColor: task.status == TaskStatus.approved ? AppColors.emerald600 : AppColors.brand,
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.check_circle_rounded, color: AppColors.emerald500, size: 24),
-                        onPressed: () => ref.read(taskProvider.notifier).updateStatus(task.id, TaskStatus.approved),
-                        tooltip: 'Approve',
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.cancel_rounded, color: AppColors.red500, size: 24),
-                        onPressed: () => ref.read(taskProvider.notifier).updateStatus(task.id, TaskStatus.rejected),
-                        tooltip: 'Reject',
-                      ),
-                    ],
-                  ),
+                  if (task.status == TaskStatus.submitted)
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.check_circle_rounded, color: AppColors.emerald500, size: 24),
+                          onPressed: () => ref.read(taskProvider.notifier).updateStatus(task.id, TaskStatus.approved),
+                          tooltip: 'Approve',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.cancel_rounded, color: AppColors.red500, size: 24),
+                          onPressed: () => ref.read(taskProvider.notifier).updateStatus(task.id, TaskStatus.rejected),
+                          tooltip: 'Reject',
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ],

@@ -231,10 +231,6 @@ class TaskEntity extends Equatable {
        uploadedImage, submittedAt, geotag, approvedBy, approvedAt];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GENERAL REQUEST  (joining-letter | certificate)
-// ─────────────────────────────────────────────────────────────────────────────
-
 class GeneralRequestEntity extends Equatable {
   const GeneralRequestEntity({
     required this.id,
@@ -246,6 +242,7 @@ class GeneralRequestEntity extends Equatable {
     required this.details,
     this.approvedBy,
     this.approvedAt,
+    this.requesterId,
   });
 
   final String             id;
@@ -257,6 +254,7 @@ class GeneralRequestEntity extends Equatable {
   final String             details;
   final String?            approvedBy;
   final String?            approvedAt;
+  final String?            requesterId;
 
   GeneralRequestEntity copyWith({
     String?             id,
@@ -268,6 +266,7 @@ class GeneralRequestEntity extends Equatable {
     String?             details,
     String?             approvedBy,
     String?             approvedAt,
+    String?             requesterId,
   }) =>
       GeneralRequestEntity(
         id:            id            ?? this.id,
@@ -279,12 +278,13 @@ class GeneralRequestEntity extends Equatable {
         details:       details       ?? this.details,
         approvedBy:    approvedBy    ?? this.approvedBy,
         approvedAt:    approvedAt    ?? this.approvedAt,
+        requesterId:   requesterId   ?? this.requesterId,
       );
 
   @override
   List<Object?> get props =>
       [id, requestType, requesterName, requesterType,
-       requestDate, status, details, approvedBy, approvedAt];
+       requestDate, status, details, approvedBy, approvedAt, requesterId];
 }
 
 
@@ -308,6 +308,7 @@ class MouRequestEntity extends Equatable {
     required this.bloodGroup,
     this.approvedBy,
     this.approvedAt,
+    this.requesterId,
   });
 
   final String        id;
@@ -323,6 +324,7 @@ class MouRequestEntity extends Equatable {
   final String        bloodGroup;
   final String?       approvedBy;
   final String?       approvedAt;
+  final String?       requesterId;
 
   MouRequestEntity copyWith({
     String?        id,
@@ -338,6 +340,7 @@ class MouRequestEntity extends Equatable {
     String?        bloodGroup,
     String?        approvedBy,
     String?        approvedAt,
+    String?        requesterId,
   }) =>
       MouRequestEntity(
         id:            id            ?? this.id,
@@ -353,12 +356,13 @@ class MouRequestEntity extends Equatable {
         bloodGroup:    bloodGroup    ?? this.bloodGroup,
         approvedBy:    approvedBy    ?? this.approvedBy,
         approvedAt:    approvedAt    ?? this.approvedAt,
+        requesterId:   requesterId   ?? this.requesterId,
       );
 
   @override
   List<Object?> get props =>
       [id, patientName, patientAge, disease, hospital, requestDate,
-       status, requesterName, phone, address, bloodGroup, approvedBy, approvedAt];
+       status, requesterName, phone, address, bloodGroup, approvedBy, approvedAt, requesterId];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -409,6 +413,7 @@ class JoiningLetterRequestEntity extends Equatable {
     required this.tenure,
     this.isNewMember = false,
     this.generatedBy,
+    this.requesterId,
   });
 
   final String            id;
@@ -419,6 +424,7 @@ class JoiningLetterRequestEntity extends Equatable {
   final String            tenure;
   final bool              isNewMember;
   final String?           generatedBy;
+  final String?           requesterId;
 
   JoiningLetterRequestEntity copyWith({
     String?            id,
@@ -429,6 +435,7 @@ class JoiningLetterRequestEntity extends Equatable {
     String?            tenure,
     bool?              isNewMember,
     String?            generatedBy,
+    String?            requesterId,
   }) =>
       JoiningLetterRequestEntity(
         id:          id          ?? this.id,
@@ -439,11 +446,12 @@ class JoiningLetterRequestEntity extends Equatable {
         tenure:      tenure      ?? this.tenure,
         isNewMember: isNewMember ?? this.isNewMember,
         generatedBy: generatedBy ?? this.generatedBy,
+        requesterId: requesterId ?? this.requesterId,
       );
 
   @override
   List<Object?> get props =>
-      [id, name, type, requestDate, status, tenure, isNewMember, generatedBy];
+      [id, name, type, requestDate, status, tenure, isNewMember, generatedBy, requesterId];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

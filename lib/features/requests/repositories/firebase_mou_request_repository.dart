@@ -58,7 +58,6 @@ class FirebaseMouRequestRepository implements IMouRequestRepository {
     final doc = await _db.collection(_collectionPath).doc(id).get();
     return _fromMap(doc.id, doc.data()!);
   }
-
   Map<String, dynamic> _toMap(MouRequestEntity r) => {
         'patientName': r.patientName,
         'patientAge': r.patientAge,
@@ -72,6 +71,7 @@ class FirebaseMouRequestRepository implements IMouRequestRepository {
         'bloodGroup': r.bloodGroup,
         if (r.approvedBy != null) 'approvedBy': r.approvedBy,
         if (r.approvedAt != null) 'approvedAt': r.approvedAt,
+        if (r.requesterId != null) 'requesterId': r.requesterId,
       };
 
   MouRequestEntity _fromMap(String id, Map<String, dynamic> map) => MouRequestEntity(
@@ -92,6 +92,7 @@ class FirebaseMouRequestRepository implements IMouRequestRepository {
         bloodGroup: map['bloodGroup'] as String? ?? '',
         approvedBy: map['approvedBy'] as String?,
         approvedAt: map['approvedAt'] as String?,
+        requesterId: map['requesterId'] as String?,
       );
 
   T enumValueOr<T extends Enum>(List<T> values, String name, T fallback) {

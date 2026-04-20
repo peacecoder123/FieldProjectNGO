@@ -35,7 +35,11 @@ class FirebaseTaskRepository implements ITaskRepository {
 
   @override
   Stream<List<TaskEntity>> watchAll() {
-    return _db.collection(_collectionPath).snapshots().map((snapshot) {
+    return _db
+        .collection(_collectionPath)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
       return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
     });
   }
@@ -56,6 +60,7 @@ class FirebaseTaskRepository implements ITaskRepository {
         .collection(_collectionPath)
         .where('assignedToId', isEqualTo: assigneeId)
         .where('assignedToType', isEqualTo: type.name)
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
