@@ -12,116 +12,177 @@ import 'package:url_launcher/url_launcher.dart' hide launch;
 import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
 import 'package:ngo_volunteer_management/services/download_service.dart';
 
-class DocumentationTab extends ConsumerWidget {
+class DocumentationTab extends ConsumerStatefulWidget {
   const DocumentationTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DocumentationTab> createState() => _DocumentationTabState();
+}
+
+class _DocumentationTabState extends ConsumerState<DocumentationTab> {
+  String _searchQuery = '';
+  bool _isActionInProgress = false;
+
+  @override
+  Widget build(BuildContext context) {
     final docsAsync = ref.watch(documentStorageProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentUser = ref.watch(currentUserProvider);
 
-    return docsAsync.when(
-      skipLoadingOnRefresh: true,
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      data: (docs) {
-        final grouped = <String, List<DocumentEntity>>{};
-        for (var d in docs) {
-          grouped.putIfAbsent(d.category, () => []).add(d);
-        }
+    return Stack(
+      children: [
+        docsAsync.when(
+          skipLoadingOnRefresh: true,
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (allDocs) {
+            // Apply search filter
+            final docs = allDocs.where((d) {
+              if (_searchQuery.isEmpty) return true;
+              return d.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                     d.category.toLowerCase().contains(_searchQuery.toLowerCase());
+            }).toList();
 
-        return RefreshIndicator(
-          onRefresh: () => ref.refresh(documentStorageProvider.future),
-          child: ListView(
-            shrinkWrap: true,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20),
-            children: [
-              SectionHeader(
-              
-              subtitle: 'Upload and access NGO policies, templates and reports',
-              actions: ElevatedButton.icon(
-                onPressed: () => _uploadNewDocument(context, ref, currentUser?.name ?? 'Admin'),
-                icon: const Icon(Icons.upload_file_rounded, size: 18),
-                label: const Text('Upload Document'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.brand,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
+            final grouped = <String, List<DocumentEntity>>{};
+            for (var d in docs) {
+              grouped.putIfAbsent(d.category, () => []).add(d);
+            }
 
-            if (docs.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 60),
-                  child: Column(
-                    children: [
-                      Icon(Icons.folder_open_rounded, size: 56, color: isDark ? AppColors.slate600 : AppColors.slate300),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No documents yet',
-                        style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontWeight: FontWeight.w600, fontSize: 16),
+            return RefreshIndicator(
+              onRefresh: () => ref.refresh(documentStorageProvider.future),
+              child: ListView(
+                shrinkWrap: true,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                children: [
+                  SectionHeader(
+                    title: 'Documentation Storage',
+                    subtitle: 'Upload and access NGO policies, templates and reports',
+                    actions: ElevatedButton.icon(
+                      onPressed: () => _uploadNewDocument(context, ref, currentUser?.name ?? 'Admin'),
+                      icon: const Icon(Icons.upload_file_rounded, size: 18),
+                      label: const Text('Upload Document'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.brand,
+                        foregroundColor: Colors.white,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Click "Upload Document" to add your first document',
-                        style: TextStyle(color: isDark ? AppColors.slate500 : AppColors.slate400, fontSize: 13),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              )
-            else
-              ...grouped.keys.map((category) {
-                final categoryDocs = grouped[category]!;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  const SizedBox(height: 20),
+
+                  // --- Search Bar ---
+                  Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.slate800 : AppColors.slate100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      onChanged: (val) => setState(() => _searchQuery = val),
+                      decoration: InputDecoration(
+                        hintText: 'Search documents by name or category...',
+                        hintStyle: TextStyle(color: isDark ? AppColors.slate500 : AppColors.slate400, fontSize: 13),
+                        prefixIcon: Icon(Icons.search_rounded, color: isDark ? AppColors.slate500 : AppColors.slate400, size: 20),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  if (docs.isEmpty && _searchQuery.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(
+                      padding: const EdgeInsets.symmetric(vertical: 60),
+                      child: Column(
                         children: [
+                          Icon(Icons.search_off_rounded, size: 48, color: isDark ? AppColors.slate600 : AppColors.slate300),
+                          const SizedBox(height: 16),
                           Text(
-                            category,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: isDark ? AppColors.slate200 : AppColors.slate700,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.slate700 : AppColors.slate100,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${categoryDocs.length}',
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
+                            'No documents match your search',
+                            style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontSize: 14),
                           ),
                         ],
                       ),
-                    ),
-                    ...categoryDocs.map((doc) => _DocumentCard(
-                      doc: doc,
-                      isDark: isDark,
-                      onReplace: () => _replaceDocument(context, ref, doc, currentUser?.name ?? 'Admin'),
-                      onDelete: () => _confirmDelete(context, ref, doc),
-                    )),
-                    const SizedBox(height: 8),
-                  ],
-                );
-              }),
-          ],
+                    )
+                  else if (docs.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 60),
+                        child: Column(
+                          children: [
+                            Icon(Icons.folder_open_rounded, size: 56, color: isDark ? AppColors.slate600 : AppColors.slate300),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No documents yet',
+                              style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500, fontWeight: FontWeight.w600, fontSize: 16),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Click "Upload Document" to add your first document',
+                              style: TextStyle(color: isDark ? AppColors.slate500 : AppColors.slate400, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ...grouped.keys.map((category) {
+                      final categoryDocs = grouped[category]!;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              children: [
+                                Text(
+                                  category,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: isDark ? AppColors.slate200 : AppColors.slate700,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppColors.slate700 : AppColors.slate100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${categoryDocs.length}',
+                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ...categoryDocs.map((doc) => _DocumentCard(
+                            doc: doc,
+                            isDark: isDark,
+                            onRename: () => _showRenameDialog(context, ref, doc),
+                            onReplace: () => _replaceDocument(context, ref, doc, currentUser?.name ?? 'Admin'),
+                            onDelete: () => _confirmDelete(context, ref, doc),
+                          )),
+                          const SizedBox(height: 8),
+                        ],
+                      );
+                    }),
+            ],
+          ),
+        );
+      },
+    ),
+    if (_isActionInProgress)
+      Container(
+        color: Colors.black26,
+        child: const Center(
+          child: CircularProgressIndicator(color: AppColors.brand),
         ),
-      );
-    },
-  );
+      ),
+  ],
+);
 }
 
   Future<void> _uploadNewDocument(BuildContext context, WidgetRef ref, String uploadedBy) async {
@@ -182,15 +243,76 @@ class DocumentationTab extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await ref.read(documentStorageRepoProvider).deleteDocument(doc);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Document deleted'), backgroundColor: AppColors.red600),
-                );
+              setState(() => _isActionInProgress = true);
+              try {
+                await ref.read(documentStorageRepoProvider).deleteDocument(doc);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Document deleted'), backgroundColor: AppColors.red600),
+                  );
+                }
+              } finally {
+                if (mounted) setState(() => _isActionInProgress = false);
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.red600, foregroundColor: Colors.white),
             child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, WidgetRef ref, DocumentEntity doc) {
+    final ctrl = TextEditingController(text: doc.title);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rename Document'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter a new name for this document:', style: TextStyle(fontSize: 13, color: AppColors.slate500)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Document Title',
+                filled: true,
+                fillColor: Theme.of(context).brightness == Brightness.dark ? AppColors.slate800 : AppColors.slate50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              final newTitle = ctrl.text.trim();
+              if (newTitle.isEmpty || newTitle == doc.title) {
+                Navigator.pop(ctx);
+                return;
+              }
+              Navigator.pop(ctx);
+              setState(() => _isActionInProgress = true);
+              try {
+                await ref.read(documentStorageRepoProvider).updateTitle(doc.id, newTitle);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('✅ Renamed to "$newTitle"'), backgroundColor: AppColors.brand),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Rename failed: $e'), backgroundColor: AppColors.red500));
+                }
+              } finally {
+                if (mounted) setState(() => _isActionInProgress = false);
+              }
+            },
+            child: const Text('Rename'),
           ),
         ],
       ),
@@ -202,12 +324,14 @@ class _DocumentCard extends StatelessWidget {
   const _DocumentCard({
     required this.doc,
     required this.isDark,
+    required this.onRename,
     required this.onReplace,
     required this.onDelete,
   });
 
   final DocumentEntity doc;
   final bool isDark;
+  final VoidCallback onRename;
   final VoidCallback onReplace;
   final VoidCallback onDelete;
 
@@ -283,29 +407,68 @@ class _DocumentCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Download
-            if (doc.downloadUrl != null)
-              IconButton(
-                icon: const Icon(Icons.download_for_offline_rounded, color: AppColors.blue500),
-                tooltip: 'Download',
-                onPressed: () async {
-                  final uri = Uri.parse(doc.downloadUrl!);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-              ),
-            // Replace
-            IconButton(
-              icon: Icon(Icons.swap_horiz_rounded, color: isDark ? AppColors.slate400 : AppColors.slate500),
-              tooltip: 'Replace',
-              onPressed: onReplace,
-            ),
-            // Delete
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.red500),
-              tooltip: 'Delete',
-              onPressed: onDelete,
+            // Action Buttons
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Download (Primary Action)
+                if (doc.downloadUrl != null)
+                  IconButton(
+                    icon: const Icon(Icons.download_for_offline_rounded, color: AppColors.blue500),
+                    tooltip: 'Download',
+                    onPressed: () async {
+                      final uri = Uri.parse(doc.downloadUrl!);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                  ),
+                
+                // More Actions Menu
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert_rounded, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'rename': onRename(); break;
+                      case 'replace': onReplace(); break;
+                      case 'delete': onDelete(); break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'rename',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined, size: 20),
+                          SizedBox(width: 12),
+                          Text('Rename'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'replace',
+                      child: Row(
+                        children: [
+                          Icon(Icons.swap_horiz_rounded, size: 20),
+                          SizedBox(width: 12),
+                          Text('Replace'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.red500),
+                          const SizedBox(width: 12),
+                          const Text('Delete', style: TextStyle(color: AppColors.red500)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

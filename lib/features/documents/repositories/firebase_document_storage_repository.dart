@@ -170,6 +170,12 @@ class FirebaseDocumentStorageRepository {
     });
   }
 
+  Future<void> updateTitle(String docId, String newTitle) async {
+    await _db.collection(_collection).doc(docId).update({
+      'title': newTitle,
+    });
+  }
+
   Future<void> deleteDocument(DocumentEntity doc) async {
     try {
       final snap = await _db.collection(_collection).doc(doc.id).get();

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
+import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
@@ -16,6 +17,9 @@ class AdminMeetingsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final meetingsAsync = ref.watch(meetingProvider);
+    // Ensure users list is initialized for the MoM assignment dropdown
+    ref.watch(usersManagementProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ListView(
@@ -100,12 +104,6 @@ class AdminMeetingsTab extends ConsumerWidget {
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
 
-    // Fetch real member and volunteer names
-    final memberNames = ref.read(memberProvider).value?.map((m) => m.name).toList() ?? [];
-    final volunteerNames = ref.read(volunteerProvider).value?.map((v) => v.name).toList() ?? [];
-    final allPeople = [...memberNames, ...volunteerNames];
-    final selectedAttendees = Set<String>.from(allPeople); // all checked by default
-
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -185,59 +183,6 @@ class AdminMeetingsTab extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    // Attendees section
-                    Text('Attendees (${selectedAttendees.length}/${allPeople.length})',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? AppColors.slate200 : AppColors.slate800),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        TextButton.icon(
-                          onPressed: () => setModalState(() => selectedAttendees.addAll(allPeople)),
-                          icon: const Icon(Icons.select_all_rounded, size: 16),
-                          label: const Text('All', style: TextStyle(fontSize: 12)),
-                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton.icon(
-                          onPressed: () => setModalState(() => selectedAttendees.clear()),
-                          icon: const Icon(Icons.deselect_rounded, size: 16),
-                          label: const Text('None', style: TextStyle(fontSize: 12)),
-                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                        ),
-                      ],
-                    ),
-                    if (memberNames.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text('Members', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.blue600)),
-                      ...memberNames.map((name) => CheckboxListTile(
-                        title: Text(name, style: const TextStyle(fontSize: 13)),
-                        value: selectedAttendees.contains(name),
-                        onChanged: (val) => setModalState(() {
-                          if (val == true) selectedAttendees.add(name); else selectedAttendees.remove(name);
-                        }),
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        visualDensity: VisualDensity.compact,
-                      )),
-                    ],
-                    if (volunteerNames.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text('Volunteers', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.emerald600)),
-                      ...volunteerNames.map((name) => CheckboxListTile(
-                        title: Text(name, style: const TextStyle(fontSize: 13)),
-                        value: selectedAttendees.contains(name),
-                        onChanged: (val) => setModalState(() {
-                          if (val == true) selectedAttendees.add(name); else selectedAttendees.remove(name);
-                        }),
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        visualDensity: VisualDensity.compact,
-                      )),
-                    ],
                   ],
                 ),
               ),
@@ -255,19 +200,13 @@ class AdminMeetingsTab extends ConsumerWidget {
                     );
                     return;
                   }
-                  if (selectedAttendees.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please select at least one attendee')),
-                    );
-                    return;
-                  }
 
                   final meeting = MeetingEntity(
                     id: '',
                     title: titleCtrl.text.trim(),
                     date: AppFormatters.toIso(selectedDate!),
                     time: selectedTime?.format(ctx) ?? '10:00 AM',
-                    attendees: selectedAttendees.toList(),
+                    attendees: const [],
                     status: MeetingStatus.upcoming,
                     link: linkCtrl.text.trim(),
                   );
@@ -427,7 +366,7 @@ class _MeetingCard extends ConsumerWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               )
-            else if (meeting.summaryAssignedTo == null || meeting.summaryAssignedTo == 'Admin')
+            else if (_canAddSummary(ref)) 
               ElevatedButton.icon(
                 onPressed: () => _showAddSummaryModal(context, ref, meeting),
                 icon: const Icon(Icons.edit_note_rounded, size: 18),
@@ -446,6 +385,19 @@ class _MeetingCard extends ConsumerWidget {
     );
   }
 
+  /// Returns true if the current user is allowed to add the MoM summary.
+  /// Only the specifically assigned person (by name) or a superAdmin can do it.
+  bool _canAddSummary(WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+    if (currentUser == null) return false;
+    // Super Admin can always add
+    if (currentUser.role == UserRole.superAdmin) return true;
+    // If no one is assigned yet, no one except superAdmin can add
+    if (meeting.summaryAssignedTo == null) return false;
+    // Only the assigned person (matched by name) can add
+    return currentUser.name == meeting.summaryAssignedTo;
+  }
+
   Future<void> _openLink(String url) async {
     final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
     if (await canLaunchUrl(uri)) {
@@ -455,7 +407,27 @@ class _MeetingCard extends ConsumerWidget {
 
   void _showMarkCompletedDialog(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    String assignTo = 'Admin';
+
+    // Build a list of all real user names from the database (whitelisted users)
+    // Filtered to only include Admins and Members (volunteers excluded)
+    final allUsers = (ref.read(usersManagementProvider).value ?? [])
+        .where((u) => u.role != UserRole.volunteer)
+        .toList();
+    final currentUser = ref.read(currentUserProvider);
+    
+    // Extract names and combine with current user
+    final allNames = <String>[
+      if (currentUser != null) currentUser.name,
+      ...allUsers.map((u) => u.name),
+    ];
+    
+    // Remove duplicates while preserving order and filtering out empty names
+    final uniqueNames = allNames
+        .where((name) => name.trim().isNotEmpty)
+        .toSet()
+        .toList();
+
+    String? assignTo = uniqueNames.isNotEmpty ? uniqueNames.first : (currentUser?.name);
 
     showDialog(
       context: context,
@@ -473,17 +445,51 @@ class _MeetingCard extends ConsumerWidget {
                 style: TextStyle(fontSize: 14, color: isDark ? AppColors.slate300 : AppColors.slate600),
               ),
               const SizedBox(height: 20),
-              Text('Assign summary writing to:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? AppColors.slate200 : AppColors.slate800)),
+              Text('Assign MoM writing to:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: isDark ? AppColors.slate200 : AppColors.slate800)),
               const SizedBox(height: 12),
-              ...['Admin', 'Member'].map((role) => RadioListTile<String>(
-                title: Text(role, style: TextStyle(color: isDark ? AppColors.slate200 : AppColors.slate800)),
-                value: role,
-                groupValue: assignTo,
-                activeColor: AppColors.blue600,
-                onChanged: (val) => setDialogState(() => assignTo = val!),
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-              )),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: isDark ? AppColors.slate600 : AppColors.slate300),
+                  color: isDark ? AppColors.slate700.withValues(alpha: 0.4) : AppColors.slate50,
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: assignTo,
+                    isExpanded: true,
+                    dropdownColor: isDark ? AppColors.slate800 : Colors.white,
+                    style: TextStyle(fontSize: 14, color: isDark ? AppColors.white : AppColors.slate900),
+                    icon: Icon(Icons.arrow_drop_down_rounded, color: isDark ? AppColors.slate400 : AppColors.slate500),
+                    items: uniqueNames.map((name) => DropdownMenuItem(
+                      value: name,
+                      child: Text(name),
+                    )).toList(),
+                    onChanged: (val) => setDialogState(() => assignTo = val),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.blue600.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.blue600.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, size: 14, color: AppColors.blue600),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Only the assigned person and Super Admin will be able to add the meeting summary.',
+                        style: TextStyle(fontSize: 11, color: isDark ? AppColors.blue400 : AppColors.blue700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
           actions: [
@@ -493,7 +499,8 @@ class _MeetingCard extends ConsumerWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                ref.read(meetingProvider.notifier).markCompleted(meeting.id, summaryAssignedTo: assignTo);
+                if (assignTo == null) return;
+                ref.read(meetingProvider.notifier).markCompleted(meeting.id, summaryAssignedTo: assignTo!);
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

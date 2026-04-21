@@ -8,15 +8,36 @@ import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
-import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
 import 'package:printing/printing.dart';
 
-class DocumentApprovalsList extends ConsumerWidget {
+/// Strips any old-format suffix and returns a clean JF/CERT/YYYY/DD number.
+String _cleanCertNo(String? raw) {
+  if (raw == null || raw.isEmpty) {
+    final now = DateTime.now();
+    return 'JF/CERT/${now.year}/${now.day.toString().padLeft(2, '0')}';
+  }
+  final clean = RegExp(r'^JF/CERT/\d{4}/\d{1,2}$');
+  if (clean.hasMatch(raw)) return raw;
+  // If it doesn't match the new standard exactly, we still return it if it looks like a JF/CERT
+  if (raw.startsWith('JF/CERT/')) return raw;
+  
+  final now = DateTime.now();
+  return 'JF/CERT/${now.year}/${now.day.toString().padLeft(2, '0')}';
+}
+
+class DocumentApprovalsList extends ConsumerStatefulWidget {
   const DocumentApprovalsList({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DocumentApprovalsList> createState() => _DocumentApprovalsListState();
+}
+
+class _DocumentApprovalsListState extends ConsumerState<DocumentApprovalsList> {
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
     final requestsAsync = ref.watch(documentRequestProvider);
     final currentUser = ref.watch(currentUserProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -25,56 +46,107 @@ class DocumentApprovalsList extends ConsumerWidget {
       skipLoadingOnRefresh: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
-      data: (requests) {
-        final pending = requests.where((r) => r.status == DocumentRequestStatus.pending).toList();
-        final past = requests.where((r) => r.status != DocumentRequestStatus.pending).toList();
+      data: (allRequests) {
+        // Filter by search query
+        final filteredRequests = allRequests.where((r) {
+          if (_searchQuery.isEmpty) return true;
+          final query = _searchQuery.toLowerCase();
+          return r.userName.toLowerCase().contains(query) || 
+                 (r.certificateNo?.toLowerCase().contains(query) ?? false) ||
+                 r.documentType.name.toLowerCase().contains(query);
+        }).toList();
 
-        if (requests.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 48),
-              child: Column(
-                children: [
-                  Icon(Icons.workspace_premium_outlined, size: 48, color: isDark ? AppColors.slate700 : AppColors.slate300),
-                  const SizedBox(height: 16),
-                  Text('No certificate requests yet', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500)),
-                ],
-              ),
-            ),
-          );
-        }
+        final pending = filteredRequests.where((r) => r.status == DocumentRequestStatus.pending).toList();
+        final past = filteredRequests.where((r) => r.status != DocumentRequestStatus.pending).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (pending.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16, left: 4),
-                child: Row(
-                  children: [
-                    const Text('PENDING APPROVALS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 1, color: AppColors.brand)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.brand.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text('${pending.length}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brand)),
-                    ),
-                  ],
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: TextField(
+                onChanged: (val) => setState(() => _searchQuery = val),
+                style: TextStyle(fontSize: 14, color: isDark ? AppColors.white : AppColors.slate900),
+                decoration: InputDecoration(
+                  hintText: 'Search by name, cert no...',
+                  hintStyle: TextStyle(color: isDark ? AppColors.slate500 : AppColors.slate400),
+                  prefixIcon: Icon(Icons.search_rounded, size: 20, color: isDark ? AppColors.slate500 : AppColors.slate400),
+                  filled: true,
+                  fillColor: isDark ? AppColors.slate800 : AppColors.slate50,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: isDark ? AppColors.slate700 : AppColors.slate200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: isDark ? AppColors.slate700 : AppColors.slate200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
+                  ),
                 ),
               ),
-              ...pending.map((req) => _RequestCard(req: req, isDark: isDark, currentUser: currentUser)),
-              const SizedBox(height: 24),
-            ],
-            
-            if (past.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16, left: 4, top: 8),
-                child: Text('HISTORY', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1, color: isDark ? AppColors.slate500 : AppColors.slate400)),
-              ),
-              ...past.map((req) => _RequestCard(req: req, isDark: isDark, currentUser: currentUser)),
+            ),
+
+            if (allRequests.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Column(
+                    children: [
+                      Icon(Icons.workspace_premium_outlined, size: 48, color: isDark ? AppColors.slate700 : AppColors.slate300),
+                      const SizedBox(height: 16),
+                      Text('No certificate requests yet', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                    ],
+                  ),
+                ),
+              )
+            else if (filteredRequests.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Column(
+                    children: [
+                      Icon(Icons.search_off_rounded, size: 48, color: isDark ? AppColors.slate700 : AppColors.slate300),
+                      const SizedBox(height: 16),
+                      Text('No results for "$_searchQuery"', style: TextStyle(color: isDark ? AppColors.slate400 : AppColors.slate500)),
+                    ],
+                  ),
+                ),
+              )
+            else ...[
+              if (pending.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16, left: 4),
+                  child: Row(
+                    children: [
+                      const Text('PENDING APPROVALS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 1, color: AppColors.brand)),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.brand.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text('${pending.length}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brand)),
+                      ),
+                    ],
+                  ),
+                ),
+                ...pending.map((req) => _RequestCard(req: req, isDark: isDark, currentUser: currentUser)),
+                const SizedBox(height: 24),
+              ],
+              
+              if (past.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16, left: 4, top: 8),
+                  child: Text('HISTORY', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1, color: isDark ? AppColors.slate500 : AppColors.slate400)),
+                ),
+                ...past.map((req) => _RequestCard(req: req, isDark: isDark, currentUser: currentUser)),
+              ],
             ],
           ],
         );
@@ -133,7 +205,7 @@ class _RequestCard extends ConsumerWidget {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(isDark ? 0.2 : 0.1),
+                              color: statusColor.withValues(alpha: isDark ? 0.2 : 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -194,7 +266,7 @@ class _RequestCard extends ConsumerWidget {
                                     barrierDismissible: false,
                                     builder: (_) => _CertificateDetailsModal(
                                       initialName: req.userName,
-                                      initialCertNo: req.certificateNo ?? 'JF/CERT/${DateTime.now().year}/${req.id.substring(0, 6).toUpperCase()}',
+                                      initialCertNo: _cleanCertNo(req.certificateNo),
                                       initialDate: DateTime.now(),
                                       userId: req.userId,
                                       reqId: req.id,
@@ -230,7 +302,7 @@ class _RequestCard extends ConsumerWidget {
                                   Text('CERTIFICATE NO.', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1, color: isDark ? AppColors.slate500 : AppColors.slate400)),
                                   const SizedBox(height: 4),
                                   Text(
-                                    req.certificateNo ?? 'PENDING',
+                                    req.certificateNo != null ? _cleanCertNo(req.certificateNo) : 'PENDING',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontFamily: 'Courier',
@@ -250,7 +322,7 @@ class _RequestCard extends ConsumerWidget {
                                   context: context,
                                   builder: (_) => _CertificateDetailsModal(
                                     initialName: req.userName,
-                                    initialCertNo: req.certificateNo ?? '',
+                                    initialCertNo: _cleanCertNo(req.certificateNo),
                                     initialDate: req.approvedAt ?? DateTime.now(),
                                     userId: req.userId,
                                   ),
@@ -290,9 +362,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(isDark ? 0.2 : 0.1),
+        color: color.withValues(alpha: isDark ? 0.2 : 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(isDark ? 0.4 : 0.2)),
+        border: Border.all(color: color.withValues(alpha: isDark ? 0.4 : 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

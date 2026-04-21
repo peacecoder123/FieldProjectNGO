@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
+import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_badge.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_modal.dart';
@@ -157,8 +158,7 @@ class _MeetingItem extends ConsumerWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             )
-          else if (isPast && (meeting.summaryAssignedTo == null || meeting.summaryAssignedTo == 'Member'))
-            // Member can only add summary if assigned to Member (or unassigned)
+          else if (isPast && _canAddSummary(ref))
             ElevatedButton.icon(
               onPressed: () => _showAddSummaryModal(context, ref),
               icon: const Icon(Icons.edit_note_rounded, size: 18),
@@ -174,6 +174,19 @@ class _MeetingItem extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Returns true if the current user is allowed to add the MoM summary.
+  /// Only the specifically assigned person (by name) or a superAdmin can do it.
+  bool _canAddSummary(WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+    if (currentUser == null) return false;
+    // Super Admin can always add
+    if (currentUser.role == UserRole.superAdmin) return true;
+    // If no one is assigned yet, no one except superAdmin can add
+    if (meeting.summaryAssignedTo == null) return false;
+    // Only the assigned person (matched by name) can add
+    return currentUser.name == meeting.summaryAssignedTo;
   }
 
   void _showSummaryDialog(BuildContext context, MeetingEntity meeting) {
