@@ -15,7 +15,6 @@ import '../tabs/joining_letters_tab.dart';
 import '../tabs/requests_tab.dart';
 import '../tabs/users_management_tab.dart';
 import '../screens/profile_screen.dart';
-import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key, required this.isSuperAdmin});
@@ -48,18 +47,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final bool isActuallySuperAdmin =
         widget.isSuperAdmin || currentUser?.role == UserRole.superAdmin;
 
-    final joining  = ref.watch(joiningLetterProvider).value ?? [];
-    final requests = ref.watch(generalRequestProvider).value ?? [];
-    final mou      = ref.watch(mouRequestProvider).value ?? [];
-    final docs     = ref.watch(documentRequestProvider).value ?? [];
-    
-    final dismissed = ref.watch(dismissedNotificationsProvider);
-
-    final joiningPending = joining.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id)).length;
-    final requestsPending = requests.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id)).length
-                          + mou.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id)).length
-                          + docs.where((r) => r.status == DocumentRequestStatus.pending && !dismissed.contains(r.id)).length;
-                          
+    // ANTI-GLITCH FIX: Use dedicated badge providers instead of watching
+    // 4 heavy stream providers. The dashboard now only rebuilds when the
+    // actual badge COUNT changes — not every time any stream emits data.
+    final joiningPending = ref.watch(adminJoiningBadgeProvider);
+    final requestsPending = ref.watch(adminRequestsBadgeProvider);
     final int totalNotifications = joiningPending + requestsPending;
 
     final List<NavItem> navItems = [
@@ -86,4 +78,4 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       body:          _buildTab(activeTab, isActuallySuperAdmin),
     );
   }
-}
+}

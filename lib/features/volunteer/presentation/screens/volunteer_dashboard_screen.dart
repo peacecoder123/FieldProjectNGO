@@ -41,13 +41,10 @@ class _VolunteerDashboardScreenState extends ConsumerState<VolunteerDashboardScr
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
-    final tasksAsync = ref.watch(taskProvider);
     
-    // Safely calculate pending tasks ONLY for the currently logged-in volunteer
-    final pendingTasks = tasksAsync.value?.where((t) => 
-      t.assignedToId == currentUser?.id && 
-      t.status.name == 'pending'
-    ).length ?? 0;
+    // ANTI-GLITCH FIX: Use a dedicated count provider instead of watching
+    // the full task stream. Only rebuilds when the pending count changes.
+    final pendingTasks = ref.watch(volunteerPendingTaskCountProvider(currentUser?.id));
 
     return AppShell(
       navItems:      _navItems,

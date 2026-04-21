@@ -739,3 +739,33 @@ final hospitalProvider =
 final usersManagementProvider = StateNotifierProvider.autoDispose<UserManagementNotifier, AsyncValue<List<UserEntity>>>(
   (ref) => UserManagementNotifier(ref.watch(userRepositoryProvider)),
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BADGE COUNT PROVIDERS — Isolate badge computation to prevent full rebuilds
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Admin badge counts — only rebuilds when the actual count changes, NOT when
+/// the underlying list data changes. This prevents the entire admin dashboard
+/// from rebuilding every time any user submits/modifies a request.
+final adminJoiningBadgeProvider = Provider.autoDispose<int>((ref) {
+  final joining = ref.watch(joiningLetterProvider).value ?? [];
+  final dismissed = ref.watch(dismissedNotificationsProvider);
+  return joining.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id)).length;
+});
+
+final adminRequestsBadgeProvider = Provider.autoDispose<int>((ref) {
+  final requests = ref.watch(generalRequestProvider).value ?? [];
+  final mou = ref.watch(mouRequestProvider).value ?? [];
+  final docs = ref.watch(documentRequestProvider).value ?? [];
+  final dismissed = ref.watch(dismissedNotificationsProvider);
+  return requests.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id)).length
+       + mou.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id)).length
+       + docs.where((r) => r.status == DocumentRequestStatus.pending && !dismissed.contains(r.id)).length;
+});
+
+/// Volunteer pending task count — only rebuilds when the count changes.
+final volunteerPendingTaskCountProvider = Provider.autoDispose.family<int, String?>((ref, userId) {
+  if (userId == null) return 0;
+  final tasksAsync = ref.watch(taskProvider);
+  return tasksAsync.value?.where((t) => t.assignedToId == userId && t.status == TaskStatus.pending).length ?? 0;
+});
