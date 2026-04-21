@@ -29,30 +29,35 @@ class FirebaseDocumentStorageRepository {
     return snap.docs.map((d) => _fromDoc(d)).toList();
   }
 
-  /// Pick a file and upload it to Firebase Storage + save metadata to Firestore.
-  /// Returns the created [DocumentEntity] on success.
-  Future<DocumentEntity?> pickAndUpload({required String uploadedBy}) async {
+  /// Pick a file and return the raw file info without uploading.
+  /// Returns null if the user cancelled.
+  Future<PlatformFile?> pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'doc', 'docx', 'xlsx', 'xls', 'png', 'jpg'],
     );
-
     if (result == null || result.files.isEmpty) return null;
-    final file = result.files.first;
+    return result.files.first;
+  }
 
+  /// Upload an already-picked file with an explicitly provided [customTitle].
+  Future<DocumentEntity> uploadFile({
+    required PlatformFile file,
+    required String customTitle,
+    required String uploadedBy,
+  }) async {
     final ext = file.extension?.toLowerCase() ?? 'pdf';
+    final safeTitle = customTitle.trim().isEmpty ? file.name : customTitle.trim();
     final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
     final storageRef = _storage.ref().child('documents/$fileName');
 
     UploadTask uploadTask;
     if (kIsWeb) {
-      // Web: use bytes
       uploadTask = storageRef.putData(
         file.bytes!,
         SettableMetadata(contentType: _mimeType(ext)),
       );
     } else {
-      // Mobile: use File
       uploadTask = storageRef.putFile(
         File(file.path!),
         SettableMetadata(contentType: _mimeType(ext)),
@@ -62,13 +67,11 @@ class FirebaseDocumentStorageRepository {
     final snap = await uploadTask;
     final downloadUrl = await snap.ref.getDownloadURL();
     final sizeLabel = _formatBytes(file.size);
-
-    // Determine category from extension
     final category = _categoryFromExt(ext);
     final fileType = _fileTypeFromExt(ext);
 
     final docData = {
-      'title': file.name,
+      'title': safeTitle,
       'category': category,
       'fileType': fileType.name,
       'size': sizeLabel,
@@ -82,13 +85,20 @@ class FirebaseDocumentStorageRepository {
 
     return DocumentEntity(
       id: docRef.id,
-      title: file.name,
+      title: safeTitle,
       category: category,
       fileType: fileType,
       size: sizeLabel,
       uploadDate: AppFormatters.today(),
       downloadUrl: downloadUrl,
     );
+  }
+
+  /// Legacy combined pick+upload (kept for replace flow).
+  Future<DocumentEntity?> pickAndUpload({required String uploadedBy}) async {
+    final file = await pickFile();
+    if (file == null) return null;
+    return uploadFile(file: file, customTitle: file.name, uploadedBy: uploadedBy);
   }
 
   /// Replace an existing document

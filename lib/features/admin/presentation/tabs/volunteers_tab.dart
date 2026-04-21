@@ -55,7 +55,7 @@ class _VolunteersTabState extends ConsumerState<VolunteersTab> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(20),
             children: [
-            SectionHeader(
+            const SectionHeader(
               title: 'Volunteers',
               subtitle: 'Manage NGO volunteers and their tasks',
             ),
@@ -368,8 +368,8 @@ class _AddVolunteerForm extends ConsumerStatefulWidget {
 }
 
 class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
-
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   String _name = '';
   String _email = '';
@@ -449,7 +449,7 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
                     labelText: 'Assigned Admin',
                     prefixIcon: Icon(Icons.shield_rounded),
                   ),
-                  value: _assignedAdmin.isEmpty ? null : _assignedAdmin,
+                  initialValue: _assignedAdmin.isEmpty ? null : _assignedAdmin,
                   hint: const Text('Select Admin'),
                   items: admins
                       .map((u) => DropdownMenuItem(value: u.name, child: Text(u.name)))
@@ -490,7 +490,7 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
                   labelText: 'Assign Mentor (Member)',
                   prefixIcon: Icon(Icons.supervisor_account_rounded),
                 ),
-                value: _mentorId,
+                initialValue: _mentorId,
                 items: [
                   const DropdownMenuItem(value: null, child: Text('No Mentor')),
                   ...members.map((m) => DropdownMenuItem(
@@ -515,13 +515,18 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
             const SizedBox(height: 24),
 
             ElevatedButton(
-              onPressed: _handleSubmit,
+              onPressed: _isLoading ? null : _handleSubmit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.blue600,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: const Text('Add Volunteer'),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 18, width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Add Volunteer'),
             ),
           ],
         ),
@@ -529,31 +534,37 @@ class _AddVolunteerFormState extends ConsumerState<_AddVolunteerForm> {
     );
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
-      widget.onSubmit(
-        VolunteerEntity(
-          id: '',
-          name: _name.trim(),
-          email: _email.trim(),
-          phone: _phone.trim(),
-          address: _address.trim(),
-          joinDate: AppFormatters.today(),
-          status: PersonStatus.active,
-          assignedAdmin: _assignedAdmin.trim(),
-          taskIds: const [],
-          tenure: _tenure,
-          skills: _skills
-              .split(',')
-              .map((s) => s.trim())
-              .where((s) => s.isNotEmpty)
-              .toList(),
-          avatar: '',
-          mentorId: _mentorId,
-          mentorName: _mentorName,
-        ),
-      );
+      setState(() => _isLoading = true);
+      try {
+        await Future.microtask(() => widget.onSubmit(
+          VolunteerEntity(
+            id: '',
+            name: _name.trim(),
+            email: _email.trim(),
+            phone: _phone.trim(),
+            address: _address.trim(),
+            joinDate: AppFormatters.today(),
+            status: PersonStatus.active,
+            assignedAdmin: _assignedAdmin.trim(),
+            taskIds: const [],
+            tenure: _tenure,
+            skills: _skills
+                .split(',')
+                .map((s) => s.trim())
+                .where((s) => s.isNotEmpty)
+                .toList(),
+            avatar: '',
+            mentorId: _mentorId,
+            mentorName: _mentorName,
+          ),
+        ));
+        if (mounted) Navigator.of(context).pop();
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 }
@@ -848,14 +859,24 @@ class _InfoRow extends StatelessWidget {
 // TASK ITEM
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _TaskItem extends ConsumerWidget {
+class _TaskItem extends ConsumerStatefulWidget {
   const _TaskItem({required this.task, required this.volunteer});
 
   final TaskEntity task;
   final VolunteerEntity volunteer;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TaskItem> createState() => _TaskItemState();
+}
+
+class _TaskItemState extends ConsumerState<_TaskItem> {
+  bool _approving = false;
+  bool _rejecting = false;
+
+  TaskEntity get task => widget.task;
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -953,33 +974,53 @@ class _TaskItem extends ConsumerWidget {
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                       ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.check_circle_rounded,
-                        color: AppColors.emerald500,
-                        size: 24,
-                      ),
-                      onPressed: () {
-                        final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
-                        ref.read(taskProvider.notifier).updateStatus(
-                          task.id, 
-                          TaskStatus.approved,
-                          approvedBy: adminName,
-                        );
-                      },
-                      tooltip: 'Approve',
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.cancel_rounded,
-                        color: AppColors.red500,
-                        size: 24,
-                      ),
-                      onPressed: () => ref
-                          .read(taskProvider.notifier)
-                          .updateStatus(task.id, TaskStatus.rejected),
-                      tooltip: 'Reject',
-                    ),
+                    // Approve button
+                    _approving
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: SizedBox(
+                              width: 20, height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.emerald500),
+                            ),
+                          )
+                        : IconButton(
+                            icon: const Icon(Icons.check_circle_rounded, color: AppColors.emerald500, size: 24),
+                            onPressed: _rejecting ? null : () async {
+                              final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
+                              setState(() => _approving = true);
+                              try {
+                                await ref.read(taskProvider.notifier).updateStatus(
+                                  task.id,
+                                  TaskStatus.approved,
+                                  approvedBy: adminName,
+                                );
+                              } finally {
+                                if (mounted) setState(() => _approving = false);
+                              }
+                            },
+                            tooltip: 'Approve',
+                          ),
+                    // Reject button
+                    _rejecting
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: SizedBox(
+                              width: 20, height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.red500),
+                            ),
+                          )
+                        : IconButton(
+                            icon: const Icon(Icons.cancel_rounded, color: AppColors.red500, size: 24),
+                            onPressed: _approving ? null : () async {
+                              setState(() => _rejecting = true);
+                              try {
+                                await ref.read(taskProvider.notifier).updateStatus(task.id, TaskStatus.rejected);
+                              } finally {
+                                if (mounted) setState(() => _rejecting = false);
+                              }
+                            },
+                            tooltip: 'Reject',
+                          ),
                   ],
                 ),
             ],
@@ -1126,6 +1167,7 @@ class _AddTaskForm extends StatefulWidget {
 
 class _AddTaskFormState extends State<_AddTaskForm> {
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   String _title = '';
   String _description = '';
@@ -1180,13 +1222,19 @@ class _AddTaskFormState extends State<_AddTaskForm> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _handleSubmit,
+              onPressed: _isLoading ? null : _handleSubmit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.blue600,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: const Text('Assign Task'),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Assign Task'),
             ),
           ],
         ),
@@ -1206,24 +1254,29 @@ class _AddTaskFormState extends State<_AddTaskForm> {
     }
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
-      widget.onSubmit(
-        TaskEntity(
-          id: '',
-          title: _title.trim(),
-          description: _description.trim(),
-          deadline: AppFormatters.toIso(_deadline),
-          assignedToId: widget.volunteer.id,
-          assignedToName: widget.volunteer.name,
-          assignedToEmail: widget.volunteer.email,
-          assignedToType: AssigneeType.volunteer,
-          status: TaskStatus.pending,
-          requiresUpload: _requiresUpload,
-          createdAt: AppFormatters.today(),
-        ),
-      );
+      setState(() => _isLoading = true);
+      try {
+        await Future.microtask(() => widget.onSubmit(
+          TaskEntity(
+            id: '',
+            title: _title.trim(),
+            description: _description.trim(),
+            deadline: AppFormatters.toIso(_deadline),
+            assignedToId: widget.volunteer.id,
+            assignedToName: widget.volunteer.name,
+            assignedToEmail: widget.volunteer.email,
+            assignedToType: AssigneeType.volunteer,
+            status: TaskStatus.pending,
+            requiresUpload: _requiresUpload,
+            createdAt: AppFormatters.today(),
+          ),
+        ));
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 }
