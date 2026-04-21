@@ -309,6 +309,7 @@ class MouRequestEntity extends Equatable {
     this.approvedBy,
     this.approvedAt,
     this.requesterId,
+    this.certificateUrl,
   });
 
   final String        id;
@@ -325,6 +326,7 @@ class MouRequestEntity extends Equatable {
   final String?       approvedBy;
   final String?       approvedAt;
   final String?       requesterId;
+  final String?       certificateUrl;
 
   MouRequestEntity copyWith({
     String?        id,
@@ -341,6 +343,7 @@ class MouRequestEntity extends Equatable {
     String?        approvedBy,
     String?        approvedAt,
     String?        requesterId,
+    String?        certificateUrl,
   }) =>
       MouRequestEntity(
         id:            id            ?? this.id,
@@ -357,12 +360,27 @@ class MouRequestEntity extends Equatable {
         approvedBy:    approvedBy    ?? this.approvedBy,
         approvedAt:    approvedAt    ?? this.approvedAt,
         requesterId:   requesterId   ?? this.requesterId,
+        certificateUrl: certificateUrl ?? this.certificateUrl,
       );
 
-  @override
-  List<Object?> get props =>
-      [id, patientName, patientAge, disease, hospital, requestDate,
-       status, requesterName, phone, address, bloodGroup, approvedBy, approvedAt, requesterId];
+   @override
+  List<Object?> get props => [
+        id,
+        patientName,
+        patientAge,
+        disease,
+        hospital,
+        requestDate,
+        status,
+        requesterName,
+        phone,
+        address,
+        bloodGroup,
+        approvedBy,
+        approvedAt,
+        requesterId,
+        certificateUrl,
+      ];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

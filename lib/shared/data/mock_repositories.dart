@@ -141,7 +141,9 @@ class MockTaskRepository implements ITaskRepository {
   @override
   Future<List<TaskEntity>> getAll() async {
     await Future.delayed(const Duration(milliseconds: 600));
-    return _data;
+    final list = List<TaskEntity>.from(_data);
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
   }
 
   @override
@@ -150,7 +152,9 @@ class MockTaskRepository implements ITaskRepository {
   @override
   Future<List<TaskEntity>> getByAssignee(String assigneeId, AssigneeType type) async {
     await Future.delayed(const Duration(milliseconds: 400));
-    return _data.where((t) => t.assignedToId == assigneeId && t.assignedToType == type).toList();
+    final list = _data.where((t) => t.assignedToId == assigneeId && t.assignedToType == type).toList();
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
   }
 
   @override
@@ -239,11 +243,11 @@ class MockMouRequestRepository implements IMouRequestRepository {
   }
 
   @override
-  Future<MouRequestEntity> updateStatus(String id, RequestStatus status, {String? approvedBy}) async {
+  Future<MouRequestEntity> updateStatus(String id, RequestStatus status, {String? approvedBy, String? certificateUrl}) async {
     await Future.delayed(const Duration(milliseconds: 600));
     final idx = _data.indexWhere((r) => r.id == id);
     if (idx != -1) {
-      _data[idx] = _data[idx].copyWith(status: status, approvedBy: approvedBy);
+      _data[idx] = _data[idx].copyWith(status: status, approvedBy: approvedBy, certificateUrl: certificateUrl);
       return _data[idx];
     }
     throw Exception('Not found');

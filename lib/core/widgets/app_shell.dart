@@ -8,6 +8,7 @@ import 'app_avatar.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import '../../shared/providers/app_providers.dart';
 import '../../shared/providers/feature_providers.dart';
+import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
 
 /// Navigation item descriptor (mirrors the React `NavItem` interface).
 class NavItem {
@@ -675,13 +676,17 @@ class _TopBarState extends ConsumerState<_TopBar> {
     showDialog(
       context: context,
       builder: (dialogCtx) {
-        final joining  = ref.watch(joiningLetterProvider).value ?? [];
-        final requests = ref.watch(generalRequestProvider).value ?? [];
-        final mou      = ref.watch(mouRequestProvider).value ?? [];
+        final joiningDocs = ref.watch(joiningLetterProvider).value ?? [];
+        final requests    = ref.watch(generalRequestProvider).value ?? [];
+        final mouRequests = ref.watch(mouRequestProvider).value ?? [];
+        final docRequests = ref.watch(documentRequestProvider).value ?? [];
+        final dismissed   = ref.watch(dismissedNotificationsProvider);
 
         final items = <Widget>[];
+        final allPendingIds = <String>[];
 
-        for (final r in joining.where((r) => r.status.name == 'pending')) {
+        for (final r in joiningDocs.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id))) {
+          allPendingIds.add(r.id);
           items.add(_buildNotifRow(
             icon: Icons.file_present_rounded,
             iconColor: AppColors.amber500,
@@ -690,7 +695,8 @@ class _TopBarState extends ConsumerState<_TopBar> {
             subtitle: '${r.name} requested on ${r.requestDate.toString().split(' ')[0]}',
           ));
         }
-        for (final r in requests.where((r) => r.status.name == 'pending')) {
+        for (final r in requests.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id))) {
+          allPendingIds.add(r.id);
           items.add(_buildNotifRow(
             icon: Icons.inbox_rounded,
             iconColor: AppColors.blue500,
@@ -699,13 +705,24 @@ class _TopBarState extends ConsumerState<_TopBar> {
             subtitle: '${r.requesterName}: ${r.requestType.displayLabel}',
           ));
         }
-        for (final r in mou.where((r) => r.status.name == 'pending')) {
+        for (final r in mouRequests.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id))) {
+          allPendingIds.add(r.id);
           items.add(_buildNotifRow(
             icon: Icons.local_hospital_rounded,
             iconColor: AppColors.red500,
             isDark: isDark,
             title: 'MOU Request',
             subtitle: '${r.patientName} at ${r.hospital}',
+          ));
+        }
+        for (final r in docRequests.where((r) => r.status == DocumentRequestStatus.pending && !dismissed.contains(r.id))) {
+          allPendingIds.add(r.id);
+          items.add(_buildNotifRow(
+            icon: Icons.folder_shared_rounded,
+            iconColor: AppColors.brand,
+            isDark: isDark,
+            title: 'Document Request',
+            subtitle: 'New request from User',
           ));
         }
 
@@ -735,33 +752,16 @@ class _TopBarState extends ConsumerState<_TopBar> {
               ),
               TextButton(
                 onPressed: () {
-                  final approver = ref.read(currentUserProvider)?.name ?? 'Admin';
-                  
-                  // Clear Joining Letters
-                  final joiningNotifier = ref.read(joiningLetterProvider.notifier);
-                  final joining = ref.read(joiningLetterProvider).value ?? [];
-                  for (final r in joining.where((r) => r.status == RequestStatus.pending)) {
-                    joiningNotifier.approve(r.id, generatedBy: approver, tenure: '6 Months');
+                  if (allPendingIds.isNotEmpty) {
+                    ref.read(dismissedNotificationsProvider.notifier).dismissAll(allPendingIds);
+                    Navigator.of(dialogCtx).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Notifications cleared locally.'),
+                        backgroundColor: AppColors.slate700,
+                      ),
+                    );
                   }
-
-                  // Clear General Requests
-                  final generalNotifier = ref.read(generalRequestProvider.notifier);
-                  final requests = ref.read(generalRequestProvider).value ?? [];
-                  for (final r in requests.where((r) => r.status == RequestStatus.pending)) {
-                    generalNotifier.approve(r.id, approvedBy: approver);
-                  }
-
-                  // Clear MOU Requests
-                  final mouNotifier = ref.read(mouRequestProvider.notifier);
-                  final mous = ref.read(mouRequestProvider).value ?? [];
-                  for (final r in mous.where((r) => r.status == RequestStatus.pending)) {
-                    mouNotifier.approve(r.id, approvedBy: approver);
-                  }
-
-                  Navigator.of(dialogCtx).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('✅ All pending requests have been approved.'), backgroundColor: AppColors.emerald600),
-                  );
                 },
                 child: const Text('Clear all', style: TextStyle(fontSize: 12)),
               ),

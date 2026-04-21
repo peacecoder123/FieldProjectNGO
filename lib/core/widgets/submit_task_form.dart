@@ -27,6 +27,7 @@ class _SubmitTaskFormState extends State<SubmitTaskForm> {
   String _geotag = '';
   bool _isCapturing = false;
   bool _showCamera = false;
+  bool _isSubmitting = false;
 
   // Camera service (web or stub)
   CameraService? _cameraService;
@@ -160,14 +161,23 @@ class _SubmitTaskFormState extends State<SubmitTaskForm> {
         ),
         const SizedBox(height: 24),
         ElevatedButton.icon(
-          onPressed: _capturedBytes == null
+          onPressed: (_capturedBytes == null || _isSubmitting)
               ? null
-              : () => widget.onSubmit(
-                    'data:image/jpeg;base64,${base64Encode(_capturedBytes!)}',
-                    _geotag,
-                  ),
-          icon: const Icon(Icons.check_circle_rounded),
-          label: const Text('Confirm Submission'),
+              : () async {
+                  setState(() => _isSubmitting = true);
+                  try {
+                    await widget.onSubmit(
+                      'data:image/jpeg;base64,${base64Encode(_capturedBytes!)}',
+                      _geotag,
+                    );
+                  } finally {
+                    if (mounted) setState(() => _isSubmitting = false);
+                  }
+                },
+          icon: _isSubmitting 
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Icon(Icons.check_circle_rounded),
+          label: Text(_isSubmitting ? 'Submitting...' : 'Confirm Submission'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.emerald600,
             foregroundColor: Colors.white,

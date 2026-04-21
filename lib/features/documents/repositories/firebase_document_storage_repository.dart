@@ -115,6 +115,17 @@ class FirebaseDocumentStorageRepository {
     );
   }
 
+  /// Upload raw bytes directly (used for generated documents like MOU Acceptance)
+  Future<String> uploadBytes({
+    required Uint8List bytes,
+    required String fileName,
+    required String contentType,
+  }) async {
+    final storageRef = _storage.ref().child('documents/$fileName');
+    await storageRef.putData(bytes, SettableMetadata(contentType: contentType));
+    return await storageRef.getDownloadURL();
+  }
+
 
   /// Replace an existing document
   Future<void> replaceDocument({

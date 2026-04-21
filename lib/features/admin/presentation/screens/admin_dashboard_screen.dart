@@ -15,6 +15,7 @@ import '../tabs/joining_letters_tab.dart';
 import '../tabs/requests_tab.dart';
 import '../tabs/users_management_tab.dart';
 import '../screens/profile_screen.dart';
+import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key, required this.isSuperAdmin});
@@ -52,10 +53,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final mou      = ref.watch(mouRequestProvider).value ?? [];
     final docs     = ref.watch(documentRequestProvider).value ?? [];
     
-    final joiningPending = joining.where((r) => r.status.name == 'pending').length;
-    final requestsPending = requests.where((r) => r.status.name == 'pending').length
-                          + mou.where((r) => r.status.name == 'pending').length
-                          + docs.where((r) => r.status.name == 'pending').length;
+    final dismissed = ref.watch(dismissedNotificationsProvider);
+
+    final joiningPending = joining.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id)).length;
+    final requestsPending = requests.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id)).length
+                          + mou.where((r) => r.status == RequestStatus.pending && !dismissed.contains(r.id)).length
+                          + docs.where((r) => r.status == DocumentRequestStatus.pending && !dismissed.contains(r.id)).length;
                           
     final int totalNotifications = joiningPending + requestsPending;
 

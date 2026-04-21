@@ -7,9 +7,9 @@ import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import '../data/entities.dart';
 import '../data/repositories.dart';
-import '../../services/notification_service.dart';
-
-// Firebase repositories
+import 'package:flutter/foundation.dart';
+import '../../features/documents/services/pdf_generator_service.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../../features/payments/repositories/donation_repository.dart';
 import '../../features/volunteers/repositories/firebase_volunteer_repository.dart';
 import '../../features/members/repositories/firebase_member_repository.dart';
@@ -27,6 +27,7 @@ import 'app_providers.dart';
 import '../../features/auth/repositories/firebase_auth_repository.dart';
 import '../../features/admin/data/user_repository.dart';
 import '../../features/auth/domain/entities/user_entity.dart';
+import '../../features/documents/services/pdf_generator_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REPOSITORY PROVIDERS — All wired to Firebase (Firestore)
@@ -174,27 +175,13 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<TaskEntity>>> {
 
   Future<void> add(TaskEntity t) async {
     await _repo.add(t);
-    _notify('New Task Assigned', 'A new task "${t.title}" has been assigned to you.');
   }
 
   Future<void> updateStatus(String taskId, TaskStatus status, {String? approvedBy}) async {
     await _repo.updateStatus(taskId, status, approvedBy: approvedBy);
-    
-    final t = state.value?.firstWhere((task) => task.id == taskId);
-    if (t != null) {
-      if (status == TaskStatus.waitingAdmin) {
-        _notify('Task Partially Approved', 'Mentor has partially approved "${t.title}". Waiting for Admin.');
-      } else if (status == TaskStatus.approved) {
-        _notify('Task Approved', 'Your submission for "${t.title}" has been fully approved!');
-      } else if (status == TaskStatus.rejected) {
-        _notify('Task Rejected', 'Submission for "${t.title}" was rejected.');
-      }
-    }
   }
 
-  void _notify(String title, String body) {
-    PushNotificationService.instance.showNotification(title: title, body: body);
-  }
+
 
   Future<void> submit(String taskId, {String? imagePath, String? geotag}) async {
     final current = state.value?.firstWhere((t) => t.id == taskId);
@@ -369,27 +356,21 @@ class GeneralRequestNotifier
         ? r.copyWith(requesterId: _currentUserId)
         : r;
     await _repo.add(entity);
-    _notify('Request Submitted', 'Your general request has been sent for review.');
   }
 
   Future<void> partiallyApprove(String id, {String? approvedBy}) async {
     await _repo.updateStatus(id, RequestStatus.waitingAdmin, approvedBy: approvedBy);
-    _notify('Request Escalated', 'A request has been partially approved and sent to Admin.');
   }
 
   Future<void> approve(String id, {String? approvedBy}) async {
     await _repo.updateStatus(id, RequestStatus.approved, approvedBy: approvedBy);
-    _notify('Request Approved', 'Your general request was approved!');
   }
 
   Future<void> reject(String id) async {
     await _repo.updateStatus(id, RequestStatus.rejected);
-    _notify('Request Rejected', 'A request was rejected.');
   }
 
-  void _notify(String title, String body) {
-    PushNotificationService.instance.showNotification(title: title, body: body);
-  }
+
 }
 
 final generalRequestProvider = StateNotifierProvider.autoDispose<GeneralRequestNotifier,
@@ -408,10 +389,11 @@ final generalRequestProvider = StateNotifierProvider.autoDispose<GeneralRequestN
 class MouRequestNotifier
     extends StateNotifier<AsyncValue<List<MouRequestEntity>>> {
   final IMouRequestRepository _repo;
+  final FirebaseDocumentStorageRepository _storageRepo;
   final String? _currentUserId;
   StreamSubscription<List<MouRequestEntity>>? _subscription;
 
-  MouRequestNotifier(this._repo, [this._currentUserId]) : super(const AsyncValue.loading()) {
+  MouRequestNotifier(this._repo, this._storageRepo, [this._currentUserId]) : super(const AsyncValue.loading()) {
     _listen();
   }
 
@@ -433,35 +415,63 @@ class MouRequestNotifier
         ? r.copyWith(requesterId: _currentUserId)
         : r;
     await _repo.add(entity);
-    _notify('MOU Request Submitted', 'New MOU request for ${r.patientName}.');
   }
 
   Future<void> partiallyApprove(String id, {String? approvedBy}) async {
     await _repo.updateStatus(id, RequestStatus.waitingAdmin, approvedBy: approvedBy);
-    _notify('MOU Escalated', 'MOU request partially approved.');
   }
 
-  Future<void> approve(String id, {String? approvedBy}) async {
-    await _repo.updateStatus(id, RequestStatus.approved, approvedBy: approvedBy);
-    _notify('MOU Approved', 'MOU request completed.');
+  Future<void> approve(String id, {String? approvedBy, String? hospitalAddress}) async {
+    // 1. Get the current request data
+    final requests = state.value ?? [];
+    final request = requests.where((r) => r.id == id).firstOrNull;
+    if (request == null) return;
+
+    String? certificateUrl;
+
+    try {
+      // 2. Generate PDF bytes
+      final pdfBytes = await PdfGeneratorService.generateMouAcceptancePdf(
+        patientName: request.patientName,
+        hospitalName: request.hospital,
+        address: hospitalAddress ?? request.address,
+        date: AppFormatters.displayDate(DateTime.now().toIso8601String()),
+      );
+
+      // 3. Upload to Firebase Storage using the repository
+      final fileName = 'MOU_Acceptance_${request.patientName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      certificateUrl = await _storageRepo.uploadBytes(
+        bytes: pdfBytes,
+        fileName: fileName,
+        contentType: 'application/pdf',
+      );
+    } catch (e) {
+      debugPrint('Error generating/uploading MOU PDF: $e');
+    }
+
+    // 4. Update Firestore with approval and the URL
+    await _repo.updateStatus(
+      id, 
+      RequestStatus.approved, 
+      approvedBy: approvedBy,
+      certificateUrl: certificateUrl,
+    );
   }
 
   Future<void> reject(String id) async {
     await _repo.updateStatus(id, RequestStatus.rejected);
-    _notify('MOU Rejected', 'MOU request was rejected.');
   }
 
-  void _notify(String title, String body) {
-    PushNotificationService.instance.showNotification(title: title, body: body);
-  }
+
 }
 
 final mouRequestProvider = StateNotifierProvider.autoDispose<MouRequestNotifier,
     AsyncValue<List<MouRequestEntity>>>(
   (ref) {
     final repo = ref.watch(mouRequestRepositoryProvider);
+    final storageRepo = ref.watch(documentStorageRepoProvider);
     final user = ref.watch(currentUserProvider);
-    return MouRequestNotifier(repo, user?.id);
+    return MouRequestNotifier(repo, storageRepo, user?.id);
   },
 );
 
@@ -497,12 +507,10 @@ class JoiningLetterNotifier
         ? r.copyWith(requesterId: _currentUserId)
         : r;
     await _repo.add(entity);
-    _notify('Letter Request Submitted', 'New joining letter request from ${r.name}.');
   }
 
   Future<void> partiallyApprove(String id) async {
     await _repo.partiallyApprove(id);
-    _notify('Letter Request Escalated', 'A joining letter request is waiting for Admin approval.');
   }
 
   Future<void> approve(
@@ -515,17 +523,13 @@ class JoiningLetterNotifier
       generatedBy: generatedBy,
       tenure:      tenure,
     );
-    _notify('Letter Generated', 'Your official joining letter is ready for download!');
   }
 
   Future<void> reject(String id) async {
     await _repo.reject(id);
-    _notify('Letter Request Rejected', 'Your joining letter request was rejected.');
   }
 
-  void _notify(String title, String body) {
-    PushNotificationService.instance.showNotification(title: title, body: body);
-  }
+
 }
 
 final joiningLetterProvider = StateNotifierProvider.autoDispose<JoiningLetterNotifier,
@@ -630,7 +634,7 @@ class DocumentRequestNotifier
   }
 
   Future<void> add(DocumentRequestEntity r) async {
-    final entity = (_currentUserId != null && (r.userId == null || r.userId.isEmpty))
+    final entity = (_currentUserId != null && r.userId.isEmpty)
         ? r.copyWith(userId: _currentUserId)
         : r;
     await _repository.add(entity);

@@ -186,6 +186,10 @@ final fcmTokenSyncProvider = Provider<void>((ref) {
         if (token != null) {
           debugPrint('Sync: Token obtained successfully. Updating Firestore...');
           authRepo.updateFcmToken(user.id, token);
+          
+          // Role-based topic subscription for targeted notifications
+          final topic = 'role_${user.role.name}';
+          PushNotificationService.instance.subscribeToTopic(topic);
         } else {
           debugPrint('Sync: Could not obtain FCM token. Check console for errors.');
         }
@@ -196,6 +200,39 @@ final fcmTokenSyncProvider = Provider<void>((ref) {
   }
 });
 
-/// Global provider for the active dashboard tab ID.
-/// Initial value is 'overview'.
 final dashboardTabProvider = StateProvider.autoDispose<String>((ref) => 'overview');
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+/// Persisted notification dismissal state. Stores document IDs that have been cleared.
+final dismissedNotificationsProvider =
+    StateNotifierProvider<_DismissedNotificationsNotifier, Set<String>>(
+  (ref) {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return _DismissedNotificationsNotifier(prefs);
+  },
+);
+
+class _DismissedNotificationsNotifier extends StateNotifier<Set<String>> {
+  _DismissedNotificationsNotifier(this._prefs)
+      : super(_loadFromPrefs(_prefs));
+
+  final SharedPreferences _prefs;
+  static const _key = 'dismissed_notif_ids';
+
+  static Set<String> _loadFromPrefs(SharedPreferences prefs) {
+    final list = prefs.getStringList(_key);
+    return (list ?? []).toSet();
+  }
+
+  void dismissAll(Iterable<String> ids) {
+    final newSet = {...state, ...ids};
+    state = newSet;
+    _prefs.setStringList(_key, newSet.toList());
+  }
+
+  void reset() {
+    state = {};
+    _prefs.remove(_key);
+  }
+}

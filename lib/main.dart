@@ -7,7 +7,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'app/app.dart';
 import 'firebase_options.dart';
 import 'shared/providers/app_providers.dart';
-import 'services/data_seeder.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {

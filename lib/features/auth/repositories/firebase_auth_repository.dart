@@ -68,6 +68,8 @@ class FirebaseAuthRepository implements IAuthRepository {
          // Optionally handle web signin specifics if needed
       }
 
+      // Force account selection by signing out first
+      await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null; // User canceled sign in
 

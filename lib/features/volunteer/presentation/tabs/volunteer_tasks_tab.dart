@@ -203,26 +203,30 @@ class _VolunteerTasksTabState extends ConsumerState<VolunteerTasksTab> {
     );
   }
 
-  void _handleSubmit(TaskEntity task) {
+  Future<void> _handleSubmit(TaskEntity task) async {
     if (task.requiresUpload) {
       AppModal.show(
         context: context,
         title: 'Submit Task: ${task.title}',
         child: SubmitTaskForm(
-          onSubmit: (imageUrl, geotag) {
-            ref.read(taskProvider.notifier).submit(task.id, imagePath: imageUrl, geotag: geotag);
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Task "${task.title}" submitted successfully')),
-            );
+          onSubmit: (imageUrl, geotag) async {
+            await ref.read(taskProvider.notifier).submit(task.id, imagePath: imageUrl, geotag: geotag);
+            if (mounted) Navigator.pop(context);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Task "${task.title}" submitted successfully')),
+              );
+            }
           },
         ),
       );
     } else {
-      ref.read(taskProvider.notifier).submit(task.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Task "${task.title}" marked as complete')),
-      );
+      await ref.read(taskProvider.notifier).submit(task.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Task "${task.title}" marked as complete')),
+        );
+      }
     }
   }
 

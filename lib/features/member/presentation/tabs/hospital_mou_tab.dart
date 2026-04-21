@@ -9,6 +9,8 @@ import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:printing/printing.dart';
 
 class HospitalMouTab extends ConsumerStatefulWidget {
   const HospitalMouTab({super.key});
@@ -186,12 +188,12 @@ class _HospitalMouTabState extends ConsumerState<HospitalMouTab> {
   }
 }
 
-class _MouHistoryItem extends StatelessWidget {
+class _MouHistoryItem extends ConsumerWidget {
   const _MouHistoryItem({required this.request});
   final MouRequestEntity request;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final statusColor = switch (request.status) {
       RequestStatus.pending => AppColors.amber500,
       RequestStatus.waitingAdmin => AppColors.brand,
@@ -221,6 +223,47 @@ class _MouHistoryItem extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           AppBadge(label: request.status.displayName.toUpperCase(), color: statusColor),
+          if (request.status == RequestStatus.approved) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.print_rounded, color: AppColors.rose600, size: 20),
+              tooltip: 'Print Letter',
+              onPressed: () async {
+                final hospitals = ref.read(hospitalProvider).value ?? [];
+                final hospital = hospitals.where((h) => h.name == request.hospital).firstOrNull;
+                final hospitalAddress = hospital != null ? '${hospital.address}, ${hospital.city}' : 'Navi Mumbai';
+
+                await Printing.layoutPdf(
+                  onLayout: (_) => PdfGeneratorService.generateMouAcceptancePdf(
+                    patientName: request.patientName,
+                    hospitalName: request.hospital,
+                    address: hospitalAddress,
+                    date: AppFormatters.displayDate(request.approvedAt ?? request.requestDate),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.download_rounded, color: AppColors.rose600, size: 20),
+              tooltip: 'Download PDF',
+              onPressed: () async {
+                final hospitals = ref.read(hospitalProvider).value ?? [];
+                final hospital = hospitals.where((h) => h.name == request.hospital).firstOrNull;
+                final hospitalAddress = hospital != null ? '${hospital.address}, ${hospital.city}' : 'Navi Mumbai';
+
+                final pdfBytes = await PdfGeneratorService.generateMouAcceptancePdf(
+                  patientName: request.patientName,
+                  hospitalName: request.hospital,
+                  address: hospitalAddress,
+                  date: AppFormatters.displayDate(request.approvedAt ?? request.requestDate),
+                );
+                await Printing.sharePdf(
+                  bytes: pdfBytes,
+                  filename: 'MOU_Acceptance_${request.patientName.replaceAll(' ', '_')}.pdf',
+                );
+              },
+            ),
+          ],
         ],
       ),
     );

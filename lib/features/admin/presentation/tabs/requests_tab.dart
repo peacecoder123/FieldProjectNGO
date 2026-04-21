@@ -10,6 +10,8 @@ import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart
 import 'package:ngo_volunteer_management/shared/data/entities.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/features/admin/presentation/tabs/document_approvals_tab.dart';
+import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
+import 'package:printing/printing.dart';
 
 class RequestsTab extends ConsumerStatefulWidget {
   const RequestsTab({super.key});
@@ -360,7 +362,10 @@ class _MouRequestsList extends ConsumerWidget {
                           child: ElevatedButton(
                             onPressed: () {
                               final adminName = ref.read(currentUserProvider)?.name ?? 'Admin';
-                              ref.read(mouRequestProvider.notifier).approve(req.id, approvedBy: adminName);
+                              final hospitals = ref.read(hospitalProvider).value ?? [];
+                              final hospital = hospitals.where((h) => h.name == req.hospital).firstOrNull;
+                              final hospitalAddress = hospital != null ? '${hospital.address}, ${hospital.city}' : 'Navi Mumbai';
+                              ref.read(mouRequestProvider.notifier).approve(req.id, approvedBy: adminName, hospitalAddress: hospitalAddress);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.brand, 
@@ -370,6 +375,69 @@ class _MouRequestsList extends ConsumerWidget {
                               elevation: 0,
                             ),
                             child: const Text('Approve MOU'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (req.status == RequestStatus.approved) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final hospitals = ref.read(hospitalProvider).value ?? [];
+                              final hospital = hospitals.where((h) => h.name == req.hospital).firstOrNull;
+                              final hospitalAddress = hospital != null ? '${hospital.address}, ${hospital.city}' : 'Navi Mumbai';
+
+                              await Printing.layoutPdf(
+                                onLayout: (_) => PdfGeneratorService.generateMouAcceptancePdf(
+                                  patientName: req.patientName,
+                                  hospitalName: req.hospital,
+                                  address: hospitalAddress,
+                                  date: AppFormatters.displayDate(req.approvedAt ?? req.requestDate),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.print_rounded, size: 16),
+                            label: const Text('Print Letter'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.rose600,
+                              side: const BorderSide(color: AppColors.rose100),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final hospitals = ref.read(hospitalProvider).value ?? [];
+                              final hospital = hospitals.where((h) => h.name == req.hospital).firstOrNull;
+                              final hospitalAddress = hospital != null ? '${hospital.address}, ${hospital.city}' : 'Navi Mumbai';
+
+                              final pdfBytes = await PdfGeneratorService.generateMouAcceptancePdf(
+                                patientName: req.patientName,
+                                hospitalName: req.hospital,
+                                address: hospitalAddress,
+                                date: AppFormatters.displayDate(req.approvedAt ?? req.requestDate),
+                              );
+                              await Printing.sharePdf(
+                                bytes: pdfBytes,
+                                filename: 'MOU_Acceptance_${req.patientName.replaceAll(' ', '_')}.pdf',
+                              );
+                            },
+                            icon: const Icon(Icons.download_rounded, size: 16),
+                            label: const Text('Download'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.rose600,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
                           ),
                         ),
                       ],

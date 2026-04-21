@@ -146,6 +146,28 @@ class PushNotificationService {
     );
   }
 
+  /// Subscribes to a specific FCM topic (e.g., 'role_admin')
+  Future<void> subscribeToTopic(String topic) async {
+    if (kIsWeb) return; // Topics not directly supported on web FCM via this plugin easily
+    try {
+      await _fcm.subscribeToTopic(topic);
+      debugPrint('FCM: Subscribed to topic: $topic');
+    } catch (e) {
+      debugPrint('FCM: Error subscribing to topic $topic: $e');
+    }
+  }
+
+  /// Unsubscribes from a specific FCM topic
+  Future<void> unsubscribeToTopic(String topic) async {
+    if (kIsWeb) return;
+    try {
+      await _fcm.unsubscribeFromTopic(topic);
+      debugPrint('FCM: Unsubscribed from topic: $topic');
+    } catch (e) {
+      debugPrint('FCM: Error unsubscribing from topic $topic: $e');
+    }
+  }
+
   void _handleNotificationClick(RemoteMessage message) {
     debugPrint('Notification clicked (App opened from background): ${message.data}');
     // TODO: Add navigation logic here based on message.data

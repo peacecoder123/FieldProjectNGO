@@ -50,6 +50,7 @@ class FirebaseTaskRepository implements ITaskRepository {
         .collection(_collectionPath)
         .where('assignedToId', isEqualTo: assigneeId)
         .where('assignedToType', isEqualTo: type.name)
+        .orderBy('createdAt', descending: true)
         .get();
     return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
   }

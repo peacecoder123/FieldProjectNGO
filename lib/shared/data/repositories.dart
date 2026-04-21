@@ -67,7 +67,12 @@ abstract interface class IMouRequestRepository {
   Future<List<MouRequestEntity>> getAll();
   Stream<List<MouRequestEntity>> watchAll();
   Future<MouRequestEntity> add(MouRequestEntity request);
-  Future<MouRequestEntity> updateStatus(String id, RequestStatus status, {String? approvedBy});
+  Future<MouRequestEntity> updateStatus(
+    String id,
+    RequestStatus status, {
+    String? approvedBy,
+    String? certificateUrl,
+  });
 }
 
 abstract interface class IHospitalRepository {

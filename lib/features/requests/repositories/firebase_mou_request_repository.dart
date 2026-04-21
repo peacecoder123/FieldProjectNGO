@@ -29,13 +29,13 @@ class FirebaseMouRequestRepository implements IMouRequestRepository {
 
   @override
   Future<List<MouRequestEntity>> getAll() async {
-    final snapshot = await _db.collection(_collectionPath).get();
+    final snapshot = await _db.collection(_collectionPath).orderBy('requestDate', descending: true).get();
     return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
   }
 
   @override
   Stream<List<MouRequestEntity>> watchAll() {
-    return _db.collection(_collectionPath).snapshots().map((snapshot) {
+    return _db.collection(_collectionPath).orderBy('requestDate', descending: true).snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => _fromMap(doc.id, doc.data())).toList();
     });
   }
@@ -47,13 +47,19 @@ class FirebaseMouRequestRepository implements IMouRequestRepository {
   }
 
   @override
-  Future<MouRequestEntity> updateStatus(String id, RequestStatus status, {String? approvedBy}) async {
+  Future<MouRequestEntity> updateStatus(
+    String id,
+    RequestStatus status, {
+    String? approvedBy,
+    String? certificateUrl,
+  }) async {
     final Map<String, dynamic> updates = {'status': status.name};
-    if (status == RequestStatus.approved && approvedBy != null) {
-      updates['approvedBy'] = approvedBy;
+    if (status == RequestStatus.approved) {
+      if (approvedBy != null) updates['approvedBy'] = approvedBy;
+      if (certificateUrl != null) updates['certificateUrl'] = certificateUrl;
       updates['approvedAt'] = DateTime.now().toIso8601String();
     }
-    
+
     await _db.collection(_collectionPath).doc(id).update(updates);
     final doc = await _db.collection(_collectionPath).doc(id).get();
     return _fromMap(doc.id, doc.data()!);
@@ -72,6 +78,7 @@ class FirebaseMouRequestRepository implements IMouRequestRepository {
         if (r.approvedBy != null) 'approvedBy': r.approvedBy,
         if (r.approvedAt != null) 'approvedAt': r.approvedAt,
         if (r.requesterId != null) 'requesterId': r.requesterId,
+        if (r.certificateUrl != null) 'certificateUrl': r.certificateUrl,
       };
 
   MouRequestEntity _fromMap(String id, Map<String, dynamic> map) => MouRequestEntity(
@@ -93,6 +100,7 @@ class FirebaseMouRequestRepository implements IMouRequestRepository {
         approvedBy: map['approvedBy'] as String?,
         approvedAt: map['approvedAt'] as String?,
         requesterId: map['requesterId'] as String?,
+        certificateUrl: map['certificateUrl'] as String?,
       );
 
   T enumValueOr<T extends Enum>(List<T> values, String name, T fallback) {

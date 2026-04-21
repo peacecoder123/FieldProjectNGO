@@ -5,6 +5,7 @@ import 'router.dart';
 import 'theme/app_theme.dart';
 import '../shared/providers/app_providers.dart';
 import '../features/public/presentation/screens/splash_screen.dart';
+import '../services/notification_listener_service.dart';
 
 /// Root widget.  Wrapped by [ProviderScope] in [main.dart].
 class NgoApp extends ConsumerStatefulWidget {
@@ -24,6 +25,9 @@ class _NgoAppState extends ConsumerState<NgoApp> {
     
     // Trigger FCM Token Synchronization
     ref.watch(fcmTokenSyncProvider);
+
+    // Trigger Central Notification Listener
+    ref.watch(notificationListenerProvider);
 
     return MaterialApp.router(
       title: 'Jayashree Foundation',
