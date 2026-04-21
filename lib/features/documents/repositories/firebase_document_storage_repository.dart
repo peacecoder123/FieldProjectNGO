@@ -35,64 +35,58 @@ class FirebaseDocumentStorageRepository {
     return snap.docs.map((d) => _fromDoc(d)).toList();
   }
 
-  /// Pick and upload a file to Firebase Storage & Firestore.
-  Future<DocumentEntity?> pickAndUpload({required String uploadedBy}) async {
-    debugPrint('Step 1: Opening File Picker...');
+  /// Pick a file and return the raw file info without uploading.
+  Future<PlatformFile?> pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'doc', 'docx', 'xlsx', 'xls', 'png', 'jpg', 'jpeg'],
       withData: true,
     );
+    if (result == null || result.files.isEmpty) return null;
+    return result.files.first;
+  }
 
-    if (result == null || result.files.isEmpty) {
-      debugPrint('File Picker: User cancelled');
-      return null;
-    }
-    final file = result.files.first;
-    debugPrint('Step 2: File selected: ${file.name} (${file.size} bytes)');
-    
-    if (file.bytes == null) {
-      debugPrint('Error: File bytes are null on Web!');
-      throw Exception('Could not read file data. Please try again.');
-    }
-    
-    final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-    final storageRef = _storage.ref().child('documents/$fileName');
-    
-    debugPrint('Step 3: Starting upload to Firebase Storage: documents/$fileName');
-    try {
-      // We use a timeout because CORS issues on Web cause putData to hang indefinitely.
-      // 30 seconds is generous for a 1-5MB file.
-      final uploadTask = await storageRef.putData(
-        file.bytes!, 
-        SettableMetadata(contentType: _getMimeType(file.extension))
-      ).timeout(const Duration(seconds: 30), onTimeout: () {
-        debugPrint('Error: Upload timed out. This is almost always a CORS configuration issue on Web.');
-        throw TimeoutException('Upload timed out. Please ensure your Firebase Storage bucket has CORS enabled for localhost.');
-      });
-      
-      debugPrint('Step 4: Storage upload complete. Status: ${uploadTask.state}');
-    } catch (e) {
-      if (e is TimeoutException) {
-        debugPrint('CORS/Timeout detected: $e');
-      } else {
-        debugPrint('Error during Storage upload: $e');
-      }
-      rethrow;
-    }
-    
-    final downloadUrl = await storageRef.getDownloadURL();
-    debugPrint('Step 5: Download URL retrieved: $downloadUrl');
-
+  /// Upload a picked file with progress support.
+  Future<DocumentEntity> uploadFile({
+    required PlatformFile file,
+    required String customTitle,
+    required String uploadedBy,
+    void Function(double progress)? onProgress,
+  }) async {
     final ext = file.extension?.toLowerCase() ?? 'pdf';
+    final safeTitle = customTitle.trim().isEmpty ? file.name : customTitle.trim();
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+    final storageRef = _storage.ref().child('documents/$fileName');
+
+    UploadTask uploadTask;
+    if (kIsWeb) {
+      if (file.bytes == null) throw Exception('File data missing');
+      uploadTask = storageRef.putData(
+        file.bytes!,
+        SettableMetadata(contentType: _getMimeType(ext)),
+      );
+    } else {
+      uploadTask = storageRef.putFile(
+        File(file.path!),
+        SettableMetadata(contentType: _getMimeType(ext)),
+      );
+    }
+
+    if (onProgress != null) {
+      uploadTask.snapshotEvents.listen((snap) {
+        final total = snap.totalBytes;
+        if (total > 0) onProgress(snap.bytesTransferred / total);
+      });
+    }
+
+    final snap = await uploadTask;
+    final downloadUrl = await snap.ref.getDownloadURL();
     final sizeLabel = _formatBytes(file.size);
-    final category = _categoryFromExt(ext);
-    final fileType = _fileTypeFromExt(ext);
 
     final docData = {
-      'title': file.name,
-      'category': category,
-      'fileType': fileType.name,
+      'title': safeTitle,
+      'category': _categoryFromExt(ext),
+      'fileType': _fileTypeFromExt(ext).name,
       'size': sizeLabel,
       'uploadDate': AppFormatters.today(),
       'uploadedBy': uploadedBy,
@@ -100,19 +94,24 @@ class FirebaseDocumentStorageRepository {
       'storagePath': 'documents/$fileName',
     };
 
-    debugPrint('Step 6: Saving metadata to Firestore collection: $_collection');
     final docRef = await _db.collection(_collection).add(docData);
-    debugPrint('Step 7: Firestore record created with ID: ${docRef.id}');
 
     return DocumentEntity(
       id: docRef.id,
-      title: file.name,
-      category: category,
-      fileType: fileType,
+      title: safeTitle,
+      category: _categoryFromExt(ext),
+      fileType: _fileTypeFromExt(ext),
       size: sizeLabel,
       uploadDate: AppFormatters.today(),
       downloadUrl: downloadUrl,
     );
+  }
+
+  /// Combined pick+upload (wrapper for legacy use if any)
+  Future<DocumentEntity?> pickAndUpload({required String uploadedBy}) async {
+    final file = await pickFile();
+    if (file == null) return null;
+    return uploadFile(file: file, customTitle: file.name, uploadedBy: uploadedBy);
   }
 
   /// Upload raw bytes directly (used for generated documents like MOU Acceptance)

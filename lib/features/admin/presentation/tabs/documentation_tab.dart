@@ -186,29 +186,31 @@ class _DocumentationTabState extends ConsumerState<DocumentationTab> {
 }
 
   Future<void> _uploadNewDocument(BuildContext context, WidgetRef ref, String uploadedBy) async {
-    final scaffold = ScaffoldMessenger.of(context);
-    scaffold.showSnackBar(
-      const SnackBar(content: Row(children: [
-        SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-        SizedBox(width: 12),
-        Text('Selecting and uploading file...'),
-      ])),
-    );
-
+    final repo = ref.read(documentStorageRepoProvider);
+    PlatformFile? pickedFile;
     try {
-      final doc = await ref.read(documentStorageRepoProvider).pickAndUpload(uploadedBy: uploadedBy);
-      scaffold.hideCurrentSnackBar();
-      if (doc != null) {
-        scaffold.showSnackBar(
-          SnackBar(content: Text('✅ "${doc.title}" uploaded successfully'), backgroundColor: AppColors.brand),
+      pickedFile = await repo.pickFile();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open file picker: $e'), backgroundColor: AppColors.red500),
         );
       }
-    } catch (e) {
-      scaffold.hideCurrentSnackBar();
-      scaffold.showSnackBar(
-        SnackBar(content: Text('Upload failed: $e'), backgroundColor: AppColors.red500),
-      );
+      return;
     }
+
+    if (pickedFile == null || !context.mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _RenameUploadDialog(
+        pickedFile: pickedFile!,
+        uploadedBy: uploadedBy,
+        repo: repo,
+        onSuccess: () => ref.invalidate(documentStorageProvider),
+      ),
+    );
   }
 
   Future<void> _replaceDocument(BuildContext context, WidgetRef ref, DocumentEntity doc, String uploadedBy) async {
@@ -317,6 +319,168 @@ class _DocumentationTabState extends ConsumerState<DocumentationTab> {
         ],
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rename + upload dialog with live upload progress loader
+// ─────────────────────────────────────────────────────────────────────────────
+class _RenameUploadDialog extends StatefulWidget {
+  const _RenameUploadDialog({
+    required this.pickedFile,
+    required this.uploadedBy,
+    required this.repo,
+    required this.onSuccess,
+  });
+
+  final PlatformFile pickedFile;
+  final String uploadedBy;
+  final dynamic repo;
+  final VoidCallback onSuccess;
+
+  @override
+  State<_RenameUploadDialog> createState() => _RenameUploadDialogState();
+}
+
+class _RenameUploadDialogState extends State<_RenameUploadDialog> {
+  late final TextEditingController _nameCtrl;
+  bool _uploading = false;
+  double _progress = 0.0;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final originalName = widget.pickedFile.name;
+    final dotIdx = originalName.lastIndexOf('.');
+    _nameCtrl = TextEditingController(
+      text: dotIdx > 0 ? originalName.substring(0, dotIdx) : originalName,
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _doUpload() async {
+    final title = _nameCtrl.text.trim();
+    if (title.isEmpty) {
+      setState(() => _error = 'Please enter a document name');
+      return;
+    }
+    setState(() { _uploading = true; _progress = 0.0; _error = null; });
+    try {
+      await widget.repo.uploadFile(
+        file: widget.pickedFile,
+        customTitle: title,
+        uploadedBy: widget.uploadedBy,
+        onProgress: (p) => { if (mounted) setState(() => _progress = p) },
+      );
+      widget.onSuccess();
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      setState(() { _uploading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ext = widget.pickedFile.extension?.toUpperCase() ?? 'FILE';
+    final size = _formatBytes(widget.pickedFile.size);
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Name your document', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.slate800 : AppColors.slate50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? AppColors.slate700 : AppColors.slate200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.insert_drive_file_rounded, size: 18, color: isDark ? AppColors.slate300 : AppColors.slate500),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.pickedFile.name,
+                    style: TextStyle(fontSize: 12, color: isDark ? AppColors.slate300 : AppColors.slate600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('$ext • $size', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? AppColors.slate400 : AppColors.slate500)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _nameCtrl,
+            enabled: !_uploading,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'Document Name',
+              hintText: 'e.g. Annual Report 2026',
+              errorText: _error,
+              prefixIcon: const Icon(Icons.label_outline_rounded),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onSubmitted: (_) => _uploading ? null : _doUpload(),
+          ),
+          if (_uploading) ...[
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _progress < 1.0 ? 'Uploading to Firebase Storage… ${(_progress * 100).toStringAsFixed(0)}%' : 'Saving to database…',
+                        style: TextStyle(fontSize: 13, color: isDark ? AppColors.slate300 : AppColors.slate600),
+                      ),
+                      const SizedBox(height: 6),
+                      LinearProgressIndicator(
+                        value: _progress > 0 ? _progress : null,
+                        backgroundColor: isDark ? AppColors.slate700 : AppColors.slate200,
+                        color: AppColors.brand,
+                        minHeight: 4,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: _uploading ? null : () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        ElevatedButton.icon(
+          onPressed: _uploading ? null : _doUpload,
+          icon: _uploading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.cloud_upload_rounded, size: 18),
+          label: Text(_uploading ? 'Uploading…' : 'Upload'),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand, foregroundColor: Colors.white),
+        ),
+      ],
+    );
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }
 
