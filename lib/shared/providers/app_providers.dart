@@ -179,19 +179,22 @@ final fcmTokenSyncProvider = Provider<void>((ref) {
   final authRepo = ref.watch(authRepositoryProvider);
 
   if (user != null) {
-    debugPrint('Sync: User ${user.email} detected. Attempting FCM sync...');
-    // Small delay to ensure browser/Firebase is fully settled
+    debugPrint('Sync: User ${user.email} detected. Checking FCM status...');
+    
     Future.delayed(const Duration(seconds: 2), () {
       PushNotificationService.instance.getFcmToken().then((token) {
         if (token != null) {
-          debugPrint('Sync: Token obtained successfully. Updating Firestore...');
-          authRepo.updateFcmToken(user.id, token);
+          // ANTI-GLITCH FIX: Only update Firestore if the token has actually changed
+          if (user.fcmToken != token) {
+            debugPrint('Sync: New token detected. Updating Firestore to prevent glitching...');
+            authRepo.updateFcmToken(user.id, token);
+          } else {
+            debugPrint('Sync: Token is already up-to-date. Skipping redundant write.');
+          }
           
-          // Role-based topic subscription for targeted notifications
+          // Role-based topic subscription (safe to call multiple times)
           final topic = 'role_${user.role.name}';
           PushNotificationService.instance.subscribeToTopic(topic);
-        } else {
-          debugPrint('Sync: Could not obtain FCM token. Check console for errors.');
         }
       });
     });
