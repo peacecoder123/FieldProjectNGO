@@ -4,13 +4,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ngo_volunteer_management/app/theme/app_colors.dart';
 import 'package:ngo_volunteer_management/core/enums/app_enums.dart';
 import 'package:ngo_volunteer_management/core/widgets/app_card.dart';
-import 'package:ngo_volunteer_management/core/widgets/section_header.dart';
 import 'package:ngo_volunteer_management/domain/entities/document_request.entity.dart';
 import 'package:ngo_volunteer_management/shared/providers/feature_providers.dart';
 import 'package:ngo_volunteer_management/shared/providers/app_providers.dart';
 import 'package:ngo_volunteer_management/utils/app_formatters.dart';
 import 'package:ngo_volunteer_management/features/documents/services/pdf_generator_service.dart';
 import 'package:printing/printing.dart';
+
+/// Strips any old-format suffix and returns a clean JF/CERT/YYYY/DD number.
+String _cleanCertNo(String? raw) {
+  if (raw == null || raw.isEmpty) {
+    final now = DateTime.now();
+    return 'JF/CERT/${now.year}/${now.day.toString().padLeft(2, '0')}';
+  }
+  final clean = RegExp(r'^JF/CERT/\d{4}/\d{1,2}$');
+  if (clean.hasMatch(raw)) return raw;
+  final now = DateTime.now();
+  return 'JF/CERT/${now.year}/${now.day.toString().padLeft(2, '0')}';
+}
 
 class DocumentApprovalsList extends ConsumerWidget {
   const DocumentApprovalsList({super.key});
@@ -151,7 +162,7 @@ class _RequestCard extends ConsumerWidget {
                         barrierDismissible: false,
                         builder: (_) => _CertificateDetailsModal(
                           initialName: req.userName,
-                          initialCertNo: req.certificateNo ?? 'JF/CERT/${DateTime.now().year}/${req.id.substring(0, 6).toUpperCase()}',
+                          initialCertNo: _cleanCertNo(req.certificateNo),
                           initialDate: DateTime.now(),
                           userId: req.userId,
                           reqId: req.id,
@@ -186,7 +197,7 @@ class _RequestCard extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            req.certificateNo ?? 'PENDING',
+                            _cleanCertNo(req.certificateNo),
                             style: TextStyle(
                               fontSize: 11,
                               fontFamily: 'Courier',
@@ -207,7 +218,7 @@ class _RequestCard extends ConsumerWidget {
                         context: context,
                         builder: (_) => _CertificateDetailsModal(
                           initialName: req.userName,
-                          initialCertNo: req.certificateNo ?? '',
+                          initialCertNo: _cleanCertNo(req.certificateNo),
                           initialDate: req.approvedAt ?? DateTime.now(),
                           userId: req.userId,
                         ),
@@ -459,12 +470,10 @@ class _CertificateDetailsModalState extends ConsumerState<_CertificateDetailsMod
                     Expanded(
                       child: TextFormField(
                         controller: _certNoCtrl,
-                        readOnly: widget.isApprovalFlow,
+                        readOnly: true,
                         style: TextStyle(
                           fontSize: 13,
-                          color: widget.isApprovalFlow
-                              ? (isDark ? AppColors.slate400 : AppColors.slate500)
-                              : (isDark ? AppColors.white : AppColors.slate900),
+                          color: isDark ? AppColors.slate400 : AppColors.slate500,
                           fontFamily: 'Courier',
                         ),
                         decoration: _decoration(
@@ -472,14 +481,8 @@ class _CertificateDetailsModalState extends ConsumerState<_CertificateDetailsMod
                           icon: Icons.tag_rounded,
                           isDark: isDark,
                         ).copyWith(
-                          suffixIcon: widget.isApprovalFlow
-                              ? const Icon(Icons.lock_rounded, size: 14, color: AppColors.slate400)
-                              : null,
-                          fillColor: widget.isApprovalFlow
-                              ? (isDark
-                                  ? AppColors.slate700.withValues(alpha: 0.3)
-                                  : AppColors.slate100)
-                              : null,
+                          suffixIcon: const Icon(Icons.lock_rounded, size: 14, color: AppColors.slate400),
+                          fillColor: isDark ? AppColors.slate700.withValues(alpha: 0.3) : AppColors.slate100,
                         ),
                         validator: (v) =>
                             (v?.trim().isEmpty ?? true) ? 'Required' : null,
