@@ -302,6 +302,7 @@ class _RenameUploadDialog extends StatefulWidget {
 class _RenameUploadDialogState extends State<_RenameUploadDialog> {
   late final TextEditingController _nameCtrl;
   bool _uploading = false;
+  double _progress = 0.0;
   String? _error;
 
   @override
@@ -330,6 +331,7 @@ class _RenameUploadDialogState extends State<_RenameUploadDialog> {
 
     setState(() {
       _uploading = true;
+      _progress = 0.0;
       _error = null;
     });
 
@@ -338,6 +340,9 @@ class _RenameUploadDialogState extends State<_RenameUploadDialog> {
         file: widget.pickedFile,
         customTitle: title,
         uploadedBy: widget.uploadedBy,
+        onProgress: (p) {
+          if (mounted) setState(() => _progress = p);
+        },
       );
       widget.onSuccess();
       if (mounted) {
@@ -437,7 +442,7 @@ class _RenameUploadDialogState extends State<_RenameUploadDialog> {
               onSubmitted: (_) => _uploading ? null : _doUpload(),
             ),
 
-            // Upload progress
+            // Upload progress bar
             if (_uploading) ...[
               const SizedBox(height: 20),
               Row(
@@ -448,11 +453,28 @@ class _RenameUploadDialogState extends State<_RenameUploadDialog> {
                     child: CircularProgressIndicator(strokeWidth: 2.5),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    'Uploading to Firebase Storage…',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? AppColors.slate300 : AppColors.slate600,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _progress < 1.0
+                              ? 'Uploading to Firebase Storage… ${(_progress * 100).toStringAsFixed(0)}%'
+                              : 'Saving to database…',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark ? AppColors.slate300 : AppColors.slate600,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        LinearProgressIndicator(
+                          value: _progress > 0 ? _progress : null,
+                          backgroundColor: isDark ? AppColors.slate700 : AppColors.slate200,
+                          color: AppColors.brand,
+                          minHeight: 4,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ],
                     ),
                   ),
                 ],

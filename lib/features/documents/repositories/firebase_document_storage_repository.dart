@@ -45,6 +45,7 @@ class FirebaseDocumentStorageRepository {
     required PlatformFile file,
     required String customTitle,
     required String uploadedBy,
+    void Function(double progress)? onProgress,
   }) async {
     final ext = file.extension?.toLowerCase() ?? 'pdf';
     final safeTitle = customTitle.trim().isEmpty ? file.name : customTitle.trim();
@@ -62,6 +63,16 @@ class FirebaseDocumentStorageRepository {
         File(file.path!),
         SettableMetadata(contentType: _mimeType(ext)),
       );
+    }
+
+    // Stream progress back to the caller
+    if (onProgress != null) {
+      uploadTask.snapshotEvents.listen((snap) {
+        final total = snap.totalBytes;
+        if (total > 0) {
+          onProgress(snap.bytesTransferred / total);
+        }
+      });
     }
 
     final snap = await uploadTask;

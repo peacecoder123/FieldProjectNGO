@@ -8,6 +8,20 @@ import 'package:intl/intl.dart';
 class PdfGeneratorService {
   static const _navyBlue = PdfColor.fromInt(0xFF001F54);
 
+  // ── Font cache — loaded once, reused across all generations ───────────────
+  static pw.Font? _cachedRobotoBold;
+  static pw.Font? _cachedMontserrat;
+
+  static Future<(pw.Font?, pw.Font?)> _loadFonts() async {
+    try {
+      _cachedRobotoBold ??= await PdfGoogleFonts.robotoBold();
+      _cachedMontserrat ??= await PdfGoogleFonts.montserratMedium();
+    } catch (_) {
+      // Fonts unavailable (offline) — fall back to default
+    }
+    return (_cachedRobotoBold, _cachedMontserrat);
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // SHARED HEADER — logo + JAYASHREE (bold) FOUNDATION (normal) + Regd No.
   // ─────────────────────────────────────────────────────────────────────────
@@ -121,16 +135,13 @@ class PdfGeneratorService {
     final pdf = pw.Document();
 
     pw.MemoryImage? logoImage;
-    pw.Font? robotoBold;
-    pw.Font? montserrat;
     try {
       final logoBytes = await rootBundle.load('assets/images/logo.png');
       logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
-      robotoBold = await PdfGoogleFonts.robotoBold();
-      montserrat = await PdfGoogleFonts.montserratMedium();
     } catch (e) {
       // Ignore if logo fails to load
     }
+    final (robotoBold, montserrat) = await _loadFonts();
 
     pdf.addPage(
       pw.Page(
@@ -344,16 +355,13 @@ class PdfGeneratorService {
     final pdf = pw.Document();
 
     pw.MemoryImage? logoImage;
-    pw.Font? robotoBold;
-    pw.Font? montserrat;
     try {
       final logoBytes = await rootBundle.load('assets/images/logo.png');
       logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
-      robotoBold = await PdfGoogleFonts.robotoBold();
-      montserrat = await PdfGoogleFonts.montserratMedium();
     } catch (e) {
       // Ignore
     }
+    final (robotoBold, montserrat) = await _loadFonts();
 
     final String displayName =
         recipientName.trim().isEmpty ? '____________________' : recipientName;
@@ -536,16 +544,13 @@ class PdfGeneratorService {
     final pdf = pw.Document();
 
     pw.MemoryImage? logoImage;
-    pw.Font? robotoBold;
-    pw.Font? montserrat;
     try {
       final logoBytes = await rootBundle.load('assets/images/logo.png');
       logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
-      robotoBold = await PdfGoogleFonts.robotoBold();
-      montserrat = await PdfGoogleFonts.montserratMedium();
     } catch (e) {
       // Ignore
     }
+    final (robotoBold, montserrat) = await _loadFonts();
 
     pdf.addPage(
       pw.Page(
@@ -688,16 +693,13 @@ class PdfGeneratorService {
     final pdf = pw.Document();
 
     pw.MemoryImage? logoImage;
-    pw.Font? robotoBold;
-    pw.Font? montserrat;
     try {
       final logoBytes = await rootBundle.load('assets/images/logo.png');
       logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
-      robotoBold = await PdfGoogleFonts.robotoBold();
-      montserrat = await PdfGoogleFonts.montserratMedium();
     } catch (e) {
       // Ignore
     }
+    final (robotoBold, montserrat) = await _loadFonts();
 
     pdf.addPage(
       pw.Page(
